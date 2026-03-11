@@ -3504,7 +3504,8 @@ const loadTaskQueueFromStorage = () => {
     batchTaskStore.clearTaskQueue();
   }
   
-  const savedQueue = safeLocalStorage.getItem('taskQueue');
+  // 优先从新的键名加载
+  const savedQueue = safeLocalStorage.getItem('batch_task_queue');
   if (savedQueue && typeof savedQueue === 'string' && savedQueue !== 'undefined') {
     try {
       const parsedQueue = JSON.parse(savedQueue);
@@ -3523,14 +3524,17 @@ const loadTaskQueueFromStorage = () => {
     } catch (error) {
       console.error('加载任务队列失败:', error);
       batchTaskStore.clearTaskQueue();
-      safeLocalStorage.removeItem('taskQueue');
+      safeLocalStorage.removeItem('batch_task_queue');
     }
   }
+  
+  // 清理旧的键名
+  safeLocalStorage.removeItem('taskQueue');
 };
 
 // 保存任务队列到localStorage
 const saveTaskQueueToStorage = () => {
-  safeLocalStorage.setItem('taskQueue', JSON.stringify(batchTaskStore.taskQueue));
+  safeLocalStorage.setItem('batch_task_queue', JSON.stringify(batchTaskStore.taskQueue));
 };
 
 // 清空任务队列
