@@ -435,7 +435,7 @@ pnpm install
    git push origin main
    ```
    
-   **目标仓库**：`https://github.com/lin4910253/xyzw_web_helper.git`
+   **目标仓库**：`https://github.com/linfsy/xyzw_web_helper.git`
    
    **注意**：只能推送到 `origin`，不能推送到 `upstream`（上游仓库）
 

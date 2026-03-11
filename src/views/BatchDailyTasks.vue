@@ -119,6 +119,14 @@
               </template>
               设置
             </n-button>
+            <n-button @click="showPushSettingsModal = true" type="default" size="medium">
+              <template #icon>
+                <n-icon>
+                  <NotificationsOutline />
+                </n-icon>
+              </template>
+              推送设置
+            </n-button>
           </div>
         </div>
 
@@ -2943,6 +2951,15 @@
         @purchase-complete="handleBlackMarketPurchaseComplete"
       />
     </n-modal>
+
+    <!-- 推送设置模态框 -->
+    <n-modal
+      v-model:show="showPushSettingsModal"
+      title="推送设置"
+      width="400px"
+    >
+      <PushNotificationSettings />
+    </n-modal>
   </div>
 </template>
 
@@ -2966,9 +2983,11 @@ import BlackMarketBuyer from "@/components/cards/BlackMarketBuyer.vue";
 import { DailyTaskRunner } from "@/utils/dailyTaskRunner";
 import { preloadQuestions } from "@/utils/studyQuestionsFromJSON.js";
 import { useMessage } from "naive-ui";
-import { Settings, AlertCircleOutline, TimerOutline } from "@vicons/ionicons5";
+import { Settings, AlertCircleOutline, TimerOutline, NotificationsOutline } from "@vicons/ionicons5";
+import PushNotificationSettings from "@/components/PushNotificationSettings.vue";
 import useIndexedDB from "@/hooks/useIndexedDB";
 import { Filesystem, Directory } from '@capacitor/filesystem';
+import { sendTaskCompleteNotification } from '@/utils/pushNotification';
 
 // Import batch task modules
 import {
@@ -4348,6 +4367,7 @@ const scheduledTasks = computed(() => scheduledTaskStore.scheduledTasks);
 const showTaskModal = ref(false); // Control the visibility of the add/edit task modal
 const showTasksModal = ref(false); // Control the visibility of the tasks list modal
 const showBlackMarketBuyerModal = ref(false); // Control the visibility of the black market buyer modal
+const showPushSettingsModal = ref(false); // 推送设置模态框
 const blackMarketBuyerRef = ref(null); // Reference to the BlackMarketBuyer component
 const showResumeTaskDialog = ref(false); // 显示恢复任务对话框
 const resumeTaskState = ref(null); // 保存的任务状态
@@ -6791,6 +6811,13 @@ const executeScheduledTask = async (task) => {
       type: "success",
     });
 
+    // 发送任务完成推送通知
+    await sendTaskCompleteNotification(task.name, {
+      success: selectedTokens.value.length,
+      failed: 0,
+      total: selectedTokens.value.length
+    });
+
     selectedTokens.value = [...originalSelectedTokens];
 
     const now = new Date();
@@ -7770,54 +7797,50 @@ const ensureConnection = async (tokenId, maxRetries = 2, taskNames = null, taskN
 
   let status = tokenStore.getWebSocketStatus(tokenId);
   let connected = status === "connected";
+  let attempts = 0;
 
   if (!connected) {
     // 等待连接槽位，限制并发连接数
     await waitForConnectionSlot();
 
-    addLog({
-      time: new Date().toLocaleTimeString(),
-      message: `正在连接... (队列: ${connectionQueue.active}/${batchSettings.maxActive})`,
-      type: "info",
-    });
+    while (!connected && attempts <= maxRetries) {
+      if (attempts > 0) {
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `连接超时，尝试重连... (${attempts}/${maxRetries})`,
+          type: "warning",
+        });
 
-    tokenStore.createWebSocketConnection(
-      tokenId,
-      latestToken.token,
-      latestToken.wsUrl,
-    );
-    connected = await waitForConnection(tokenId);
-
-    if (!connected && maxRetries > 0) {
-      addLog({
-        time: new Date().toLocaleTimeString(),
-        message: `连接超时，尝试重连...`,
-        type: "warning",
-      });
-
-      tokenStore.closeWebSocketConnection(tokenId);
-      await new Promise((r) => setTimeout(r, batchSettings.reconnectDelay));
+        tokenStore.closeWebSocketConnection(tokenId);
+        await new Promise((r) => setTimeout(r, batchSettings.reconnectDelay));
+      }
 
       addLog({
         time: new Date().toLocaleTimeString(),
-        message: `正在重连...`,
+        message: attempts > 0 ? `正在重连... (${attempts}/${maxRetries})` : `正在连接... (队列: ${connectionQueue.active}/${batchSettings.maxActive})`,
         type: "info",
       });
 
-      const refreshedToken = tokens.value.find((t) => t.id === tokenId);
+      const currentToken = tokens.value.find((t) => t.id === tokenId);
+      if (!currentToken) {
+        // 连接失败，释放槽位
+        releaseConnectionSlot();
+        throw new Error(`Token not found: ${tokenId}`);
+      }
+
       tokenStore.createWebSocketConnection(
         tokenId,
-        refreshedToken.token,
-        refreshedToken.wsUrl,
+        currentToken.token,
+        currentToken.wsUrl,
       );
-
       connected = await waitForConnection(tokenId);
+      attempts++;
     }
 
     if (!connected) {
       // 连接失败，释放槽位
       releaseConnectionSlot();
-      throw new Error("连接失败 (重试后仍超时)");
+      throw new Error(`连接失败 (已重试 ${maxRetries} 次)`);
     }
   }
 
@@ -8993,6 +9016,13 @@ async function startBatch(isFromQueue = false) {
         time: new Date().toLocaleTimeString(),
         message: `=== 批量任务执行完成 ===`,
         type: "success",
+      });
+
+      // 发送批量任务完成推送通知
+      await sendTaskCompleteNotification('批量日常任务', {
+        success: totalTokens,
+        failed: 0,
+        total: totalTokens
       });
     }
   } catch (error) {
