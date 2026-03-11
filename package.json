@@ -1,6 +1,6 @@
 {
   "name": "xyzw-token-manager",
-  "version": "3.24.8",
+  "version": "3.24.10",
   "type": "module",
   "description": "XYZW游戏Token管理工具 - 支持Base64导入和WebSocket连接管理",
   "main": "src/main.js",

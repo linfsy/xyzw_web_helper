@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { useLocalStorage } from '@vueuse/core'
+import { calculateNextExecutionTime as calculateCronNextExecutionTime } from '@/utils/batch/cronUtils'
 
 export interface ScheduledTask {
   id: number
@@ -163,11 +164,15 @@ export const useScheduledTaskStore = defineStore('scheduledTask', () => {
       return nextTime.getTime()
     }
     
-    // 处理 cron 表达式（简化版）
+    // 处理 cron 表达式
     if (task.runType === 'cron' && task.cronExpression) {
-      // 这里可以实现更复杂的 cron 解析
-      // 暂时返回一个较远的时间
-      return Date.now() + 24 * 60 * 60 * 1000
+      try {
+        const nextRun = calculateCronNextExecutionTime(task)
+        return nextRun ? nextRun.getTime() : Infinity
+      } catch (error) {
+        console.error('[ScheduledTask] 解析cron表达式失败:', error)
+        return Infinity
+      }
     }
     
     return Infinity

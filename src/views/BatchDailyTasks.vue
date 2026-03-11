@@ -4678,7 +4678,8 @@ const deleteTask = (taskId) => {
 const toggleTaskEnabled = (taskId, enabled) => {
   const task = scheduledTasks.value.find((t) => t.id === taskId);
   if (task) {
-    scheduledTaskStore.toggleTask(taskId);
+    // 直接更新任务状态，不再调用toggleTask（避免状态被切换两次）
+    scheduledTaskStore.updateTask(taskId, { enabled });
     message.success(`定时任务已${enabled ? "启用" : "禁用"}`);
     addLog({
       time: new Date().toLocaleTimeString(),
@@ -6813,7 +6814,7 @@ const executeScheduledTask = async (task) => {
     // 重要：只清除状态，不重置 isRunning，因为 isRunning 由调用者管理
     safeLocalStorage.removeItem('executingState');
     // 清除任务正在执行的标记
-    localStorage.removeItem(`task_executing_${task.id}`);
+    safeLocalStorage.removeItem(`task_executing_${task.id}`);
   }
 };
 
