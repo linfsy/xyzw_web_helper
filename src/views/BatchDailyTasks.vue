@@ -3555,13 +3555,69 @@ const loadTaskQueueFromStorage = () => {
 
 // 保存任务队列到localStorage
 const saveTaskQueueToStorage = () => {
-  safeLocalStorage.setItem('batch_task_queue', JSON.stringify(batchTaskStore.taskQueue));
+  try {
+    // 验证任务队列数据结构，确保可以安全序列化
+    const queue = batchTaskStore.taskQueue || [];
+    if (!Array.isArray(queue)) {
+      console.error('任务队列不是数组:', queue);
+      return;
+    }
+    
+    // 限制队列长度，避免存储过大的数据
+    const limitedQueue = queue.slice(0, 50); // 最多保存50个任务
+    
+    // 序列化前进行数据清理，移除可能导致循环引用的属性
+    const sanitizedQueue = limitedQueue.map(task => {
+      const sanitizedTask = { ...task };
+      // 移除可能导致序列化问题的属性
+      if (sanitizedTask.params) {
+        // 只保留必要的参数
+        sanitizedTask.params = { ...sanitizedTask.params };
+        // 移除可能包含循环引用的复杂对象
+        Object.keys(sanitizedTask.params).forEach(key => {
+          const value = sanitizedTask.params[key];
+          if (typeof value === 'object' && value !== null) {
+            // 简化复杂对象
+            try {
+              JSON.stringify(value); // 测试是否可以序列化
+            } catch {
+              // 如果不能序列化，移除该属性
+              delete sanitizedTask.params[key];
+            }
+          }
+        });
+      }
+      return sanitizedTask;
+    });
+    
+    const serialized = JSON.stringify(sanitizedQueue);
+    safeLocalStorage.setItem('batch_task_queue', serialized);
+  } catch (error) {
+    console.error('保存任务队列失败:', error);
+    // 发生错误时清空存储，避免下次加载时再次出错
+    safeLocalStorage.removeItem('batch_task_queue');
+  }
 };
 
 // 清空任务队列
 const clearTaskQueue = () => {
-  batchTaskStore.clearTaskQueue();
-  safeLocalStorage.removeItem('taskQueue');
+  try {
+    batchTaskStore.clearTaskQueue();
+    safeLocalStorage.removeItem('taskQueue');
+    safeLocalStorage.removeItem('batch_task_queue');
+    enhancedAddLog({
+      time: new Date().toLocaleTimeString(),
+      message: '=== 任务队列已清空 ===',
+      type: "info",
+    });
+  } catch (error) {
+    console.error('清空任务队列失败:', error);
+    enhancedAddLog({
+      time: new Date().toLocaleTimeString(),
+      message: `=== 清空任务队列失败: ${error.message} ===`,
+      type: "error",
+    });
+  }
 };
 
 // 监听任务队列变化，自动保存
