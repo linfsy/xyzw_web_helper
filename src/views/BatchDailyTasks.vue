@@ -3544,8 +3544,13 @@ const loadTaskQueueFromStorage = () => {
       }
     } catch (error) {
       console.error('加载任务队列失败:', error);
-      batchTaskStore.clearTaskQueue();
-      safeLocalStorage.removeItem('batch_task_queue');
+      // 重要修复：加载失败时不清空队列，保留现有队列数据
+      // 避免数据丢失，只在明确需要清空时才清空
+      addLog({
+        time: new Date().toLocaleTimeString(),
+        message: `=== 加载积攒队列失败: ${error.message}，保留现有队列 ===`,
+        type: "warning",
+      });
     }
   }
   
@@ -3594,8 +3599,13 @@ const saveTaskQueueToStorage = () => {
     safeLocalStorage.setItem('batch_task_queue', serialized);
   } catch (error) {
     console.error('保存任务队列失败:', error);
-    // 发生错误时清空存储，避免下次加载时再次出错
-    safeLocalStorage.removeItem('batch_task_queue');
+    // 重要修复：保存失败时不清空存储，避免数据丢失
+    // 只在明确需要清空时才清空
+    addLog({
+      time: new Date().toLocaleTimeString(),
+      message: `=== 保存积攒队列失败: ${error.message}，保留现有数据 ===`,
+      type: "warning",
+    });
   }
 };
 
@@ -4365,7 +4375,13 @@ const loadBatchSettings = () => {
     const saved = localStorage.getItem("batchSettings");
     if (saved) {
       const parsed = JSON.parse(saved);
-      Object.assign(batchSettings, parsed);
+      // 确保关键设置有默认值，避免被覆盖为undefined
+      const defaultSettings = {
+        enableBatchExecution: true,
+        batchSize: 5,
+        batchDelay: 5,
+      };
+      Object.assign(batchSettings, defaultSettings, parsed);
     }
   } catch (error) {
     console.error("Failed to load batch settings:", error);
@@ -5352,21 +5368,12 @@ const checkAndExecuteQueuedTasks = async () => {
   // 重要修复：不要在执行前就清空队列！等执行成功后再清空
   // 如果执行失败，任务应该保留在队列中
   
-  // 只处理主要任务（有多个账号的任务），跳过单个账号的任务
-  const mainTasks = queuedTasks.filter(t => (t.selectedTokens?.length || 0) > 1);
-  const singleTasks = queuedTasks.filter(t => (t.selectedTokens?.length || 0) === 1);
-  
-  if (singleTasks.length > 0) {
-    addLog({
-      time: new Date().toLocaleTimeString(),
-      message: `=== 跳过 ${singleTasks.length} 个单个账号任务（已包含在主要任务中） ===`,
-      type: "info",
-    });
-  }
+  // 重要修复：处理所有任务，包括单账号任务
+  // 之前跳过单账号任务会导致被暂停的账号永远不被执行
+  const mainTasks = queuedTasks.filter(t => (t.selectedTokens?.length || 0) > 0);
   
   if (mainTasks.length === 0) {
-    // 没有主要任务，只清空单个账号任务
-    batchTaskStore.clearTaskQueue();
+    // 没有任务，直接返回
     isExecutingQueuedTasks.value = false;
     return;
   }
@@ -5408,6 +5415,16 @@ const checkAndExecuteQueuedTasks = async () => {
         try {
           if (hasDailyTask) {
             selectedTokens.value = currentTaskTokens;
+            // 添加日志，确认分批执行设置
+            const batchSize = batchSettings.batchSize || 5;
+            const batchDelay = batchSettings.batchDelay || 5;
+            const enableBatch = batchSettings.enableBatchExecution !== false;
+            const totalBatches = Math.ceil(currentTaskTokens.length / batchSize);
+            addLog({
+              time: new Date().toLocaleTimeString(),
+              message: `=== 积攒任务执行批量日常: ${currentTaskTokens.length}个账号, 分批执行:${enableBatch ? '开启' : '关闭'}, 每批${batchSize}个, 延迟${batchDelay}秒, 共${totalBatches}批 ===`,
+              type: "info",
+            });
             await startBatch(true); // 传入true表示从积攒队列执行
           }
           
@@ -5452,34 +5469,33 @@ const checkAndExecuteQueuedTasks = async () => {
       }
     }
     
-    // 只有所有任务都成功完成才清空队列
-    if (allTasksCompleted) {
-      batchTaskStore.clearTaskQueue();
-      // 保存更新后的队列到本地存储
-      safeLocalStorage.setItem('batch_task_queue', JSON.stringify([]));
+    // 重要修复：不再统一清空队列，而是在循环中逐个移除已完成的任务
+    // 这样可以确保即使部分任务成功，其他未执行的任务也不会被清空
+    // 保存更新后的队列到本地存储，确保序列化安全
+    try {
+      safeLocalStorage.setItem('batch_task_queue', JSON.stringify(batchTaskStore.taskQueue));
+    } catch (serializationError) {
+      console.error('保存任务队列失败:', serializationError);
+      addLog({
+        time: new Date().toLocaleTimeString(),
+        message: `=== 保存积攒队列失败: ${serializationError.message}，保留现有数据 ===`,
+        type: "warning",
+      });
+    }
+    
+    if (failedTasks.length > 0) {
+      // 有任务失败，保留失败的任务在队列中
+      addLog({
+        time: new Date().toLocaleTimeString(),
+        message: `=== 执行完成，${failedTasks.length} 个任务执行失败，已保留在队列中 ===`,
+        type: "warning",
+      });
+    } else {
+      // 所有任务都已处理完成
       addLog({
         time: new Date().toLocaleTimeString(),
         message: `=== 积攒队列任务执行完成 ===`,
         type: "success",
-      });
-    } else {
-      // 有任务失败，只保留失败的任务在队列中
-      batchTaskStore.clearTaskQueue();
-      failedTasks.forEach(task => {
-        batchTaskStore.addToTaskQueue(task);
-      });
-      // 保存更新后的队列到本地存储，确保序列化安全
-      try {
-        safeLocalStorage.setItem('batch_task_queue', JSON.stringify(failedTasks));
-      } catch (serializationError) {
-        console.error('序列化失败任务队列时出错:', serializationError);
-        // 序列化失败时，清空队列以避免存储错误
-        safeLocalStorage.setItem('batch_task_queue', JSON.stringify([]));
-      }
-      addLog({
-        time: new Date().toLocaleTimeString(),
-        message: `=== 积攒队列部分任务失败，已保留 ${failedTasks.length} 个失败任务在队列中 ===`,
-        type: "warning",
       });
     }
   } catch (error) {
@@ -5913,11 +5929,13 @@ const startScheduler = () => {
             continue;
           }
           
-          // 检查任务是否已经在队列中
-          const existingTaskIndex = batchTaskStore.taskQueue.findIndex(t => 
-            t.name === task.name && 
-            JSON.stringify(t.selectedTasks) === JSON.stringify(task.selectedTasks)
-          );
+          // 检查任务是否已经在队列中（同时检查任务名称、任务类型和账号列表）
+          const existingTaskIndex = batchTaskStore.taskQueue.findIndex(t => {
+            const sameName = t.name === task.name;
+            const sameTasks = JSON.stringify(t.selectedTasks?.sort()) === JSON.stringify(task.selectedTasks?.sort());
+            const sameTokens = JSON.stringify(t.selectedTokens?.sort()) === JSON.stringify(task.selectedTokens?.sort());
+            return sameName && sameTasks && sameTokens;
+          });
           
           if (isPauseTime.value && isPauseTime.value.paused) {
             // 处于暂停时间，加入积攒队列
@@ -5964,6 +5982,8 @@ const startScheduler = () => {
             } finally {
               // 任务完成，清除保存的任务信息
               clearRunningTask();
+              // 重要：重置 isRunning 状态，确保积攒队列可以正常执行
+              batchTaskStore.stopTask();
               // 重要：只有任务真正执行完成（不是加入积攒队列）后才检查积攒队列
               // 如果 taskExecuted 为 false，表示任务加入了积攒队列，不应该立即触发 checkAndExecuteQueuedTasks
               if (taskExecuted !== false) {
@@ -6427,8 +6447,11 @@ const executeScheduledTask = async (task) => {
               if (batchTaskStore.shouldStop.value) break;
 
               if (isPauseTime.value.paused) {
-                // 检查任务是否已经在积攒队列中
-                const existingTaskIndex = batchTaskStore.taskQueue.findIndex(t => t.name === task.name);
+                // 检查任务是否已经在积攒队列中（同时检查任务名称和任务类型）
+                const existingTaskIndex = batchTaskStore.taskQueue.findIndex(t => 
+                  t.name === task.name && 
+                  JSON.stringify(t.selectedTasks?.sort()) === JSON.stringify([taskName].sort())
+                );
                 
                 if (existingTaskIndex === -1) {
                   // 任务不在队列中，添加新任务（包含当前账号）
@@ -6493,8 +6516,11 @@ const executeScheduledTask = async (task) => {
           } catch (error) {
             console.error(error);
             if (error.isPause) {
-              // 检查任务是否已经在积攒队列中
-              const existingTaskIndex = batchTaskStore.taskQueue.findIndex(t => t.name === task.name);
+              // 检查任务是否已经在积攒队列中（同时检查任务名称和任务类型）
+              const existingTaskIndex = batchTaskStore.taskQueue.findIndex(t => 
+                t.name === task.name && 
+                JSON.stringify(t.selectedTasks?.sort()) === JSON.stringify(selectedTasks.value?.sort())
+              );
               
               if (existingTaskIndex === -1) {
                 // 任务不在队列中，添加新任务
@@ -6909,10 +6935,12 @@ const executeScheduledTask = async (task) => {
     );
   } finally {
     selectedTokens.value = [...originalSelectedTokens];
-    // 重要：只清除状态，不重置 isRunning，因为 isRunning 由调用者管理
+    // 重要：清除状态并重置 isRunning，确保后续任务可以正常执行
     safeLocalStorage.removeItem('executingState');
     // 清除任务正在执行的标记
     safeLocalStorage.removeItem(`task_executing_${task.id}`);
+    // 重置 isRunning 状态
+    batchTaskStore.stopTask();
   }
 };
 
@@ -8558,7 +8586,13 @@ const executeInBatches = async (taskFunction, taskName, taskFunctionName, isFrom
           }
 
           // 检查任务是否已经在积攒队列中（避免重复添加）
-          const existingTask = batchTaskStore.taskQueue.find(t => t.name === taskName);
+          // 同时检查任务名称、任务类型和账号列表
+          const existingTask = batchTaskStore.taskQueue.find(t => {
+            const sameName = t.name === taskName;
+            const sameTasks = JSON.stringify(t.selectedTasks?.sort()) === JSON.stringify([taskFunctionName || taskName].sort());
+            const sameTokens = JSON.stringify(t.selectedTokens?.sort()) === JSON.stringify(remainingTokens.sort());
+            return sameName && sameTasks && sameTokens;
+          });
           if (!existingTask) {
             addLog({
               time: new Date().toLocaleTimeString(),
@@ -8975,9 +9009,12 @@ async function startBatch(isFromQueue = false) {
   };
 
   try {
-    if (batchSettings.enableBatchExecution) {
-      const batchSize = batchSettings.batchSize;
-      const batchDelay = batchSettings.batchDelay * 1000;
+    // 确保分批执行设置有默认值
+    const enableBatchExecution = batchSettings.enableBatchExecution !== false;
+    const batchSize = batchSettings.batchSize || 5;
+    const batchDelay = (batchSettings.batchDelay || 5) * 1000;
+    
+    if (enableBatchExecution) {
       const totalBatches = Math.ceil(totalTokens / batchSize);
 
       addLog({
@@ -9010,9 +9047,11 @@ async function startBatch(isFromQueue = false) {
         await Promise.all(batchPromises);
 
         if (batchIndex < totalBatches - 1 && !batchTaskStore.shouldStop.value) {
+          // 使用局部变量 batchDelay（已转换为秒）
+          const batchDelaySeconds = batchDelay / 1000;
           addLog({
             time: new Date().toLocaleTimeString(),
-            message: `=== 第 ${batchIndex + 1} 批完成，等待 ${batchSettings.batchDelay} 秒后执行下一批 ===`,
+            message: `=== 第 ${batchIndex + 1} 批完成，等待 ${batchDelaySeconds} 秒后执行下一批 ===`,
             type: "info",
           });
 
@@ -9021,7 +9060,7 @@ async function startBatch(isFromQueue = false) {
           const currentProgress = Math.round((completedCount / totalTokens) * 100);
           batchTaskStore.setProgress(currentProgress);
 
-          let remainingSeconds = batchSettings.batchDelay;
+          let remainingSeconds = batchDelaySeconds;
           while (remainingSeconds > 0 && !batchTaskStore.shouldStop.value) {
             // 重要：确保在等待期间 isRunning 保持为 true，防止按钮被启用
             if (!batchTaskStore.isRunning) {

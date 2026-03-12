@@ -1799,7 +1799,7 @@ const importConfig = async ({ file }) => {
 
         if (importData.scheduledTasks && Array.isArray(importData.scheduledTasks)) {
           try {
-            localStorage.setItem("scheduledTasks", JSON.stringify(importData.scheduledTasks));
+            localStorage.setItem("scheduledTasks_v2", JSON.stringify(importData.scheduledTasks));
             message.info(`定时任务导入完成: ${importData.scheduledTasks.length} 个`);
           } catch (e) {
             console.error('导入定时任务失败:', e);

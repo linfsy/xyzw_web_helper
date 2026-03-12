@@ -74,13 +74,31 @@ export async function loadQuestionsData() {
 export function matchQuestion(questionFromDB, actualQuestion, threshold = 1) {
   if (!questionFromDB || !actualQuestion) return false;
 
+  // 去除空格和特殊字符进行匹配
+  const cleanDB = questionFromDB.replace(/\s+/g, "").toLowerCase();
+  const cleanActual = actualQuestion.replace(/\s+/g, "").toLowerCase();
+
   // 简单的包含匹配
   if (threshold === 1) {
-    // 去除空格和特殊字符进行匹配
-    const cleanDB = questionFromDB.replace(/\s+/g, "").toLowerCase();
-    const cleanActual = actualQuestion.replace(/\s+/g, "").toLowerCase();
-
     return cleanActual.includes(cleanDB) || cleanDB.includes(cleanActual);
+  }
+  
+  // 关键词匹配（阈值2）
+  if (threshold === 2) {
+    // 提取关键词
+    const dbWords = cleanDB.split(/[，。？！：；,.?!:;]/).filter(word => word.length > 2);
+    const actualWords = cleanActual.split(/[，。？！：；,.?!:;]/).filter(word => word.length > 2);
+    
+    // 计算匹配的关键词数量
+    let matchCount = 0;
+    for (const word of dbWords) {
+      if (actualWords.some(actualWord => actualWord.includes(word) || word.includes(actualWord))) {
+        matchCount++;
+      }
+    }
+    
+    // 至少匹配2个关键词
+    return matchCount >= 2;
   }
 
   return false;
@@ -96,22 +114,54 @@ export async function findAnswer(question) {
     const questions = await loadQuestionsData();
 
     if (!questions || questions.length === 0) {
-      // 降噪
       return null;
     }
 
-    // 遍历所有题目寻找匹配
-    for (let i = 0; i < questions.length; i++) {
-      const item = questions[i];
-      if (!item.name || !item.value) continue;
+    // 按题目长度分组，优先查找长度相近的题目
+    const questionLength = question.length;
+    const lengthGroups = {
+      short: questions.filter(item => item.name && Math.abs(item.name.length - questionLength) <= 5),
+      medium: questions.filter(item => item.name && Math.abs(item.name.length - questionLength) > 5 && Math.abs(item.name.length - questionLength) <= 15),
+      long: questions.filter(item => item.name && Math.abs(item.name.length - questionLength) > 15)
+    };
 
+    // 1. 先在长度相近的题目中使用精确匹配（阈值1）
+    for (const item of lengthGroups.short) {
+      if (!item.name || !item.value) continue;
       if (matchQuestion(item.name, question, 1)) {
-        // 降噪
         return item.value;
       }
     }
 
-    // 降噪
+    // 2. 在中等长度差异的题目中使用精确匹配
+    for (const item of lengthGroups.medium) {
+      if (!item.name || !item.value) continue;
+      if (matchQuestion(item.name, question, 1)) {
+        return item.value;
+      }
+    }
+
+    // 3. 在所有题目中使用关键词匹配（阈值2）
+    for (const item of questions) {
+      if (!item.name || !item.value) continue;
+      if (matchQuestion(item.name, question, 2)) {
+        return item.value;
+      }
+    }
+
+    // 4. 最后的尝试：在所有题目中进行宽松匹配
+    for (const item of questions) {
+      if (!item.name || !item.value) continue;
+      const cleanItem = item.name.replace(/\s+/g, "").toLowerCase();
+      const cleanQuestion = question.replace(/\s+/g, "").toLowerCase();
+      // 检查是否有共同的长单词（长度>3）
+      const itemWords = cleanItem.split(/\W+/).filter(w => w.length > 3);
+      const questionWords = cleanQuestion.split(/\W+/).filter(w => w.length > 3);
+      if (itemWords.some(word => questionWords.includes(word))) {
+        return item.value;
+      }
+    }
+
     return null; // 未找到匹配的题目
   } catch (error) {
     console.error("❌ 查找答案时出错:", error);

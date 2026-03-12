@@ -120,16 +120,23 @@ export const useBatchTaskStore = defineStore("batchTask", () => {
     params?: any;
   }) {
     // 检查任务是否已在队列中，避免重复加入
+    // 同时检查任务名称、运行类型、账号列表和任务类型
     const isTaskExists = taskQueue.value.some(existingTask => {
       // 检查任务名称和类型
       if (existingTask.name === task.name && existingTask.runType === task.runType) {
         // 检查选中的账号是否相同
         const existingTokens = existingTask.selectedTokens || existingTask.tokenIds || [];
         const newTokens = task.selectedTokens || task.tokenIds || [];
-        
-        // 账号数量相同且包含相同的账号
-        return existingTokens.length === newTokens.length && 
+        const sameTokens = existingTokens.length === newTokens.length && 
                existingTokens.every(tokenId => newTokens.includes(tokenId));
+        
+        // 检查选中的任务类型是否相同
+        const existingTasks = existingTask.selectedTasks || existingTask.taskNames || [];
+        const newTasks = task.selectedTasks || task.taskNames || [];
+        const sameTasks = JSON.stringify(existingTasks.sort()) === JSON.stringify(newTasks.sort());
+        
+        // 只有名称、类型、账号和任务类型都相同才认为是重复任务
+        return sameTokens && sameTasks;
       }
       return false;
     });
