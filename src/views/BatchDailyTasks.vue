@@ -111,7 +111,7 @@
             >
               任务模板
             </n-button>
-            <n-button @click="openBatchSettings" type="default" size="medium">
+            <n-button @click="openBatchSettings" type="default" size="medium" style="width: 90px;">
               <template #icon>
                 <n-icon>
                   <Settings />
@@ -119,7 +119,7 @@
               </template>
               设置
             </n-button>
-            <n-button @click="showPushSettingsModal = true" type="default" size="medium">
+            <n-button @click="showPushSettingsModal = true" type="default" size="medium" style="width: 90px;">
               <template #icon>
                 <n-icon>
                   <NotificationsOutline />
@@ -5929,6 +5929,24 @@ const startScheduler = () => {
             continue;
           }
           
+          // 检查是否有其他任务正在运行
+          if (batchTaskStore.isRunning) {
+            // 有任务正在运行，将定时任务加入积攒队列
+            addLog({
+              time: currentTime,
+              message: `=== 定时任务 ${task.name} 检测到任务冲突（有任务运行中），加入积攒队列 ===`,
+              type: "info",
+            });
+            batchTaskStore.addToTaskQueue({
+              id: Date.now() + Math.random(),
+              name: task.name,
+              runType: 'scheduled',
+              selectedTokens: [...(task.selectedTokens || task.tokenIds || [])],
+              selectedTasks: [...(task.selectedTasks || task.taskNames || ['batchDaily'])],
+            });
+            continue;
+          }
+          
           // 检查任务是否已经在队列中（同时检查任务名称、任务类型和账号列表）
           const existingTaskIndex = batchTaskStore.taskQueue.findIndex(t => {
             const sameName = t.name === task.name;
@@ -5984,11 +6002,8 @@ const startScheduler = () => {
               clearRunningTask();
               // 重要：重置 isRunning 状态，确保积攒队列可以正常执行
               batchTaskStore.stopTask();
-              // 重要：只有任务真正执行完成（不是加入积攒队列）后才检查积攒队列
-              // 如果 taskExecuted 为 false，表示任务加入了积攒队列，不应该立即触发 checkAndExecuteQueuedTasks
-              if (taskExecuted !== false) {
-                checkAndExecuteQueuedTasks();
-              }
+              // 重要：任务完成后无论是否有任务加入积攒队列，都应该检查并执行积攒队列
+              checkAndExecuteQueuedTasks();
             }
           }
         }
@@ -6620,6 +6635,17 @@ const executeScheduledTask = async (task) => {
       return;
     }
 
+    // 检查是否有其他任务正在运行
+    if (batchTaskStore.isRunning.value) {
+      addLog({
+        time: new Date().toLocaleTimeString(),
+        message: `=== 定时任务 ${task.name} 检测到任务冲突（有任务运行中），已加入积攒队列 ===`,
+        type: "info",
+      });
+      batchTaskStore.addToTaskQueue(task);
+      return;
+    }
+
     const availableTokenList = tokens.value || tokenStore.gameTokens?.value || [];
 
     const availableTokens = (
@@ -6733,7 +6759,10 @@ const executeScheduledTask = async (task) => {
           // 使用原始任务函数，避免嵌套调用 executeInBatches
           const taskFunction = getOriginalTaskFunction(taskName);
           if (typeof taskFunction === "function") {
-            if (
+            if (taskName === 'startBatch') {
+              // 执行日常任务时，传入 true 表示从定时任务执行，避免任务冲突检查
+              await taskFunction(true);
+            } else if (
               [
                 "batchOpenBox",
                 "batchFish",
@@ -6880,7 +6909,10 @@ const executeScheduledTask = async (task) => {
         // 使用原始任务函数，避免包装函数的额外检查和队列逻辑
         const taskFunction = getOriginalTaskFunction(taskName);
         if (typeof taskFunction === "function") {
-          if (
+          if (taskName === 'startBatch') {
+            // 执行日常任务时，传入 true 表示从定时任务执行，避免任务冲突检查
+            await taskFunction(true);
+          } else if (
             [
               "batchOpenBox",
               "batchFish",
@@ -8459,6 +8491,9 @@ const executeInBatches = async (taskFunction, taskName, taskFunctionName, isFrom
 
     // 确保任务状态正确
     batchTaskStore.startTask();
+  } else {
+    // 从队列中执行任务时，也需要设置 isRunning 为 true
+    batchTaskStore.startTask();
   }
 
   const originalSelectedTasks = [...selectedTasks.value];
@@ -8508,6 +8543,56 @@ const executeInBatches = async (taskFunction, taskName, taskFunctionName, isFrom
       break;
     }
     
+    // 检查是否进入暂停时间
+    if (isPauseTime.value.paused) {
+      // 计算剩余未执行的账号（从当前批开始）
+      const remainingTokens = sortedTokens.slice(batchIndex * batchSize);
+
+      if (remainingTokens.length === 0) {
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `=== 批量任务所有批次已完成，无需加入积攒队列 ===`,
+          type: "info",
+        });
+        selectedTokens.value = [...originalSelectedTokens];
+        selectedTasks.value = [...originalSelectedTasks];
+        return;
+      }
+
+      // 检查任务是否已经在积攒队列中（避免重复添加）
+      // 同时检查任务名称、任务类型和账号列表
+      const existingTask = batchTaskStore.taskQueue.find(t => {
+        const sameName = t.name === taskName;
+        const sameTasks = JSON.stringify(t.selectedTasks?.sort()) === JSON.stringify([taskFunctionName || taskName].sort());
+        const sameTokens = JSON.stringify(t.selectedTokens?.sort()) === JSON.stringify(remainingTokens.sort());
+        return sameName && sameTasks && sameTokens;
+      });
+      if (!existingTask) {
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `=== 批量任务被暂停: 当前处于${isPauseTime.value.reason}，已加入积攒队列（剩余 ${remainingTokens.length} 个账号，从第${batchIndex + 1}批开始） ===`,
+          type: "info",
+        });
+        // 将剩余未执行的账号加入积攒队列
+        batchTaskStore.addToTaskQueue({
+          id: Date.now() + Math.random(),
+          name: taskName,
+          runType: isScheduled ? 'scheduled' : 'manual',
+          selectedTokens: remainingTokens,
+          selectedTasks: [taskFunctionName || taskName],
+        });
+      } else {
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `=== 批量任务已在积攒队列中，跳过 ===`,
+          type: "info",
+        });
+      }
+      selectedTokens.value = [...originalSelectedTokens];
+      selectedTasks.value = [...originalSelectedTasks];
+      return;
+    }
+    
     // 简化版任务持久化：只保存任务队列，不保存执行进度
     // batchTaskStore.saveTaskState({
     //   isRunning: true,
@@ -8540,6 +8625,14 @@ const executeInBatches = async (taskFunction, taskName, taskFunctionName, isFrom
         type: "error",
       });
       console.error('taskFunction error:', error);
+      // 将失败的任务加入积攒队列
+      batchTaskStore.addToTaskQueue({
+        id: Date.now() + Math.random(),
+        name: taskName,
+        runType: isScheduled ? 'scheduled' : 'manual',
+        selectedTokens: [...selectedTokens.value],
+        selectedTasks: [taskFunctionName || taskName],
+      });
     } finally {
       // 重要：恢复 isRunning 状态
       // 如果任务执行前 isRunning 为 true，但任务函数内部调用了 stopTask() 将其设为 false
@@ -8634,6 +8727,10 @@ const executeInBatches = async (taskFunction, taskName, taskFunctionName, isFrom
 
   selectedTokens.value = originalSelectedTokens;
   selectedTasks.value = originalSelectedTasks;
+  // 重置任务状态
+  batchTaskStore.stopTask();
+  // 任务完成后检查并执行积攒队列
+  checkAndExecuteQueuedTasks();
 
   if (!batchTaskStore.shouldStop.value) {
     addLog({
