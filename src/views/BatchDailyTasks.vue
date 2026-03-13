@@ -111,21 +111,13 @@
             >
               任务模板
             </n-button>
-            <n-button @click="openBatchSettings" type="default" size="medium" style="width: 90px;">
+            <n-button @click="openBatchSettings" type="default" size="medium">
               <template #icon>
                 <n-icon>
                   <Settings />
                 </n-icon>
               </template>
               设置
-            </n-button>
-            <n-button @click="showPushSettingsModal = true" type="default" size="medium" style="width: 90px;">
-              <template #icon>
-                <n-icon>
-                  <NotificationsOutline />
-                </n-icon>
-              </template>
-              推送设置
             </n-button>
           </div>
         </div>
@@ -2141,98 +2133,97 @@
                 <label class="setting-label">默认鱼竿类型</label>
                 <n-select v-model:value="batchSettingsForm.defaultFishType" :options="fishTypeOptions" size="small" style="width: 120px" />
               </div>
-            <n-divider title-placement="left" style="margin: 12px 0 8px 0"
-              >智能发车条件设置</n-divider
-            >
-            <div class="settings-grid">
-              <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
-                <label class="setting-label">保底车辆颜色</label>
-                <n-select
-                  v-model:value="batchSettingsForm.carMinColor"
-                  :options="[
-                    { label: '绿·普通', value: 1 },
-                    { label: '蓝·稀有', value: 2 },
-                    { label: '紫·史诗', value: 3 },
-                    { label: '橙·传说', value: 4 },
-                    { label: '红·神话', value: 5 },
-                    { label: '金·传奇', value: 6 },
-                  ]"
-                  size="small"
-                  style="width: 120px"
-                />
-              </div>
-              <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
-                <label class="setting-label">车辆强制刷新保底 (优先级最高)</label>
-                <n-switch v-model:value="batchSettingsForm.useGoldRefreshFallback"/>
-              </div>
-              <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
-                <label class="setting-label">启用最大刷新次数限制</label>
-                <n-switch v-model:value="batchSettingsForm.enableMaxCarRefresh"/>
-              </div>
-              <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
-                <label class="setting-label">最大刷新次数(0=无限制刷新)</label>
-                <n-input-number v-model:value="batchSettingsForm.maxCarRefreshCount" :min="0" :max="15" :step="1" size="small" style="width: 100px" :disabled="!batchSettingsForm.enableMaxCarRefresh" />
-              </div>
-              <n-collapse>
-                <n-collapse-item title="刷新规则说明">
-                  <div class="refresh-rules">
-                    <table style="width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px;">
-                      <thead>
-                        <tr style="background-color: #f5f5f5;">
-                          <th style="border: 1px solid #ddd; padding: 6px; text-align: left;">设置值</th>
-                          <th style="border: 1px solid #ddd; padding: 6px; text-align: left;">行为</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr>
-                          <td style="border: 1px solid #ddd; padding: 6px;">0</td>
-                          <td style="border: 1px solid #ddd; padding: 6px;">无限制刷新，直到满足条件或无刷新条件</td>
-                        </tr>
-                        <tr>
-                          <td style="border: 1px solid #ddd; padding: 6px;">1</td>
-                          <td style="border: 1px solid #ddd; padding: 6px;">只允许免费刷新1次，用完就停止</td>
-                        </tr>
-                        <tr>
-                          <td style="border: 1px solid #ddd; padding: 6px;">2-15</td>
-                          <td style="border: 1px solid #ddd; padding: 6px;">允许用刷新券或金砖，最多刷新指定次数</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                    <div style="margin-top: 10px; font-size: 12px; color: #666; line-height: 1.4;">
-                      <p><strong>特别说明：</strong></p>
-                      <p>1. 最大刷新次数的限制优先级高于保底颜色的要求</p>
-                      <p>2. 例如：选择橙传说车作为保底颜色，同时设置最大刷新次数=1</p>
-                      <p>   - 系统只会使用1次免费刷新</p>
-                      <p>   - 不管刷新后是不是橙色传说，都会直接发车</p>
-                      <p>   - 不会为了追求橙色传说而继续刷新</p>
-                      <p>3. 这样设计的目的是保护资源，防止过度消耗刷新券和金砖</p>
-                    </div>
+            <n-collapse style="margin-top: 10px;">
+              <n-collapse-item title="智能发车设置">
+                <div class="settings-grid">
+                  <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                    <label class="setting-label">保底车辆颜色</label>
+                    <n-select
+                      v-model:value="batchSettingsForm.carMinColor"
+                      :options="[
+                        { label: '绿·普通', value: 1 },
+                        { label: '蓝·稀有', value: 2 },
+                        { label: '紫·史诗', value: 3 },
+                        { label: '橙·传说', value: 4 },
+                        { label: '红·神话', value: 5 },
+                        { label: '金·传奇', value: 6 },
+                      ]"
+                      size="small"
+                      style="width: 120px"
+                    />
                   </div>
-                </n-collapse-item>
-              </n-collapse>
-            </div>
-            <div class="settings-grid">
-              <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
-                <label class="setting-label">满足任一条件即可发车</label>
-                <n-switch v-model:value="batchSettingsForm.smartDepartureMatchAll"/>
-              </div>
-              <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
-                <label class="setting-label">金砖 >=</label>
-                <n-input-number v-model:value="batchSettingsForm.smartDepartureGoldThreshold" :min="0" :step="100" size="small" style="width: 100px" />
-              </div>
-              <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
-                <label class="setting-label">招募令 >=</label>
-                <n-input-number v-model:value="batchSettingsForm.smartDepartureRecruitThreshold" :min="0" :step="10" size="small" style="width: 100px" />
-              </div>
-              <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
-                <label class="setting-label">白玉 >=</label>
-                <n-input-number v-model:value="batchSettingsForm.smartDepartureJadeThreshold" :min="0" :step="100" size="small" style="width: 100px" />
-              </div>
-              <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
-                <label class="setting-label">刷新卷 >=</label>
-                <n-input-number v-model:value="batchSettingsForm.smartDepartureTicketThreshold" :min="0" :step="1" size="small" style="width: 100px" />
-              </div>
-            </div>
+                  <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                    <label class="setting-label">车辆强制刷新保底 (优先级最高)</label>
+                    <n-switch v-model:value="batchSettingsForm.useGoldRefreshFallback"/>
+                  </div>
+                  <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                    <label class="setting-label">启用最大刷新次数限制</label>
+                    <n-switch v-model:value="batchSettingsForm.enableMaxCarRefresh"/>
+                  </div>
+                  <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                    <label class="setting-label">最大刷新次数(0=无限制刷新)</label>
+                    <n-input-number v-model:value="batchSettingsForm.maxCarRefreshCount" :min="0" :max="15" :step="1" size="small" style="width: 100px" :disabled="!batchSettingsForm.enableMaxCarRefresh" />
+                  </div>
+                  <n-collapse>
+                    <n-collapse-item title="刷新规则说明">
+                      <div class="refresh-rules">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px;">
+                          <thead>
+                            <tr style="background-color: #f5f5f5;">
+                              <th style="border: 1px solid #ddd; padding: 6px; text-align: left;">设置值</th>
+                              <th style="border: 1px solid #ddd; padding: 6px; text-align: left;">行为</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr>
+                              <td style="border: 1px solid #ddd; padding: 6px;">0</td>
+                              <td style="border: 1px solid #ddd; padding: 6px;">无限制刷新，直到满足条件或无刷新条件</td>
+                            </tr>
+                            <tr>
+                              <td style="border: 1px solid #ddd; padding: 6px;">1</td>
+                              <td style="border: 1px solid #ddd; padding: 6px;">只允许免费刷新1次，用完就停止</td>
+                            </tr>
+                            <tr>
+                              <td style="border: 1px solid #ddd; padding: 6px;">2-15</td>
+                              <td style="border: 1px solid #ddd; padding: 6px;">允许用刷新券或金砖，最多刷新指定次数</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                        <div style="margin-top: 10px; font-size: 12px; color: #666; line-height: 1.4;">
+                          <p><strong>特别说明：</strong></p>
+                          <p>1. 最大刷新次数的限制优先级高于保底颜色的要求</p>
+                          <p>2. 例如：选择橙传说车作为保底颜色，同时设置最大刷新次数=1</p>
+                          <p>   - 系统只会使用1次免费刷新</p>
+                          <p>   - 不管刷新后是不是橙色传说，都会直接发车</p>
+                          <p>   - 不会为了追求橙色传说而继续刷新</p>
+                          <p>3. 这样设计的目的是保护资源，防止过度消耗刷新券和金砖</p>
+                        </div>
+                      </div>
+                    </n-collapse-item>
+                  </n-collapse>
+                  <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                    <label class="setting-label">满足任一条件即可发车</label>
+                    <n-switch v-model:value="batchSettingsForm.smartDepartureMatchAll"/>
+                  </div>
+                  <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                    <label class="setting-label">金砖 >=</label>
+                    <n-input-number v-model:value="batchSettingsForm.smartDepartureGoldThreshold" :min="0" :step="100" size="small" style="width: 100px" />
+                  </div>
+                  <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                    <label class="setting-label">招募令 >=</label>
+                    <n-input-number v-model:value="batchSettingsForm.smartDepartureRecruitThreshold" :min="0" :step="10" size="small" style="width: 100px" />
+                  </div>
+                  <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                    <label class="setting-label">白玉 >=</label>
+                    <n-input-number v-model:value="batchSettingsForm.smartDepartureJadeThreshold" :min="0" :step="100" size="small" style="width: 100px" />
+                  </div>
+                  <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                    <label class="setting-label">刷新卷 >=</label>
+                    <n-input-number v-model:value="batchSettingsForm.smartDepartureTicketThreshold" :min="0" :step="1" size="small" style="width: 100px" />
+                  </div>
+                </div>
+              </n-collapse-item>
+            </n-collapse>
             </div>
             <n-divider title-placement="left" style="margin: 12px 0 8px 0"
               >功法赠送设置</n-divider
@@ -2573,6 +2564,32 @@
                 <n-input-number v-model:value="batchSettingsForm.refreshNoticeDelay" :min="5" :max="300" :step="5" size="small" style="width: 100px" />
               </div>
             </div>
+            <n-collapse style="margin-top: 10px;">
+              <n-collapse-item title="推送通知设置">
+                <div class="settings-grid">
+                  <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                    <label class="setting-label">启用推送</label>
+                    <n-switch v-model:value="batchSettingsForm.pushNotificationEnabled" />
+                  </div>
+                  <div class="setting-item" style="flex-direction: column; align-items: flex-start; gap: 8px;">
+                    <label class="setting-label">推送方式</label>
+                    <n-select v-model:value="batchSettingsForm.pushProvider" :options="pushProviderOptions" size="small" style="width: 100%" />
+                  </div>
+                  <div class="setting-item" style="flex-direction: column; align-items: flex-start; gap: 8px;">
+                    <label class="setting-label">推送 Token</label>
+                    <n-input v-model:value="batchSettingsForm.pushToken" type="password" show-password-on="click" :placeholder="getPushTokenPlaceholder()" size="small" style="width: 100%" />
+                    <n-text depth="3" style="font-size: 12px">
+                      {{ getPushTokenHelp() }}
+                    </n-text>
+                  </div>
+                  <div class="setting-item" style="flex-direction: row; justify-content: flex-end; align-items: center;">
+                    <n-button type="primary" size="small" :loading="testingPush" :disabled="!batchSettingsForm.pushToken" @click="testPushNotification">
+                      测试推送
+                    </n-button>
+                  </div>
+                </div>
+              </n-collapse-item>
+            </n-collapse>
           </n-grid-item>
         </n-grid>
         <div class="modal-actions" style="margin-top: 20px; text-align: right">
@@ -2952,14 +2969,7 @@
       />
     </n-modal>
 
-    <!-- 推送设置模态框 -->
-    <n-modal
-      v-model:show="showPushSettingsModal"
-      title="推送设置"
-      width="400px"
-    >
-      <PushNotificationSettings />
-    </n-modal>
+
   </div>
 </template>
 
@@ -2983,11 +2993,10 @@ import BlackMarketBuyer from "@/components/cards/BlackMarketBuyer.vue";
 import { DailyTaskRunner } from "@/utils/dailyTaskRunner";
 import { preloadQuestions } from "@/utils/studyQuestionsFromJSON.js";
 import { useMessage } from "naive-ui";
-import { Settings, AlertCircleOutline, TimerOutline, NotificationsOutline } from "@vicons/ionicons5";
-import PushNotificationSettings from "@/components/PushNotificationSettings.vue";
+import { Settings, AlertCircleOutline, TimerOutline } from "@vicons/ionicons5";
 import useIndexedDB from "@/hooks/useIndexedDB";
 import { Filesystem, Directory } from '@capacitor/filesystem';
-import { sendTaskCompleteNotification } from '@/utils/pushNotification';
+import { sendTaskCompleteNotification, getPushConfig, savePushConfig, testPushNotification as testPushNotificationUtil } from '@/utils/pushNotification';
 
 // Import batch task modules
 import {
@@ -4367,6 +4376,10 @@ const batchSettings = reactive({
   enableBatchExecution: true,
   batchSize: 5,
   batchDelay: 5,
+  // 推送通知配置
+  pushNotificationEnabled: false,
+  pushProvider: 'pushplus',
+  pushToken: '',
 });
 
 // Load batch settings from localStorage
@@ -4380,6 +4393,9 @@ const loadBatchSettings = () => {
         enableBatchExecution: true,
         batchSize: 5,
         batchDelay: 5,
+        pushNotificationEnabled: false,
+        pushProvider: 'pushplus',
+        pushToken: '',
       };
       Object.assign(batchSettings, defaultSettings, parsed);
     }
@@ -4394,6 +4410,14 @@ const saveBatchSettings = () => {
     // 将临时表单数据复制到实际设置
     Object.assign(batchSettings, JSON.parse(JSON.stringify(batchSettingsForm)));
     localStorage.setItem("batchSettings", JSON.stringify(batchSettings));
+    
+    // 保存推送配置到pushNotification
+    savePushConfig({
+      enabled: batchSettings.pushNotificationEnabled,
+      provider: batchSettings.pushProvider,
+      token: batchSettings.pushToken
+    });
+    
     message.success("定时批量任务设置已保存");
     showBatchSettingsModal.value = false;
   } catch (error) {
@@ -4407,7 +4431,67 @@ const openBatchSettings = () => {
   loadBatchSettings();
   // 将当前设置复制到临时表单
   Object.assign(batchSettingsForm, JSON.parse(JSON.stringify(batchSettings)));
+  // 加载推送配置
+  const pushConfig = getPushConfig();
+  batchSettingsForm.pushNotificationEnabled = pushConfig.enabled;
+  batchSettingsForm.pushProvider = pushConfig.provider;
+  batchSettingsForm.pushToken = pushConfig.token;
   showBatchSettingsModal.value = true;
+};
+
+// 推送提供商选项
+const pushProviderOptions = [
+  { label: 'PushPlus（推送加）', value: 'pushplus' },
+  { label: 'Bark', value: 'bark' },
+  { label: 'ServerChan（Server酱）', value: 'serverchan' }
+];
+
+// 测试推送状态
+const testingPush = ref(false);
+
+// 获取Token占位符
+const getPushTokenPlaceholder = () => {
+  switch (batchSettingsForm.pushProvider) {
+    case 'pushplus':
+      return '请输入 PushPlus Token';
+    case 'bark':
+      return '请输入 Bark Key';
+    case 'serverchan':
+      return '请输入 ServerChan SendKey';
+    default:
+      return '请输入 Token';
+  }
+};
+
+// 获取Token帮助文本
+const getPushTokenHelp = () => {
+  switch (batchSettingsForm.pushProvider) {
+    case 'pushplus':
+      return 'PushPlus: 填 token，获取地址 pushplus.plus';
+    case 'bark':
+      return 'Bark: 填 key 或完整 URL，获取地址 day.app';
+    case 'serverchan':
+      return 'ServerChan: 填 SendKey，获取地址 sct.ftqq.com';
+    default:
+      return '';
+  }
+};
+
+// 测试推送
+const testPushNotification = async () => {
+  testingPush.value = true;
+  try {
+    const result = await testPushNotificationUtil();
+    if (result) {
+      message.success('测试推送发送成功');
+    } else {
+      message.error('测试推送发送失败，请检查配置');
+    }
+  } catch (error) {
+    message.error('测试推送失败: ' + error.message);
+  } finally {
+    testingPush.value = false;
+  }
 };
 
 // Load settings on component mount
@@ -4439,7 +4523,6 @@ const scheduledTasks = computed(() => scheduledTaskStore.scheduledTasks);
 const showTaskModal = ref(false); // Control the visibility of the add/edit task modal
 const showTasksModal = ref(false); // Control the visibility of the tasks list modal
 const showBlackMarketBuyerModal = ref(false); // Control the visibility of the black market buyer modal
-const showPushSettingsModal = ref(false); // 推送设置模态框
 const blackMarketBuyerRef = ref(null); // Reference to the BlackMarketBuyer component
 const showResumeTaskDialog = ref(false); // 显示恢复任务对话框
 const resumeTaskState = ref(null); // 保存的任务状态
@@ -5425,7 +5508,7 @@ const checkAndExecuteQueuedTasks = async () => {
               message: `=== 积攒任务执行批量日常: ${currentTaskTokens.length}个账号, 分批执行:${enableBatch ? '开启' : '关闭'}, 每批${batchSize}个, 延迟${batchDelay}秒, 共${totalBatches}批 ===`,
               type: "info",
             });
-            await startBatch(true); // 传入true表示从积攒队列执行
+            await startBatch(true, true); // 传入true表示从积攒队列执行
           }
           
           for (const subTaskName of otherTasks) {
@@ -5433,7 +5516,7 @@ const checkAndExecuteQueuedTasks = async () => {
             if (typeof taskFunction === 'function') {
               selectedTokens.value = currentTaskTokens;
               // 使用原始任务的名称，而不是函数名
-              await executeInBatches(taskFunction, taskName, subTaskName, true);
+              await executeInBatches(taskFunction, taskName, subTaskName, true, false, true);
             }
           }
           
@@ -5605,7 +5688,7 @@ const healthCheck = async () => {
               lastTaskExecution = Date.now();
 
               if (hasDailyTask) {
-                await startBatch(true); // 传入true表示从恢复状态执行
+                await startBatch(true, true); // 传入true表示从恢复状态执行
               } else if (otherTasks.length > 0) {
                 for (const taskName of otherTasks) {
                   const taskFunction = getTaskFunction(taskName);
@@ -8300,7 +8383,7 @@ const resumeTaskExecution = async () => {
   }
 
   // 从保存的批次继续执行
-  await executeInBatchesFromState(taskFunction, state.taskName || '批量任务', null, state);
+  await executeInBatchesFromState(taskFunction, state.taskName || '批量任务', null, state, true);
 
   // 清除任务状态
   batchTaskStore.clearTaskState();
@@ -8325,13 +8408,15 @@ const cancelResumeTask = () => {
 /**
  * 从指定状态继续分批执行
  */
-const executeInBatchesFromState = async (taskFunction, taskName, taskFunctionName, state) => {
+const executeInBatchesFromState = async (taskFunction, taskName, taskFunctionName, state, preserveOrder = false) => {
   const batchSize = batchSettings.batchSize;
-  const sortedTokens = [...state.selectedTokens].sort((a, b) => {
-    const tokenA = tokens.value.find((t) => t.id === a);
-    const tokenB = tokens.value.find((t) => t.id === b);
-    return (tokenA?.sortOrder || 0) - (tokenB?.sortOrder || 0);
-  });
+  const sortedTokens = preserveOrder
+    ? [...state.selectedTokens]
+    : [...state.selectedTokens].sort((a, b) => {
+        const tokenA = tokens.value.find((t) => t.id === a);
+        const tokenB = tokens.value.find((t) => t.id === b);
+        return (tokenA?.sortOrder || 0) - (tokenB?.sortOrder || 0);
+      });
   const totalTokens = sortedTokens.length;
   const totalBatches = Math.ceil(totalTokens / batchSize);
   
@@ -8466,7 +8551,7 @@ const executeInBatchesFromState = async (taskFunction, taskName, taskFunctionNam
   checkAndExecuteQueuedTasks();
 };
 
-const executeInBatches = async (taskFunction, taskName, taskFunctionName, isFromQueue = false, isScheduled = false) => {
+const executeInBatches = async (taskFunction, taskName, taskFunctionName, isFromQueue = false, isScheduled = false, preserveOrder = false) => {
   if (selectedTokens.value.length === 0) return;
 
   // 只有在任务不是从队列中执行时才检查冲突
@@ -8514,11 +8599,13 @@ const executeInBatches = async (taskFunction, taskName, taskFunctionName, isFrom
     return;
   }
 
-  const sortedTokens = [...selectedTokens.value].sort((a, b) => {
-    const tokenA = tokens.value.find((t) => t.id === a);
-    const tokenB = tokens.value.find((t) => t.id === b);
-    return (tokenA?.sortOrder || 0) - (tokenB?.sortOrder || 0);
-  });
+  const sortedTokens = preserveOrder
+    ? [...selectedTokens.value]
+    : [...selectedTokens.value].sort((a, b) => {
+        const tokenA = tokens.value.find((t) => t.id === a);
+        const tokenB = tokens.value.find((t) => t.id === b);
+        return (tokenA?.sortOrder || 0) - (tokenB?.sortOrder || 0);
+      });
 
   const batchSize = batchSettings.batchSize || 10;
   const batchDelay = batchSettings.batchDelay * 1000;
@@ -8886,7 +8973,7 @@ const getOriginalTaskFunction = (taskName) => {
   return originalTaskFunctionMap[taskName] || null;
 };
 
-async function startBatch(isFromQueue = false) {
+async function startBatch(isFromQueue = false, preserveOrder = false) {
   if (selectedTokens.value.length === 0) return;
 
   // 安全检查：如果 isRunning 为 true 但没有实际任务在执行（可能是之前任务异常退出），则重置状态
@@ -8940,11 +9027,13 @@ async function startBatch(isFromQueue = false) {
     tokenStatus.value[id] = "waiting";
   });
 
-  const sortedSelectedTokens = selectedTokens.value.sort((a, b) => {
-    const tokenA = tokens.value.find((t) => t.id === a);
-    const tokenB = tokens.value.find((t) => t.id === b);
-    return (tokenA?.sortOrder || 0) - (tokenB?.sortOrder || 0);
-  });
+  const sortedSelectedTokens = preserveOrder 
+    ? [...selectedTokens.value]
+    : selectedTokens.value.sort((a, b) => {
+        const tokenA = tokens.value.find((t) => t.id === a);
+        const tokenB = tokens.value.find((t) => t.id === b);
+        return (tokenA?.sortOrder || 0) - (tokenB?.sortOrder || 0);
+      });
 
   const totalTokens = sortedSelectedTokens.length;
   let completedCount = 0;
