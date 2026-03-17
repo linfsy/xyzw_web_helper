@@ -1,0 +1,49 @@
+{
+  "hash": "ff44c1bf",
+  "configHash": "16f31ed3",
+  "lockfileHash": "2bbe1aa5",
+  "browserHash": "4d8e072a",
+  "optimized": {
+    "vue": {
+      "src": "../../node_modules/.pnpm/vue@3.5.29_typescript@5.9.3/node_modules/vue/dist/vue.runtime.esm-bundler.js",
+      "file": "vue.js",
+      "fileHash": "8ecb23b4",
+      "needsInterop": false
+    },
+    "pinia": {
+      "src": "../../node_modules/.pnpm/pinia@2.3.1_typescript@5.9.3_vue@3.5.29_typescript@5.9.3_/node_modules/pinia/dist/pinia.mjs",
+      "file": "pinia.js",
+      "fileHash": "06f2293d",
+      "needsInterop": false
+    },
+    "naive-ui": {
+      "src": "../../node_modules/.pnpm/naive-ui@2.43.2_vue@3.5.29_typescript@5.9.3_/node_modules/naive-ui/es/index.mjs",
+      "file": "naive-ui.js",
+      "fileHash": "b6827a0b",
+      "needsInterop": false
+    },
+    "vue-router": {
+      "src": "../../node_modules/.pnpm/vue-router@4.6.4_vue@3.5.29_typescript@5.9.3_/node_modules/vue-router/dist/vue-router.mjs",
+      "file": "vue-router.js",
+      "fileHash": "319a1ed9",
+      "needsInterop": false
+    },
+    "vue-router/auto-routes": {
+      "src": "../../node_modules/.pnpm/vue-router@4.6.4_vue@3.5.29_typescript@5.9.3_/node_modules/vue-router/dist/vue-router.mjs",
+      "file": "vue-router_auto-routes.js",
+      "fileHash": "4de26073",
+      "needsInterop": false
+    }
+  },
+  "chunks": {
+    "chunk-WJRTV6CP": {
+      "file": "chunk-WJRTV6CP.js"
+    },
+    "chunk-BPR5FKHA": {
+      "file": "chunk-BPR5FKHA.js"
+    },
+    "chunk-YXOX7YVL": {
+      "file": "chunk-YXOX7YVL.js"
+    }
+  }
+}
