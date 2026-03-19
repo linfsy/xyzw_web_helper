@@ -457,11 +457,15 @@ export const calculateNextExecutionTime = (task) => {
       const month = nextRun.getMonth() + 1; // JavaScript月份是0-based
       const dayOfWeek = nextRun.getDay(); // 0是周日
 
-      // 检查分钟和小时
-      const matchesMinute = possibleMinutes.includes(minutes);
-      const matchesHour = possibleHours.includes(hours);
-      const matchesMonth = possibleMonths.includes(month);
-      let matchesDayOfWeek = possibleDaysOfWeek.includes(dayOfWeek);
+      // 检查月份
+      if (!possibleMonths.includes(month)) {
+        // 直接跳到下个月的第一天
+        nextRun.setMonth(nextRun.getMonth() + 1);
+        nextRun.setDate(1);
+        nextRun.setHours(0);
+        nextRun.setMinutes(0);
+        continue;
+      }
 
       // 检查日期（特殊处理L字符）
       let matchesDayOfMonth;
@@ -473,6 +477,9 @@ export const calculateNextExecutionTime = (task) => {
         // 否则使用正常的日期匹配
         matchesDayOfMonth = possibleDaysOfMonth.includes(dayOfMonth);
       }
+
+      // 检查星期
+      const matchesDayOfWeek = possibleDaysOfWeek.includes(dayOfWeek);
 
       // Special handling: if both dayOfMonth and dayOfWeek are specified, they are OR'ed
       const isDayOfWeekSpecified = dayOfWeekField !== "*";
@@ -487,7 +494,24 @@ export const calculateNextExecutionTime = (task) => {
         matchesDay = matchesDayOfMonth && matchesDayOfWeek;
       }
 
-      if (matchesMinute && matchesHour && matchesDay && matchesMonth) {
+      if (!matchesDay) {
+        // 直接跳到第二天的0点
+        nextRun.setDate(nextRun.getDate() + 1);
+        nextRun.setHours(0);
+        nextRun.setMinutes(0);
+        continue;
+      }
+
+      // 检查小时
+      if (!possibleHours.includes(hours)) {
+        // 直接跳到下一个小时的0分
+        nextRun.setHours(nextRun.getHours() + 1);
+        nextRun.setMinutes(0);
+        continue;
+      }
+
+      // 检查分钟
+      if (possibleMinutes.includes(minutes)) {
         return nextRun;
       }
 

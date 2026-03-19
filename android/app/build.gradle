@@ -7,8 +7,8 @@ android {
         applicationId "com.xyzw.tokenmanager"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 32515
-        versionName "3.25.15"
+        versionCode 32516
+        versionName "3.25.16"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
