@@ -1,9 +1,9 @@
 {
   "major": 3,
   "minor": 25,
-  "patch": 14,
-  "versionCode": 32514,
-  "versionName": "3.25.14",
+  "patch": 15,
+  "versionCode": 32515,
+  "versionName": "3.25.15",
   "rules": {
     "description": "当修订版本号 > 次版本号时，次版本号+1，修订版本号重置为0",
     "condition": "patch > minor",

@@ -683,6 +683,7 @@ const router = useRouter();
 const message = useMessage();
 const dialog = useDialog();
 const tokenStore = useTokenStore();
+const scheduledTaskStore = useScheduledTaskStore();
 
 // 响应式数据
 const showImportForm = ref(false);
@@ -1811,9 +1812,8 @@ const importConfig = async ({ file }) => {
             localStorage.setItem("scheduledTasks_v2", JSON.stringify(importData.scheduledTasks));
             message.info(`定时任务导入完成: ${importData.scheduledTasks.length} 个`);
             
-            // 尝试更新Pinia store中的定时任务状态
+            // 更新Pinia store中的定时任务状态
             try {
-              const scheduledTaskStore = useScheduledTaskStore();
               if (scheduledTaskStore) {
                 // 清空现有的任务
                 while (scheduledTaskStore.scheduledTasks.length > 0) {
@@ -1834,6 +1834,8 @@ const importConfig = async ({ file }) => {
                     batchDelay: task.batchDelay
                   });
                 });
+                // 重新启动调度器，确保状态同步
+                scheduledTaskStore.startScheduler();
                 message.info('定时任务已同步到状态管理');
               }
             } catch (storeError) {
