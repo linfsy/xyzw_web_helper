@@ -5453,9 +5453,13 @@ const startResumeCheck = () => {
 
 // 检查并执行积攒队列中的任务（用于任务完成后自动执行）
 const checkAndExecuteQueuedTasks = async () => {
-  const queue = batchTaskStore.taskQueue || [];
+  // 确保任务队列存在
+  if (!batchTaskStore.taskQueue) {
+    batchTaskStore.taskQueue = [];
+  }
   
-  if (queue.length === 0) {
+  // 检查队列是否为空
+  if (batchTaskStore.taskQueue.length === 0) {
     return;
   }
   
@@ -5477,26 +5481,6 @@ const checkAndExecuteQueuedTasks = async () => {
   // 这样可以防止其他任务在积攒队列执行期间启动
   batchTaskStore.startTask();
   
-  addLog({
-    time: new Date().toLocaleTimeString(),
-    message: `=== 开始执行积攒队列中的 ${queue.length} 个任务 ===`,
-    type: "info",
-  });
-  
-  const queuedTasks = [...queue];
-  // 重要修复：不要在执行前就清空队列！等执行成功后再清空
-  // 如果执行失败，任务应该保留在队列中
-  
-  // 重要修复：处理所有任务，包括单账号任务
-  // 之前跳过单账号任务会导致被暂停的账号永远不被执行
-  const mainTasks = queuedTasks.filter(t => (t.selectedTokens?.length || 0) > 0);
-  
-  if (mainTasks.length === 0) {
-    // 没有任务，直接返回
-    isExecutingQueuedTasks.value = false;
-    return;
-  }
-  
   const prevSelectedTokens = [...selectedTokens.value];
   const prevSelectedTasks = [...selectedTasks.value];
   
@@ -5504,13 +5488,28 @@ const checkAndExecuteQueuedTasks = async () => {
   const failedTasks = [];
   
   try {
-    // 按任务名称分组执行，每个任务使用自己的账号列表
-    for (const task of mainTasks) {
+    addLog({
+      time: new Date().toLocaleTimeString(),
+      message: `=== 开始执行积攒队列中的 ${batchTaskStore.taskQueue.length} 个任务 ===`,
+      type: "info",
+    });
+    
+    // 循环处理队列中的任务，直到队列为空
+    while (batchTaskStore.taskQueue.length > 0) {
+      // 每次循环都获取当前队列的第一个任务
+      const task = batchTaskStore.taskQueue[0];
+      if (!task) break;
+      
       const taskName = task.name;
       const taskSelectedTasks = task.selectedTasks || [];
       const taskTokenIds = task.selectedTokens || [];
       
-      if (taskTokenIds.length === 0) continue;
+      if (taskTokenIds.length === 0) {
+        // 移除无效任务
+        batchTaskStore.taskQueue.shift();
+        saveTaskQueueToStorage();
+        continue;
+      }
       
       addLog({
         time: new Date().toLocaleTimeString(),
@@ -5558,17 +5557,14 @@ const checkAndExecuteQueuedTasks = async () => {
           
           // 重要：任务执行成功后，立即从积攒队列中移除
           // 避免页面刷新后重复执行已完成的任务
-          const taskIndex = batchTaskStore.taskQueue.findIndex(t => t.id === task.id);
-          if (taskIndex > -1) {
-            batchTaskStore.taskQueue.splice(taskIndex, 1);
-            // 保存更新后的队列到本地存储
-            saveTaskQueueToStorage();
-            addLog({
-              time: new Date().toLocaleTimeString(),
-              message: `=== 积攒任务 ${taskName} 执行完成，已从队列中移除 ===`,
-              type: "success",
-            });
-          }
+          batchTaskStore.taskQueue.shift();
+          // 保存更新后的队列到本地存储
+          saveTaskQueueToStorage();
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `=== 积攒任务 ${taskName} 执行完成，已从队列中移除 ===`,
+            type: "success",
+          });
         } finally {
           // 清除任务正在执行的标记
           if (task.id) {
@@ -5585,11 +5581,13 @@ const checkAndExecuteQueuedTasks = async () => {
           type: "error",
         });
         console.error(`积攒任务 ${taskName} 执行失败:`, taskError);
+        
+        // 失败的任务保留在队列中，继续执行下一个任务
+        batchTaskStore.taskQueue.shift();
+        saveTaskQueueToStorage();
       }
     }
     
-    // 重要修复：不再统一清空队列，而是在循环中逐个移除已完成的任务
-    // 这样可以确保即使部分任务成功，其他未执行的任务也不会被清空
     // 保存更新后的队列到本地存储，确保序列化安全
     saveTaskQueueToStorage();
     
