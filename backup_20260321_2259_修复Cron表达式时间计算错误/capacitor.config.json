@@ -1,0 +1,6 @@
+{
+  "appId": "com.xyzw.tokenmanager",
+  "appName": "内鬼之王",
+  "webDir": "dist",
+  "bundledWebRuntime": false
+}

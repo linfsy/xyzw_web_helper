@@ -1,0 +1,18 @@
+# pack-refs with: peeled fully-peeled sorted 
+37edbb758c9d035beab75337452392fb39517729 refs/heads/backup-main-20260325
+6e9d20cffe8769f55d971e6eaf8aa879d3f37009 refs/heads/fresh-main
+37edbb758c9d035beab75337452392fb39517729 refs/heads/local-modifications
+ef9ba1212a2bbed919ec4a2f3164b9e5fffc5be5 refs/heads/main
+b0585240c76c5ab9834f0189d29cb499ea8dc6de refs/heads/main-fix
+a8fbdc3995d8caf4fefc0745a29618bac72f0401 refs/heads/master
+36e6a3ea04f6915e2c15f229339b56f3b5c99fec refs/heads/new-main
+ef9ba1212a2bbed919ec4a2f3164b9e5fffc5be5 refs/heads/push-branch
+37edbb758c9d035beab75337452392fb39517729 refs/heads/temp-branch
+2a99e329b420becc2dbbbc22f5f774dd8f29cc92 refs/remotes/fork/backup0120
+e5cb4d948885753f0358c281d4fcc1cdf4ae2e12 refs/remotes/fork/main
+6e9d20cffe8769f55d971e6eaf8aa879d3f37009 refs/remotes/origin/fresh-main
+37edbb758c9d035beab75337452392fb39517729 refs/remotes/origin/main
+b9027b77c97f38ac8694e8e0dcc1af1eea0ba600 refs/remotes/upstream/main
+694f07234d49a1d53b96a5d6a3f4996b31cb7df4 refs/tags/v2.1.0
+1c4bdb2b0816a9b5ad9ab65d5e517a37d96f87e4 refs/tags/v2.1.1
+4627da6a58131336d5f2b2d46484bddafb8a361f refs/tags/v2.1.2

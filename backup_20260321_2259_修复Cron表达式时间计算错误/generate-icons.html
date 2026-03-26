@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图标生成工具</title>
+</head>
+<body>
+    <div style="padding: 20px;">
+        <h1>图标生成工具</h1>
+        <input type="file" id="fileInput" accept="image/*">
+        <button onclick="generateIcons()">生成图标</button>
+        <div id="output"></div>
+    </div>
+
+    <script>
+        const iconSizes = [
+            { name: 'mipmap-mdpi', size: 48 },
+            { name: 'mipmap-hdpi', size: 72 },
+            { name: 'mipmap-xhdpi', size: 96 },
+            { name: 'mipmap-xxhdpi', size: 144 },
+            { name: 'mipmap-xxxhdpi', size: 192 }
+        ];
+
+        function generateIcons() {
+            const fileInput = document.getElementById('fileInput');
+            const output = document.getElementById('output');
+            
+            if (!fileInput.files[0]) {
+                alert('请先选择图片');
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    output.innerHTML = '<h2>生成的图标：</h2>';
+                    
+                    iconSizes.forEach(({ name, size }) => {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = size;
+                        canvas.height = size;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, size, size);
+                        
+                        const dataUrl = canvas.toDataURL('image/png');
+                        
+                        const div = document.createElement('div');
+                        div.style.marginBottom = '20px';
+                        
+                        const imgElement = document.createElement('img');
+                        imgElement.src = dataUrl;
+                        imgElement.style.width = '100px';
+                        imgElement.style.height = '100px';
+                        imgElement.style.border = '1px solid #ccc';
+                        
+                        const downloadLink = document.createElement('a');
+                        downloadLink.href = dataUrl;
+                        downloadLink.download = `${name}_ic_launcher.png`;
+                        downloadLink.textContent = `下载 ${name}/ic_launcher.png (${size}x${size})`;
+                        downloadLink.style.display = 'block';
+                        downloadLink.style.marginTop = '5px';
+                        
+                        div.appendChild(imgElement);
+                        div.appendChild(downloadLink);
+                        output.appendChild(div);
+                    });
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    </script>
+</body>
+</html>
