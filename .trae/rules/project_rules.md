@@ -418,6 +418,8 @@ pnpm install
    Remove-Item ".vscode" -Recurse -ErrorAction SilentlyContinue  # 排除VSCode配置
    Remove-Item ".idea" -Recurse -ErrorAction SilentlyContinue  # 排除IntelliJ配置
    Remove-Item "backup_*" -Recurse -ErrorAction SilentlyContinue  # 排除备份目录
+   Remove-Item "temp-*" -Recurse -ErrorAction SilentlyContinue  # 排除临时目录
+   Remove-Item "鲨鱼之王离线版" -Recurse -ErrorAction SilentlyContinue  # 排除离线游戏目录
    
    # 从Git暂存区移除账号配置文件
    git rm --cached "xyzw_config_*.json" -f 2>$null
@@ -429,6 +431,8 @@ pnpm install
    git rm --cached ".vscode" -r -f 2>$null  # 从暂存区移除VSCode配置
    git rm --cached ".idea" -r -f 2>$null  # 从暂存区移除IntelliJ配置
    git rm --cached "backup_*" -r -f 2>$null  # 从暂存区移除备份目录
+   git rm --cached "temp-*" -r -f 2>$null  # 从暂存区移除临时目录
+   git rm --cached "鲨鱼之王离线版" -r -f 2>$null  # 从暂存区移除离线游戏目录
    ```
 
 3. **添加所有修改**
