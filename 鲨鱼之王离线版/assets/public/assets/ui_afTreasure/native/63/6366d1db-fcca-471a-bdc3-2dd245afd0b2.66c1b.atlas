@@ -1,0 +1,55 @@
+
+sqhd_mario.png
+size: 128,128
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+sqhd_mario_body
+  rotate: false
+  xy: 2, 32
+  size: 51, 89
+  orig: 51, 89
+  offset: 0, 0
+  index: -1
+sqhd_mario_eye
+  rotate: false
+  xy: 77, 38
+  size: 11, 12
+  orig: 11, 12
+  offset: 0, 0
+  index: -1
+sqhd_mario_handl
+  rotate: false
+  xy: 93, 81
+  size: 20, 40
+  orig: 20, 40
+  offset: 0, 0
+  index: -1
+sqhd_mario_handr
+  rotate: false
+  xy: 55, 52
+  size: 38, 21
+  orig: 38, 21
+  offset: 0, 0
+  index: -1
+sqhd_mario_legl
+  rotate: false
+  xy: 2, 2
+  size: 34, 28
+  orig: 34, 28
+  offset: 0, 0
+  index: -1
+sqhd_mario_legr
+  rotate: false
+  xy: 38, 7
+  size: 37, 23
+  orig: 37, 23
+  offset: 0, 0
+  index: -1
+sqhd_mario_tail
+  rotate: true
+  xy: 55, 75
+  size: 46, 36
+  orig: 47, 36
+  offset: 0, 0
+  index: -1

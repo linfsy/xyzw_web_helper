@@ -1,0 +1,153 @@
+
+huoche_lihua.png
+size: 512,256
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+hero_effect_halo1
+  rotate: false
+  xy: 2, 5
+  size: 46, 46
+  orig: 46, 46
+  offset: 0, 0
+  index: -1
+huoche_lh_cd1
+  rotate: false
+  xy: 94, 9
+  size: 39, 42
+  orig: 39, 42
+  offset: 0, 0
+  index: -1
+huoche_lh_cd10
+  rotate: false
+  xy: 319, 2
+  size: 15, 18
+  orig: 15, 18
+  offset: 0, 0
+  index: -1
+huoche_lh_cd11
+  rotate: false
+  xy: 319, 22
+  size: 77, 85
+  orig: 78, 86
+  offset: 1, 1
+  index: -1
+huoche_lh_cd2
+  rotate: true
+  xy: 350, 146
+  size: 33, 56
+  orig: 34, 58
+  offset: 0, 0
+  index: -1
+huoche_lh_cd3
+  rotate: true
+  xy: 350, 181
+  size: 72, 71
+  orig: 72, 72
+  offset: 0, 0
+  index: -1
+huoche_lh_cd4
+  rotate: true
+  xy: 339, 110
+  size: 34, 55
+  orig: 34, 56
+  offset: 0, 1
+  index: -1
+huoche_lh_cd5
+  rotate: false
+  xy: 408, 149
+  size: 58, 30
+  orig: 58, 30
+  offset: 0, 0
+  index: -1
+huoche_lh_cd6
+  rotate: true
+  xy: 283, 109
+  size: 35, 54
+  orig: 36, 54
+  offset: 1, 0
+  index: -1
+huoche_lh_cd7
+  rotate: false
+  xy: 197, 3
+  size: 120, 102
+  orig: 120, 102
+  offset: 0, 0
+  index: -1
+huoche_lh_cd8
+  rotate: true
+  xy: 134, 107
+  size: 146, 112
+  orig: 146, 112
+  offset: 0, 0
+  index: -1
+huoche_lh_cd9
+  rotate: true
+  xy: 437, 92
+  size: 55, 66
+  orig: 56, 67
+  offset: 1, 1
+  index: -1
+huoche_lh_guang
+  rotate: false
+  xy: 135, 2
+  size: 60, 103
+  orig: 60, 103
+  offset: 0, 0
+  index: -1
+huoche_lh_tong1
+  rotate: false
+  xy: 248, 146
+  size: 100, 107
+  orig: 100, 107
+  offset: 0, 0
+  index: -1
+huoche_lh_tong3
+  rotate: false
+  xy: 2, 53
+  size: 130, 200
+  orig: 130, 202
+  offset: 0, 0
+  index: -1
+huoche_lh_xing1
+  rotate: false
+  xy: 468, 214
+  size: 39, 39
+  orig: 39, 39
+  offset: 0, 0
+  index: -1
+huoche_lh_xing2
+  rotate: true
+  xy: 248, 107
+  size: 37, 33
+  orig: 37, 33
+  offset: 0, 0
+  index: -1
+huoche_lh_xing3
+  rotate: true
+  xy: 396, 110
+  size: 34, 39
+  orig: 35, 40
+  offset: 0, 0
+  index: -1
+huoche_lh_xing4
+  rotate: false
+  xy: 468, 178
+  size: 38, 34
+  orig: 38, 34
+  offset: 0, 0
+  index: -1
+huoche_lh_xing5
+  rotate: true
+  xy: 468, 151
+  size: 25, 22
+  orig: 26, 22
+  offset: 1, 0
+  index: -1
+huoche_lh_xing6
+  rotate: false
+  xy: 50, 5
+  size: 42, 46
+  orig: 42, 46
+  offset: 0, 0
+  index: -1

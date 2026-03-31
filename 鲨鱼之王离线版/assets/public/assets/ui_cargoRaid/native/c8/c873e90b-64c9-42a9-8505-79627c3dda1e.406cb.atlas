@@ -1,0 +1,104 @@
+
+huoche_shouche.png
+size: 512,512
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+huoche_shouche_bj
+  rotate: false
+  xy: 2, 2
+  size: 498, 161
+  orig: 498, 161
+  offset: 0, 0
+  index: -1
+huoche_shouche_jian1
+  rotate: false
+  xy: 74, 346
+  size: 84, 84
+  orig: 86, 90
+  offset: 1, 1
+  index: -1
+huoche_shouche_jian2
+  rotate: true
+  xy: 309, 423
+  size: 46, 76
+  orig: 48, 83
+  offset: 1, 2
+  index: -1
+huoche_shouche_qp
+  rotate: false
+  xy: 160, 333
+  size: 165, 88
+  orig: 167, 90
+  offset: 1, 1
+  index: -1
+huoche_shouche_shen
+  rotate: false
+  xy: 2, 165
+  size: 185, 166
+  orig: 185, 166
+  offset: 0, 0
+  index: -1
+huoche_shouche_shour
+  rotate: false
+  xy: 2, 361
+  size: 70, 70
+  orig: 72, 72
+  offset: 1, 1
+  index: -1
+huoche_shouche_wei
+  rotate: false
+  xy: 387, 421
+  size: 79, 48
+  orig: 81, 50
+  offset: 1, 1
+  index: -1
+huoche_shouche_yan
+  rotate: true
+  xy: 159, 432
+  size: 37, 38
+  orig: 39, 40
+  offset: 1, 1
+  index: -1
+huoche_shouche_yl1
+  rotate: false
+  xy: 20, 434
+  size: 43, 35
+  orig: 45, 37
+  offset: 1, 1
+  index: -1
+huoche_shouche_yl2
+  rotate: false
+  xy: 65, 433
+  size: 50, 36
+  orig: 52, 38
+  offset: 1, 1
+  index: -1
+huoche_shouche_yz
+  rotate: false
+  xy: 2, 455
+  size: 16, 14
+  orig: 18, 17
+  offset: 1, 1
+  index: -1
+huoche_shouche_zi
+  rotate: false
+  xy: 199, 424
+  size: 108, 45
+  orig: 110, 47
+  offset: 1, 1
+  index: -1
+huoche_shouche_zui
+  rotate: false
+  xy: 327, 310
+  size: 127, 109
+  orig: 129, 111
+  offset: 1, 1
+  index: -1
+huoche_shouche_zz
+  rotate: true
+  xy: 117, 433
+  size: 36, 40
+  orig: 37, 40
+  offset: 0, 0
+  index: -1

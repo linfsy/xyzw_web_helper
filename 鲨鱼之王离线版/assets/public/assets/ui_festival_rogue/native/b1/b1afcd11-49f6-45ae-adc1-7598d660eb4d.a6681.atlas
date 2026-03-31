@@ -1,0 +1,83 @@
+
+ygbh_rg_putao.png
+size: 512,128
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+ygbh_rg_pt_1
+  rotate: false
+  xy: 363, 83
+  size: 35, 35
+  orig: 35, 35
+  offset: 0, 0
+  index: -1
+ygbh_rg_pt_2
+  rotate: true
+  xy: 363, 46
+  size: 35, 34
+  orig: 36, 35
+  offset: 1, 1
+  index: -1
+ygbh_rg_pt_3
+  rotate: true
+  xy: 399, 45
+  size: 34, 35
+  orig: 35, 35
+  offset: 1, 0
+  index: -1
+ygbh_rg_pt_4
+  rotate: false
+  xy: 363, 9
+  size: 34, 35
+  orig: 35, 35
+  offset: 1, 0
+  index: -1
+ygbh_rg_pt_5
+  rotate: true
+  xy: 269, 34
+  size: 84, 92
+  orig: 86, 93
+  offset: 1, 1
+  index: -1
+ygbh_rg_pt_gan
+  rotate: true
+  xy: 302, 12
+  size: 20, 31
+  orig: 22, 32
+  offset: 1, 0
+  index: -1
+ygbh_rg_pt_pen
+  rotate: false
+  xy: 2, 15
+  size: 132, 103
+  orig: 132, 110
+  offset: 0, 0
+  index: -1
+ygbh_rg_pt_xian1
+  rotate: false
+  xy: 335, 2
+  size: 19, 30
+  orig: 19, 30
+  offset: 0, 0
+  index: -1
+ygbh_rg_pt_xian2
+  rotate: false
+  xy: 400, 81
+  size: 34, 37
+  orig: 34, 37
+  offset: 0, 0
+  index: -1
+ygbh_rg_pt_xian3
+  rotate: true
+  xy: 269, 3
+  size: 29, 31
+  orig: 29, 31
+  offset: 0, 0
+  index: -1
+ygbh_rg_pt_ying
+  rotate: false
+  xy: 136, 29
+  size: 131, 89
+  orig: 135, 90
+  offset: 3, 0
+  index: -1

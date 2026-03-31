@@ -1,0 +1,27 @@
+
+tgcf_ent_bg.png
+size: 512,512
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+tgcf_ent_bg1
+  rotate: true
+  xy: 390, 91
+  size: 95, 99
+  orig: 111, 117
+  offset: 8, 9
+  index: -1
+tgcf_ent_bg2
+  rotate: false
+  xy: 390, 188
+  size: 113, 131
+  orig: 127, 146
+  offset: 7, 8
+  index: -1
+tgcf_ent_bg3
+  rotate: false
+  xy: 2, 2
+  size: 386, 317
+  orig: 386, 317
+  offset: 0, 0
+  index: -1

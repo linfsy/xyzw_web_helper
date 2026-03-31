@@ -1,0 +1,34 @@
+
+ygbh_rg_ygbh2.png
+size: 512,512
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+ygbh_rg_ygbh5_bai
+  rotate: false
+  xy: 305, 212
+  size: 140, 138
+  orig: 140, 138
+  offset: 0, 0
+  index: -1
+ygbh_rg_ygbh5_hong
+  rotate: false
+  xy: 2, 72
+  size: 301, 278
+  orig: 301, 278
+  offset: 0, 0
+  index: -1
+ygbh_rg_ygbh5_hong1
+  rotate: false
+  xy: 305, 81
+  size: 133, 129
+  orig: 133, 129
+  offset: 0, 0
+  index: -1
+ygbh_rg_ygbh5_xian
+  rotate: false
+  xy: 305, 2
+  size: 119, 77
+  orig: 221, 199
+  offset: 0, 0
+  index: -1

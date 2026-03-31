@@ -1,0 +1,188 @@
+
+cjqh_boss2b.png
+size: 512,512
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+cjqh_boss22_1arml
+  rotate: false
+  xy: 173, 124
+  size: 86, 86
+  orig: 86, 86
+  offset: 0, 0
+  index: -1
+cjqh_boss22_1armr1
+  rotate: false
+  xy: 2, 2
+  size: 77, 67
+  orig: 77, 67
+  offset: 0, 0
+  index: -1
+cjqh_boss22_1armr2
+  rotate: true
+  xy: 2, 71
+  size: 62, 104
+  orig: 62, 104
+  offset: 0, 0
+  index: -1
+cjqh_boss22_1body1
+  rotate: false
+  xy: 203, 308
+  size: 172, 124
+  orig: 172, 124
+  offset: 0, 0
+  index: -1
+cjqh_boss22_1body2
+  rotate: true
+  xy: 2, 209
+  size: 90, 108
+  orig: 90, 108
+  offset: 0, 0
+  index: -1
+cjqh_boss22_1hat1
+  rotate: false
+  xy: 203, 212
+  size: 138, 94
+  orig: 138, 94
+  offset: 0, 0
+  index: -1
+cjqh_boss22_1hat2
+  rotate: true
+  xy: 112, 161
+  size: 138, 59
+  orig: 138, 59
+  offset: 0, 0
+  index: -1
+cjqh_boss22_1hip
+  rotate: false
+  xy: 2, 301
+  size: 199, 131
+  orig: 199, 131
+  offset: 0, 0
+  index: -1
+cjqh_boss22_arml2
+  rotate: false
+  xy: 2, 135
+  size: 106, 72
+  orig: 106, 72
+  offset: 0, 0
+  index: -1
+cjqh_boss22_arml3
+  rotate: false
+  xy: 166, 78
+  size: 62, 44
+  orig: 62, 44
+  offset: 0, 0
+  index: -1
+cjqh_boss2_1attack1
+  rotate: false
+  xy: 166, 34
+  size: 54, 42
+  orig: 54, 42
+  offset: 0, 0
+  index: -1
+cjqh_boss2_1attack2
+  rotate: true
+  xy: 261, 120
+  size: 90, 55
+  orig: 91, 55
+  offset: 0, 0
+  index: -1
+cjqh_boss2_1bao
+  rotate: false
+  xy: 377, 186
+  size: 122, 99
+  orig: 122, 99
+  offset: 0, 0
+  index: -1
+cjqh_boss2_1eye1
+  rotate: true
+  xy: 501, 272
+  size: 5, 6
+  orig: 5, 6
+  offset: 0, 0
+  index: -1
+cjqh_boss2_1eye2
+  rotate: true
+  xy: 501, 279
+  size: 6, 8
+  orig: 6, 8
+  offset: 0, 0
+  index: -1
+cjqh_boss2_1eyebrow1
+  rotate: true
+  xy: 173, 261
+  size: 38, 15
+  orig: 38, 15
+  offset: 0, 0
+  index: -1
+cjqh_boss2_1eyebrow2
+  rotate: false
+  xy: 173, 242
+  size: 24, 17
+  orig: 24, 17
+  offset: 0, 0
+  index: -1
+cjqh_boss2_1eyewhite1
+  rotate: false
+  xy: 343, 190
+  size: 28, 21
+  orig: 30, 21
+  offset: 0, 0
+  index: -1
+cjqh_boss2_1eyewhite2
+  rotate: false
+  xy: 173, 223
+  size: 18, 17
+  orig: 20, 19
+  offset: 0, 2
+  index: -1
+cjqh_boss2_1fool
+  rotate: true
+  xy: 318, 90
+  size: 98, 48
+  orig: 109, 48
+  offset: 9, 0
+  index: -1
+cjqh_boss2_1footr
+  rotate: true
+  xy: 110, 54
+  size: 105, 54
+  orig: 107, 54
+  offset: 2, 0
+  index: -1
+cjqh_boss2_1handl
+  rotate: true
+  xy: 343, 213
+  size: 47, 26
+  orig: 47, 26
+  offset: 0, 0
+  index: -1
+cjqh_boss2_1head
+  rotate: false
+  xy: 377, 287
+  size: 131, 145
+  orig: 131, 145
+  offset: 0, 0
+  index: -1
+cjqh_boss2_1mouth
+  rotate: false
+  xy: 81, 16
+  size: 43, 36
+  orig: 44, 36
+  offset: 0, 0
+  index: -1
+cjqh_boss2_mouth2
+  rotate: false
+  xy: 230, 74
+  size: 53, 44
+  orig: 53, 44
+  offset: 0, 0
+  index: -1
+cjqh_boss2_skill1
+  rotate: false
+  xy: 343, 262
+  size: 32, 44
+  orig: 32, 44
+  offset: 0, 0
+  index: -1

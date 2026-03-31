@@ -1,0 +1,41 @@
+
+huoche_fache.png
+size: 512,512
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+huoche_fache_2
+  rotate: true
+  xy: 261, 168
+  size: 128, 206
+  orig: 128, 206
+  offset: 0, 0
+  index: -1
+huoche_fache_3
+  rotate: true
+  xy: 68, 219
+  size: 77, 191
+  orig: 78, 191
+  offset: 0, 0
+  index: -1
+huoche_fache_4
+  rotate: false
+  xy: 2, 2
+  size: 482, 164
+  orig: 482, 164
+  offset: 0, 0
+  index: -1
+huoche_fache_deng
+  rotate: true
+  xy: 2, 287
+  size: 9, 13
+  orig: 9, 13
+  offset: 0, 0
+  index: -1
+huoche_fache_zz
+  rotate: false
+  xy: 17, 265
+  size: 49, 31
+  orig: 49, 31
+  offset: 0, 0
+  index: -1

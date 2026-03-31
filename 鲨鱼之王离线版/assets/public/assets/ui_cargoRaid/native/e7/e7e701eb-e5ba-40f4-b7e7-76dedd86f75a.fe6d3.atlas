@@ -1,0 +1,83 @@
+
+huoche_yeqian2.png
+size: 512,512
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+huoche_yeqian2_kuang
+  rotate: false
+  xy: 2, 378
+  size: 276, 128
+  orig: 278, 130
+  offset: 1, 1
+  index: -1
+huoche_yeqian_bj
+  rotate: true
+  xy: 2, 105
+  size: 271, 102
+  orig: 271, 112
+  offset: 0, 0
+  index: -1
+huoche_yeqian_che
+  rotate: true
+  xy: 106, 169
+  size: 207, 115
+  orig: 222, 139
+  offset: 0, 24
+  index: -1
+huoche_yeqian_cheh
+  rotate: true
+  xy: 106, 36
+  size: 131, 77
+  orig: 133, 79
+  offset: 1, 1
+  index: -1
+huoche_yeqian_ct
+  rotate: true
+  xy: 280, 230
+  size: 276, 128
+  orig: 278, 130
+  offset: 1, 1
+  index: -1
+huoche_yeqian_guang
+  rotate: false
+  xy: 223, 306
+  size: 23, 23
+  orig: 25, 25
+  offset: 1, 1
+  index: -1
+huoche_yeqian_jinbi1
+  rotate: true
+  xy: 223, 279
+  size: 25, 18
+  orig: 27, 21
+  offset: 1, 1
+  index: -1
+huoche_yeqian_qiang
+  rotate: true
+  xy: 223, 331
+  size: 45, 38
+  orig: 47, 40
+  offset: 1, 1
+  index: -1
+huoche_yeqian_yu
+  rotate: false
+  xy: 223, 143
+  size: 104, 85
+  orig: 106, 87
+  offset: 1, 1
+  index: -1
+huoche_yeqian_zi
+  rotate: true
+  xy: 185, 66
+  size: 101, 28
+  orig: 103, 30
+  offset: 1, 1
+  index: -1
+huoche_yeqian_zi1
+  rotate: true
+  xy: 2, 2
+  size: 101, 28
+  orig: 103, 30
+  offset: 1, 1
+  index: -1

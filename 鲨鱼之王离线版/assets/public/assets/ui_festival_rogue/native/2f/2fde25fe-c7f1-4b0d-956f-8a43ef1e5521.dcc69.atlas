@@ -1,0 +1,244 @@
+
+ygbh_rg_pubu.png
+size: 1024,512
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+bj
+  rotate: true
+  xy: 150, 45
+  size: 64, 59
+  orig: 64, 59
+  offset: 0, 0
+  index: -1
+ygbh_sld_di1
+  rotate: false
+  xy: 2, 185
+  size: 503, 99
+  orig: 503, 106
+  offset: 0, 7
+  index: -1
+ygbh_sld_di2
+  rotate: false
+  xy: 902, 278
+  size: 104, 54
+  orig: 104, 54
+  offset: 0, 0
+  index: -1
+ygbh_sld_h1
+  rotate: true
+  xy: 945, 126
+  size: 150, 68
+  orig: 150, 68
+  offset: 0, 0
+  index: -1
+ygbh_sld_h10
+  rotate: false
+  xy: 773, 136
+  size: 14, 39
+  orig: 14, 39
+  offset: 0, 0
+  index: -1
+ygbh_sld_h2
+  rotate: true
+  xy: 2, 99
+  size: 84, 146
+  orig: 84, 146
+  offset: 0, 0
+  index: -1
+ygbh_sld_h3
+  rotate: true
+  xy: 773, 36
+  size: 98, 133
+  orig: 98, 133
+  offset: 0, 0
+  index: -1
+ygbh_sld_h4
+  rotate: false
+  xy: 800, 278
+  size: 100, 232
+  orig: 100, 232
+  offset: 0, 0
+  index: -1
+ygbh_sld_h5
+  rotate: true
+  xy: 507, 61
+  size: 161, 126
+  orig: 161, 126
+  offset: 0, 0
+  index: -1
+ygbh_sld_h6
+  rotate: true
+  xy: 418, 318
+  size: 12, 115
+  orig: 12, 115
+  offset: 0, 0
+  index: -1
+ygbh_sld_h7
+  rotate: true
+  xy: 635, 44
+  size: 131, 136
+  orig: 131, 136
+  offset: 0, 0
+  index: -1
+ygbh_sld_h8
+  rotate: true
+  xy: 324, 11
+  size: 48, 149
+  orig: 48, 149
+  offset: 0, 0
+  index: -1
+ygbh_sld_h9
+  rotate: false
+  xy: 2, 286
+  size: 224, 224
+  orig: 224, 224
+  offset: 0, 0
+  index: -1
+ygbh_sld_shi1
+  rotate: true
+  xy: 507, 239
+  size: 46, 87
+  orig: 46, 87
+  offset: 0, 0
+  index: -1
+ygbh_sld_shi2
+  rotate: true
+  xy: 150, 111
+  size: 72, 140
+  orig: 73, 140
+  offset: 1, 0
+  index: -1
+ygbh_sld_sl_1
+  rotate: true
+  xy: 2, 7
+  size: 35, 320
+  orig: 35, 320
+  offset: 0, 0
+  index: -1
+ygbh_sld_sl_10
+  rotate: false
+  xy: 789, 310
+  size: 9, 24
+  orig: 9, 24
+  offset: 0, 0
+  index: -1
+ygbh_sld_sl_11
+  rotate: true
+  xy: 228, 316
+  size: 194, 188
+  orig: 194, 188
+  offset: 0, 0
+  index: -1
+ygbh_sld_sl_2
+  rotate: true
+  xy: 475, 8
+  size: 34, 194
+  orig: 34, 194
+  offset: 0, 0
+  index: -1
+ygbh_sld_sl_3
+  rotate: true
+  xy: 228, 287
+  size: 27, 153
+  orig: 27, 153
+  offset: 0, 0
+  index: -1
+ygbh_sld_sl_33
+  rotate: false
+  xy: 292, 111
+  size: 137, 72
+  orig: 137, 78
+  offset: 0, 6
+  index: -1
+ygbh_sld_sl_4
+  rotate: true
+  xy: 789, 136
+  size: 140, 154
+  orig: 140, 154
+  offset: 0, 0
+  index: -1
+ygbh_sld_sl_5
+  rotate: true
+  xy: 475, 119
+  size: 64, 25
+  orig: 64, 25
+  offset: 0, 0
+  index: -1
+ygbh_sld_sl_6
+  rotate: false
+  xy: 610, 224
+  size: 25, 92
+  orig: 34, 92
+  offset: 9, 0
+  index: -1
+ygbh_sld_sl_7
+  rotate: true
+  xy: 383, 289
+  size: 6, 73
+  orig: 6, 73
+  offset: 0, 0
+  index: -1
+ygbh_sld_sl_8
+  rotate: true
+  xy: 383, 297
+  size: 17, 225
+  orig: 17, 225
+  offset: 0, 0
+  index: -1
+ygbh_sld_sl_9
+  rotate: true
+  xy: 535, 318
+  size: 12, 105
+  orig: 12, 105
+  offset: 0, 0
+  index: -1
+ygbh_sld_yan1
+  rotate: true
+  xy: 902, 334
+  size: 176, 96
+  orig: 176, 96
+  offset: 0, 0
+  index: -1
+ygbh_sld_yan2
+  rotate: true
+  xy: 642, 177
+  size: 157, 145
+  orig: 157, 145
+  offset: 0, 0
+  index: -1
+ygbh_sld_yan3
+  rotate: false
+  xy: 615, 336
+  size: 183, 174
+  orig: 183, 174
+  offset: 0, 0
+  index: -1
+ygbh_sld_zhong1
+  rotate: true
+  xy: 418, 332
+  size: 178, 195
+  orig: 178, 195
+  offset: 0, 0
+  index: -1
+ygbh_sld_zhong2
+  rotate: false
+  xy: 908, 2
+  size: 95, 122
+  orig: 95, 122
+  offset: 0, 0
+  index: -1
+ygbh_sld_zhong3
+  rotate: true
+  xy: 458, 287
+  size: 8, 57
+  orig: 9, 57
+  offset: 1, 0
+  index: -1
+ygbh_sld_zhong4
+  rotate: false
+  xy: 596, 253
+  size: 10, 42
+  orig: 10, 42
+  offset: 0, 0
+  index: -1

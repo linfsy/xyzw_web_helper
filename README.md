@@ -1,5 +1,17 @@
 # XYZW Web Helper
 
+## 📦 仓库信息
+
+### 主仓库
+- **地址**：[https://github.com/w1249178256/xyzw_web_helper](https://github.com/w1249178256/xyzw_web_helper)
+- **说明**：用户主仓库，包含最新的自定义功能和修改
+- **分支**：main
+
+### 分仓库
+- **地址**：[https://github.com/yukong0529/xyzw_web_helper](https://github.com/yukong0529/xyzw_web_helper)
+- **说明**：原始分仓库，包含基础功能和官方更新
+- **分支**：main
+
 <div align="center">
 
 ![XYZW Logo](public/xiaoyugan.png)
@@ -179,32 +191,23 @@ Cloudflare Pages 会自动识别 `dist/_worker.js` 并启用 Advanced Mode，无
 
 > 注意：`npm run preview` 仅提供静态文件预览，无法执行 `worker.js` 中的代理逻辑。请使用 `wrangler` 进行全功能预览。
 
-### 部署TokenURL获取服务 (Python)
+### 部署Token获取服务 (Python)
 
-本项目提供了一个基于 Python Flask 的配套后端服务，用于管理游戏 bin 文件并提供 Token 获取接口。
-
-**主要功能：**
-*   **多用户管理**：支持用户注册、登录、注销，每个用户拥有独立的文件存储空间。
-*   **Web 管理界面**：可视化管理 bin 文件，支持批量上传、删除。
-*   **安全认证**：内置登录认证机制，保护接口安全。
-*   **专属 Token**：为每个用户生成唯一的 Token，用于构建安全的访问链接。
+如果你需要通过URL方式自动获取Token，可以使用本项目提供的Python服务脚本 `server/app.py`。该服务可以读取服务器上的bin文件，并自动换取游戏Token。
 
 #### 1. 环境准备
 
-确保服务器安装了 Python 3.x，并安装依赖：
+确保服务器安装了Python 3.x，并安装依赖：
 
 ```bash
 cd server
 pip install -r requirements.txt
 ```
 
-#### 2. 配置
+#### 2. 配置与运行
 
-服务启动时会自动检查 `server/config.json`，如果不存在则创建默认配置（包含默认管理员账号）。
-
-> **注意**：默认管理员账号为 `admin`，密码为 `admin123`。建议首次登录后修改密码或创建新账号。
-
-#### 3. 启动服务
+1. **准备bin文件**：将游戏的bin文件放置在 `server/bin` 目录下。
+2. **启动服务**：
 
 ```bash
 python app.py
@@ -212,27 +215,21 @@ python app.py
 
 服务将在 `0.0.0.0:5000` 启动。
 
-#### 4. 使用方式
+#### 3. 使用方式
 
-1.  **注册/登录**：
-    访问 `http://<你的服务器IP>:5000`。
-    *   默认管理员：`admin` / `admin123`
-    *   普通用户：点击“注册新账号”创建自己的账号。
+在Web端的 "Token管理" -> "URL获取" 中输入：
 
-2.  **上传 bin 文件**：
-    登录后，点击“上传”按钮，选择一个或多个 `.bin` 文件进行上传。文件将存储在您的专属目录下。
+```
+http://<你的服务器IP>:5000/<bin文件名>/<base64编码的文件名>
+```
 
-3.  **获取 Token URL**：
-    上传成功后，列表中会显示每个文件的 Token URL。点击“复制完整链接”按钮。
+例如，如果bin文件名为 `user1` (即 `server/bin/user1.bin`)，则URL为：
 
-    URL 格式示例（包含用户专属 Token）：
-    ```
-    http://<你的服务器IP>:5000/<UserToken>/<bin文件名>/<base64编码>
-    ```
+```
+http://<你的服务器IP>:5000/user1/dXNlcjE=
+```
 
-4.  **账号管理**：
-    *   **修改密码**：点击“修改密码”按钮，在弹出的窗口中输入新密码进行修改。
-    *   **注销账号**：普通用户可以点击“注销账号”来永久删除账号及所有数据。管理员账号不可注销。
+注意：URL中的 `<key>` 参数必须是 `<bin_param>` 的Base64编码值，用于简单的校验。
 
 ---
 

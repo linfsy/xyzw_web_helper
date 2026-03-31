@@ -186,13 +186,6 @@ export default defineConfig(async () => {
             Origin: "https://open.weixin.qq.com",
             Referer: "https://open.weixin.qq.com/",
           },
-          // 配置代理仅用于开发助手功能，不影响游戏本身
-          bypass: (req) => {
-            // 如果请求来自游戏小程序，不代理
-            if (req.headers.referer && req.headers.referer.includes('servicewechat.com')) {
-              return req.url;
-            }
-          }
         },
       },
     },

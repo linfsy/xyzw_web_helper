@@ -1,0 +1,41 @@
+
+huoche_cheku_light.png
+size: 512,512
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+wyfm_dz_jxb_ng
+  rotate: false
+  xy: 397, 122
+  size: 85, 86
+  orig: 85, 86
+  offset: 0, 0
+  index: -1
+wyfm_dz_jxb_wg
+  rotate: false
+  xy: 2, 208
+  size: 253, 264
+  orig: 253, 264
+  offset: 0, 0
+  index: -1
+wyfm_dz_jxb_x
+  rotate: false
+  xy: 257, 210
+  size: 192, 262
+  orig: 192, 262
+  offset: 0, 0
+  index: -1
+wyfm_dz_jxb_yan
+  rotate: true
+  xy: 249, 44
+  size: 162, 146
+  orig: 162, 146
+  offset: 0, 0
+  index: -1
+wyfm_dz_wc_xing
+  rotate: true
+  xy: 2, 2
+  size: 204, 245
+  orig: 204, 245
+  offset: 0, 0
+  index: -1

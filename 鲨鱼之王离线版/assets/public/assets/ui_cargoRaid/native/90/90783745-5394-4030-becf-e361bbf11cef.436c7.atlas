@@ -1,0 +1,90 @@
+
+huoche_cheku2.png
+size: 1024,512
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+huoche_dz_ds_banshou
+  rotate: true
+  xy: 693, 329
+  size: 65, 69
+  orig: 65, 69
+  offset: 0, 0
+  index: -1
+huoche_dz_ds_diaotai
+  rotate: false
+  xy: 2, 2
+  size: 562, 503
+  orig: 562, 503
+  offset: 0, 0
+  index: -1
+huoche_dz_ds_gg
+  rotate: true
+  xy: 714, 154
+  size: 173, 107
+  orig: 173, 107
+  offset: 0, 0
+  index: -1
+huoche_dz_ds_guang
+  rotate: true
+  xy: 566, 68
+  size: 116, 63
+  orig: 116, 63
+  offset: 0, 0
+  index: -1
+huoche_dz_ds_lvp
+  rotate: true
+  xy: 566, 310
+  size: 195, 125
+  orig: 195, 125
+  offset: 0, 0
+  index: -1
+huoche_dz_ds_xian
+  rotate: false
+  xy: 693, 396
+  size: 181, 109
+  orig: 181, 109
+  offset: 0, 0
+  index: -1
+huoche_dz_ds_yu_mei
+  rotate: false
+  xy: 680, 164
+  size: 20, 20
+  orig: 22, 21
+  offset: 1, 0
+  index: -1
+huoche_dz_ds_yu_shen
+  rotate: true
+  xy: 566, 186
+  size: 122, 146
+  orig: 122, 146
+  offset: 0, 0
+  index: -1
+huoche_dz_ds_yu_shou
+  rotate: false
+  xy: 802, 359
+  size: 35, 35
+  orig: 35, 35
+  offset: 0, 0
+  index: -1
+huoche_dz_ds_yu_yan
+  rotate: true
+  xy: 764, 359
+  size: 35, 36
+  orig: 36, 38
+  offset: 0, 1
+  index: -1
+huoche_dz_ds_yu_yz
+  rotate: true
+  xy: 693, 319
+  size: 8, 11
+  orig: 8, 11
+  offset: 0, 0
+  index: -1
+huoche_dz_ds_yu_zui
+  rotate: false
+  xy: 631, 136
+  size: 47, 48
+  orig: 47, 48
+  offset: 0, 0
+  index: -1

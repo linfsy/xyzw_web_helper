@@ -1,0 +1,62 @@
+
+ygbh_rg_zzb.png
+size: 256,128
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+ygbh_rg_zzb_jiaol
+  rotate: true
+  xy: 176, 99
+  size: 25, 14
+  orig: 25, 15
+  offset: 0, 0
+  index: -1
+ygbh_rg_zzb_jiaor
+  rotate: true
+  xy: 157, 37
+  size: 24, 17
+  orig: 24, 17
+  offset: 0, 0
+  index: -1
+ygbh_rg_zzb_shen
+  rotate: true
+  xy: 2, 2
+  size: 122, 127
+  orig: 122, 127
+  offset: 0, 0
+  index: -1
+ygbh_rg_zzb_shoul
+  rotate: true
+  xy: 131, 9
+  size: 25, 23
+  orig: 25, 24
+  offset: 0, 0
+  index: -1
+ygbh_rg_zzb_shour
+  rotate: true
+  xy: 156, 9
+  size: 25, 23
+  orig: 25, 24
+  offset: 0, 0
+  index: -1
+ygbh_rg_zzb_wei
+  rotate: true
+  xy: 131, 63
+  size: 61, 43
+  orig: 61, 43
+  offset: 0, 0
+  index: -1
+ygbh_rg_zzb_yan
+  rotate: false
+  xy: 131, 36
+  size: 24, 25
+  orig: 27, 26
+  offset: 0, 0
+  index: -1
+ygbh_rg_zzb_yz
+  rotate: false
+  xy: 176, 87
+  size: 9, 10
+  orig: 9, 10
+  offset: 0, 0
+  index: -1

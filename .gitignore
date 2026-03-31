@@ -37,6 +37,16 @@ Thumbs.db
 logs
 *.log
 
+# Backup directories
+backup_*/
+
+# Android build files
+android/app/build/
+android/.gradle/
+
+# pnpm
+.pnpm/
+
 # Runtime data
 pids
 *.pid
@@ -70,13 +80,12 @@ jspm_packages/
 # Temporary folders
 tmp/
 temp/
-temp-repo/
 
 .github
 *.bat
 *.exe
 node_modules/
 dist.zip
-*.bin
-bin/
-server/config.json
+
+# Configuration files
+xyzw_config_*.json

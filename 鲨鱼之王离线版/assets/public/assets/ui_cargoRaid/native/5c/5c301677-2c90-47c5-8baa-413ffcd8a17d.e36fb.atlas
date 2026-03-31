@@ -1,0 +1,41 @@
+
+huoche_jcgx.png
+size: 512,256
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+huoche_jcgx_g1
+  rotate: false
+  xy: 163, 130
+  size: 259, 90
+  orig: 259, 90
+  offset: 0, 0
+  index: -1
+huoche_jcgx_g2
+  rotate: false
+  xy: 254, 2
+  size: 238, 126
+  orig: 238, 126
+  offset: 0, 0
+  index: -1
+huoche_jcgx_xc
+  rotate: false
+  xy: 31, 138
+  size: 130, 82
+  orig: 130, 82
+  offset: 0, 0
+  index: -1
+huoche_jcgx_xing
+  rotate: true
+  xy: 2, 202
+  size: 18, 27
+  orig: 18, 27
+  offset: 0, 0
+  index: -1
+huoche_jcgx_yu
+  rotate: false
+  xy: 2, 3
+  size: 250, 125
+  orig: 250, 125
+  offset: 0, 0
+  index: -1

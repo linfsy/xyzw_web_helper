@@ -12,6 +12,16 @@
           </div>
 
           <div class="header-actions">
+            <!-- 账号切换下拉菜单 -->
+            <n-select
+              v-if="gameTokens.length > 0"
+              v-model:value="selectedTokenId"
+              :options="tokenOptions"
+              placeholder="选择账号"
+              size="small"
+              style="width: 140px; margin-right: 12px;"
+              @update:value="handleTokenChange"
+            />
             <div class="connection-status" :class="connectionStatus">
               <n-icon>
                 <CloudDone />
@@ -29,7 +39,7 @@
     <!-- 功能模块网格 -->
     <div class="features-grid-section">
       <div class="container">
-        <GameStatus />
+        <GameStatus :key="gameStatusKey" />
       </div>
     </div>
 
@@ -67,7 +77,7 @@
 import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import { useMessage } from "naive-ui";
-import { useTokenStore } from "@/stores/tokenStore";
+import { useTokenStore, gameTokens, selectedTokenId } from "@/stores/tokenStore";
 import { CloudDone } from "@vicons/ionicons5";
 
 const router = useRouter();
@@ -77,6 +87,62 @@ const tokenStore = useTokenStore();
 // 响应式数据
 const showFeedback = ref(true);
 const lastActivity = ref(null);
+const gameStatusKey = ref(0); // 用于强制刷新GameStatus组件
+
+// 账号选项
+const tokenOptions = computed(() => {
+  return gameTokens.value.map(token => ({
+    label: token.name || token.id,
+    value: token.id
+  }));
+});
+
+// 切换账号
+const handleTokenChange = async (tokenId) => {
+  const token = tokenStore.selectToken(tokenId);
+  if (token) {
+    message.success(`已切换到账号: ${token.name || token.id}`);
+    // 等待连接建立成功后再刷新数据
+    await waitForConnection(tokenId);
+    // 触发页面数据刷新
+    await refreshPageData();
+  }
+};
+
+// 等待WebSocket连接建立
+const waitForConnection = (tokenId, timeout = 5000) => {
+  return new Promise((resolve) => {
+    const startTime = Date.now();
+    
+    const checkConnection = () => {
+      const status = tokenStore.getWebSocketStatus(tokenId);
+      if (status === "connected") {
+        resolve(true);
+        return;
+      }
+      
+      if (Date.now() - startTime > timeout) {
+        // 超时，但继续刷新页面
+        resolve(false);
+        return;
+      }
+      
+      // 每100ms检查一次
+      setTimeout(checkConnection, 100);
+    };
+    
+    checkConnection();
+  });
+};
+
+// 刷新页面数据
+const refreshPageData = async () => {
+  // 重置游戏数据，让组件重新加载
+  lastActivity.value = new Date().toLocaleString();
+  // 强制刷新GameStatus组件
+  gameStatusKey.value++;
+  // 可以在这里添加更多刷新逻辑
+};
 
 // 计算属性
 const connectionStatus = computed(() => {

@@ -1,7 +1,7 @@
 {
-  "extends": "@vue/tsconfig/tsconfig.dom.json",
+  "extends": "./node_modules/@vue/tsconfig/tsconfig.dom.json",
   "compilerOptions": {
-    "types": ["unplugin-vue-router/client"],
+    "types": ["./node_modules/unplugin-vue-router/client.d.ts"],
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
     "allowJs": true,
     "esModuleInterop": true,

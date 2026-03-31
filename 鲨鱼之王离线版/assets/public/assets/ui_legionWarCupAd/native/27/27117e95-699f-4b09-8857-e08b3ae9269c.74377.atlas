@@ -1,0 +1,34 @@
+
+ycxsz_plt_2.png
+size: 1024,1024
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+ycxsz_plt_di
+  rotate: false
+  xy: 2, 155
+  size: 402, 323
+  orig: 402, 323
+  offset: 0, 0
+  index: -1
+ycxsz_plt_jil
+  rotate: true
+  xy: 395, 480
+  size: 200, 383
+  orig: 200, 383
+  offset: 0, 0
+  index: -1
+ycxsz_plt_jq3
+  rotate: true
+  xy: 406, 2
+  size: 476, 557
+  orig: 476, 557
+  offset: 0, 0
+  index: -1
+ycxsz_plt_jqr
+  rotate: true
+  xy: 2, 506
+  size: 174, 391
+  orig: 174, 391
+  offset: 0, 0
+  index: -1

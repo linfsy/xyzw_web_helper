@@ -13,15 +13,6 @@
         </div>
       </div>
 
-      <!-- 限流等待提示 -->
-      <n-alert
-        v-if="rateLimitWaiting"
-        type="warning"
-        style="margin-bottom: 16px"
-      >
-        {{ rateLimitMessage }}
-      </n-alert>
-
       <!-- Token导入区域 -->
       <a-modal
         class="token-import-modal"
@@ -81,6 +72,74 @@
         </div>
       </a-modal>
 
+      <!-- 操作按钮区域 -->
+      <div class="tokens-section">
+        <div class="section-header">
+          <div class="header-actions">
+            <div class="main-actions">
+              <n-button type="success" @click="goToDashboard">
+                <template #icon>
+                  <n-icon>
+                    <List />
+                  </n-icon>
+                </template>
+                批量功能
+              </n-button>
+
+              <n-button
+                v-if="!showImportForm"
+                type="primary"
+                @click="showImportForm = true"
+              >
+                <template #icon>
+                  <n-icon>
+                    <Add />
+                  </n-icon>
+                </template>
+                添加Token
+              </n-button>
+            </div>
+
+            <div class="config-actions">
+              <n-button type="warning" @click="exportConfig">
+                <template #icon>
+                  <n-icon>
+                    <Download />
+                  </n-icon>
+                </template>
+                导出配置
+              </n-button>
+
+              <n-upload
+                :show-file-list="false"
+                accept=".json"
+                :custom-request="importConfig"
+              >
+                <n-button type="warning">
+                  <template #icon>
+                    <n-icon>
+                      <CloudUpload />
+                    </n-icon>
+                  </template>
+                  导入配置
+                </n-button>
+              </n-upload>
+            </div>
+
+            <n-dropdown :options="bulkOptions" @select="handleBulkAction">
+              <n-button type="primary">
+                <template #icon>
+                  <n-icon>
+                    <Menu />
+                  </n-icon>
+                </template>
+                批量操作
+              </n-button>
+            </n-dropdown>
+          </div>
+        </div>
+      </div>
+
       <!-- Token列表 -->
       <div v-if="tokenStore.hasTokens" class="tokens-section">
         <div class="section-header">
@@ -118,40 +177,6 @@
               </n-button>
             </n-button-group>
           </n-space>
-          <div class="header-actions">
-            <n-button type="success" @click="goToDashboard">
-              <template #icon>
-                <n-icon>
-                  <List />
-                </n-icon>
-              </template>
-              批量功能
-            </n-button>
-
-            <n-button
-              v-if="!showImportForm"
-              type="primary"
-              @click="showImportForm = true"
-            >
-              <template #icon>
-                <n-icon>
-                  <Add />
-                </n-icon>
-              </template>
-              添加Token
-            </n-button>
-
-            <n-dropdown :options="bulkOptions" @select="handleBulkAction">
-              <n-button>
-                <template #icon>
-                  <n-icon>
-                    <Menu />
-                  </n-icon>
-                </template>
-                批量操作
-              </n-button>
-            </n-dropdown>
-          </div>
         </div>
 
         <div class="tokens-grid" v-if="viewMode === 'card'">
@@ -618,10 +643,13 @@ import singleBinTokenForm from "./singlebin.vue";
 import WxQrcodeForm from "./wxqrcode.vue";
 
 import { useTokenStore, selectedTokenId } from "@/stores/tokenStore";
+import { useScheduledTaskStore } from "@/stores/scheduledTaskStore";
 import {
   Add,
   Copy,
   Create,
+  Download,
+  CloudUpload,
   EllipsisHorizontal,
   Grid,
   List,
@@ -633,14 +661,14 @@ import {
   SyncCircle,
   TrashBin,
 } from "@vicons/ionicons5";
-import { NIcon, NAlert, useDialog, useMessage } from "naive-ui";
-import { h, onMounted, onUnmounted, reactive, ref, watch } from "vue";
+import { NIcon, useDialog, useMessage } from "naive-ui";
+import { h, onMounted, reactive, ref, watch } from "vue";
 import { useRouter } from "vue-router";
-import { transformToken, scheduleAuthUserRequest } from "@/utils/token";
-import { $emit } from "@/stores/events/index.ts";
+import { transformToken } from "@/utils/token";
 import useIndexedDB from "@/hooks/useIndexedDB";
-const { getArrayBuffer, storeArrayBuffer, deleteArrayBuffer, clearAll } =
-  useIndexedDB();
+import { Filesystem, Directory } from '@capacitor/filesystem';
+const indexedDB = useIndexedDB();
+const { getArrayBuffer, storeArrayBuffer, deleteArrayBuffer } = indexedDB;
 // 接收路由参数
 const props = defineProps({
   token: String,
@@ -655,10 +683,7 @@ const router = useRouter();
 const message = useMessage();
 const dialog = useDialog();
 const tokenStore = useTokenStore();
-
-// 限流等待状态
-const rateLimitWaiting = ref(false);
-const rateLimitMessage = ref("");
+const scheduledTaskStore = useScheduledTaskStore();
 
 // 响应式数据
 const showImportForm = ref(false);
@@ -697,7 +722,7 @@ const sortConfig = ref(
 
 // 排序后的游戏角色Token列表
 const sortedTokens = computed(() => {
-  if (sortConfig.value.field === "manual") {
+  if (sortConfig.value.field === 'manual') {
     return tokenStore.gameTokens;
   }
 
@@ -786,12 +811,12 @@ const handleDrop = (index, event) => {
 
   // 更新 store
   tokenStore.gameTokens = currentTokens;
-
+  
   // 切换到手动排序模式，防止自动排序打乱顺序
-  sortConfig.value.field = "manual";
+  sortConfig.value.field = 'manual';
   // 保存排序设置
   localStorage.setItem("tokenSortConfig", JSON.stringify(sortConfig.value));
-
+  
   dragIndex.value = null;
   message.success("Token 顺序已更新");
 };
@@ -833,48 +858,42 @@ const refreshToken = async (token) => {
 
   try {
     if (token.importMethod === "url") {
-      // 有源URL的token - 从URL重新获取（使用限流）
-      const data = await scheduleAuthUserRequest(async () => {
-        let response;
+      // 有源URL的token - 从URL重新获取
+      let response;
 
-        const isLocalUrl =
-          token.sourceUrl.startsWith(window.location.origin) ||
-          token.sourceUrl.startsWith("/") ||
-          token.sourceUrl.startsWith("http://localhost") ||
-          token.sourceUrl.startsWith("http://127.0.0.1");
+      const isLocalUrl =
+        token.sourceUrl.startsWith(window.location.origin) ||
+        token.sourceUrl.startsWith("/") ||
+        token.sourceUrl.startsWith("http://localhost") ||
+        token.sourceUrl.startsWith("http://127.0.0.1");
 
-        if (isLocalUrl) {
-          response = await fetch(token.sourceUrl);
-        } else {
-          try {
-            response = await fetch(token.sourceUrl, {
-              method: "GET",
-              headers: {
-                Accept: "application/json",
-              },
-              mode: "cors",
-            });
-          } catch (corsError) {
-            throw new Error(
-              `跨域请求被阻止。请确保目标服务器支持CORS。错误详情: ${corsError.message}`,
-            );
-          }
-        }
-
-        if (!response.ok) {
+      if (isLocalUrl) {
+        response = await fetch(token.sourceUrl);
+      } else {
+        try {
+          response = await fetch(token.sourceUrl, {
+            method: "GET",
+            headers: {
+              Accept: "application/json",
+            },
+            mode: "cors",
+          });
+        } catch (corsError) {
           throw new Error(
-            `请求失败: ${response.status} ${response.statusText}`,
+            `跨域请求被阻止。请确保目标服务器支持CORS。错误详情: ${corsError.message}`,
           );
         }
+      }
 
-        const result = await response.json();
+      if (!response.ok) {
+        throw new Error(`请求失败: ${response.status} ${response.statusText}`);
+      }
 
-        if (!result.token) {
-          throw new Error("返回数据中未找到token字段");
-        }
+      const data = await response.json();
 
-        return result;
-      });
+      if (!data.token) {
+        throw new Error("返回数据中未找到token字段");
+      }
 
       // 更新token信息
       tokenStore.updateToken(token.id, {
@@ -960,8 +979,6 @@ const refreshToken = async (token) => {
     message.error(error.message || "Token刷新失败");
   } finally {
     refreshingTokens.value.delete(token.id);
-    // 关闭限流等待提示
-    rateLimitWaiting.value = false;
   }
 };
 
@@ -1225,8 +1242,8 @@ const deleteToken = (token) => {
     content: `确定要删除Token "${token.name}" 吗？此操作无法恢复。`,
     positiveText: "确定删除",
     negativeText: "取消",
-    onPositiveClick: async () => {
-      await tokenStore.removeToken(token.id);
+    onPositiveClick: () => {
+      tokenStore.removeToken(token.id);
       message.success("Token已删除");
     },
   });
@@ -1280,20 +1297,22 @@ const refreshAllTokens = async () => {
             // 更新进度显示
             loadingMessage.content = `正在刷新Token (${i + 1}/${tokensToRefresh.length}): ${token.name}`;
 
-            // 调用单个刷新函数（限流器会自动处理等待）
+            // 调用单个刷新函数
             await refreshToken(token);
             successCount++;
           } catch (error) {
             console.error(`刷新Token "${token.name}" 失败:`, error);
             failCount++;
           }
+
+          // 添加短暂延迟避免请求过于频繁
+          if (i < tokensToRefresh.length - 1) {
+            await new Promise((resolve) => setTimeout(resolve, 500));
+          }
         }
 
         // 关闭进度提示
         loadingMessage.destroy();
-
-        // 关闭限流等待提示
-        rateLimitWaiting.value = false;
 
         // 显示结果
         if (failCount === 0) {
@@ -1385,8 +1404,484 @@ const importTokenFile = () => {
   input.click();
 };
 
-const cleanExpiredTokens = async () => {
-  const count = await tokenStore.cleanExpiredTokens();
+const decodeBase64 = (str) => {
+  try {
+    str = str.replace(/[\s\n\r]/g, '');
+    try {
+      return decodeURIComponent(escape(atob(str)));
+    } catch (e) {
+      const binary = atob(str);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      return new TextDecoder().decode(bytes);
+    }
+  } catch (e) {
+    throw new Error('Base64解码失败: ' + e.message);
+  }
+};
+
+const exportConfig = async () => {
+  try {
+    const loadingMsg = message.loading('正在导出配置，读取BIN文件中...', { duration: 0 });
+    
+    const { waitForReady, getAllKeys, getArrayBuffer } = indexedDB;
+    const ready = await waitForReady(3000);
+    if (!ready) {
+      console.warn('IndexedDB 未准备好，跳过BIN文件导出');
+    }
+
+    const tokens = tokenStore.gameTokens;
+    const validTokenIds = new Set(tokens.map((t) => t.id));
+
+    const tokenSettings = [];
+    tokens.forEach((token) => {
+      const settings = localStorage.getItem(`daily-settings:${token.id}`);
+      if (settings) {
+        try {
+          tokenSettings.push({
+            tokenId: token.id,
+            settings: JSON.parse(settings),
+          });
+        } catch (e) {
+          console.warn(`Failed to parse settings for token ${token.id}`, e);
+        }
+      }
+    });
+
+    let scheduledTasks = [];
+    try {
+      // 首先尝试从v2版本读取（新格式）
+      const savedV2 = localStorage.getItem("scheduledTasks_v2");
+      if (savedV2) {
+        const parsedV2 = JSON.parse(savedV2);
+        scheduledTasks = Array.isArray(parsedV2) ? parsedV2 : [];
+      } else {
+        // 兼容旧版本格式
+        const savedV1 = localStorage.getItem("scheduledTasks");
+        if (savedV1) {
+          const parsedV1 = JSON.parse(savedV1);
+          scheduledTasks = Array.isArray(parsedV1) ? parsedV1 : [];
+        }
+      }
+    } catch (e) {
+      console.warn('获取定时任务失败', e);
+    }
+
+    let batchSettings = {};
+    try {
+      const saved = localStorage.getItem("batchSettings");
+      if (saved) {
+        batchSettings = JSON.parse(saved);
+      }
+    } catch (e) {
+      console.warn('获取批量设置失败', e);
+    }
+
+    let taskTemplates = [];
+    try {
+      const saved = localStorage.getItem("task-templates");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        taskTemplates = Array.isArray(parsed) ? parsed : [];
+      }
+    } catch (e) {
+      console.warn('获取任务模板失败', e);
+    }
+
+    let tokenSortConfig = null;
+    try {
+      const saved = localStorage.getItem("tokenSortConfig");
+      if (saved) {
+        tokenSortConfig = JSON.parse(saved);
+      }
+    } catch (e) {
+      console.warn('获取账号排序配置失败', e);
+    }
+
+    const binFiles = {};
+    if (ready) {
+      try {
+        const keys = await getAllKeys();
+        const existingKeys = new Set(keys);
+        
+        for (const token of tokens) {
+          let arrayBuffer = null;
+          
+          if (existingKeys.has(token.id)) {
+            arrayBuffer = await getArrayBuffer(token.id);
+          } else if (existingKeys.has(token.name)) {
+            arrayBuffer = await getArrayBuffer(token.name);
+          }
+          
+          if (arrayBuffer) {
+            binFiles[token.id] = Array.from(new Uint8Array(arrayBuffer));
+          }
+        }
+      } catch (binError) {
+        console.error('获取BIN文件失败:', binError);
+      }
+    }
+
+    let tokenGroups = [];
+    try {
+      const saved = localStorage.getItem("tokenGroups");
+      if (saved) {
+        tokenGroups = JSON.parse(saved);
+      }
+    } catch (e) {
+      console.warn('获取分组配置失败', e);
+    }
+
+    const exportData = {
+      version: "1.2",
+      exportTime: new Date().toISOString(),
+      tokens: tokens.map((t) => ({
+        id: t.id,
+        name: t.name,
+        token: t.token,
+        server: t.server,
+        wsUrl: t.wsUrl,
+        remark: t.remark,
+        importMethod: t.importMethod,
+        sourceUrl: t.sourceUrl,
+        upgradedToPermanent: true,
+        upgradedAt: t.upgradedAt,
+        updatedAt: t.updatedAt,
+      })),
+      scheduledTasks: scheduledTasks,
+      batchSettings: batchSettings,
+      taskTemplates: taskTemplates,
+      tokenSortConfig: tokenSortConfig,
+      tokenSettings: tokenSettings,
+      tokenGroups: tokenGroups,
+      binFiles: binFiles,
+    };
+
+    const jsonString = JSON.stringify(exportData, null, 2);
+    const getBeijingDateTime = () => {
+      const now = new Date();
+      now.setHours(now.getHours() + 8);
+      return now.toISOString().slice(0, 16).replace('T', '_').replace(':', '');
+    };
+    const fileName = `xyzw_config_${getBeijingDateTime()}.json`;
+
+    const isAndroidApp = typeof window !== 'undefined' && 
+                      window.Capacitor && 
+                      /android/i.test(navigator.userAgent);
+
+    if (isAndroidApp) {
+      try {
+        loadingMsg.content = '正在保存文件...';
+        const permStatus = await Filesystem.checkPermissions();
+        if (permStatus.publicStorage !== 'granted') {
+          const reqResult = await Filesystem.requestPermissions();
+          if (reqResult.publicStorage !== 'granted') {
+            loadingMsg.destroy();
+            message.error('存储权限被拒绝，请在设置中允许存储权限后重试');
+            return;
+          }
+        }
+
+        const encodedData = btoa(unescape(encodeURIComponent(jsonString)));
+        await Filesystem.writeFile({
+          path: fileName,
+          data: encodedData,
+          directory: Directory.Documents,
+          encoding: 'utf8'
+        });
+        
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        loadingMsg.destroy();
+        message.success(`设置导出成功！文件已保存到：/storage/emulated/0/Documents/${fileName}`);
+      } catch (fsError) {
+        loadingMsg.destroy();
+        console.error('文件系统保存失败:', fsError);
+        message.warning('存储权限可能不足，尝试使用浏览器下载方式');
+        saveFileByDownload(jsonString, fileName);
+      }
+    } else {
+      loadingMsg.destroy();
+      saveFileByDownload(jsonString, fileName);
+    }
+  } catch (error) {
+    loadingMsg.destroy();
+    console.error("导出失败:", error);
+    message.error("导出失败: " + error.message);
+  }
+};
+
+const saveFileByDownload = (jsonString, fileName) => {
+  const blob = new Blob([jsonString], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+
+  const exportData = JSON.parse(jsonString);
+  message.success(`导出成功: ${exportData.tokens.length} 个账号, ${exportData.scheduledTasks?.length || 0} 个定时任务, ${Object.keys(exportData.binFiles || {}).length} 个BIN文件`);
+};
+
+const importConfig = async ({ file }) => {
+  try {
+    const loadingMsg = message.loading('正在读取配置文件...', { duration: 0 });
+    const reader = new FileReader();
+    const { waitForReady, storeArrayBuffer } = indexedDB;
+
+    reader.onload = async (e) => {
+      try {
+        let importData;
+        let content = e.target.result;
+
+        try {
+          importData = JSON.parse(content);
+          message.info('JSON格式，直接解析成功');
+        } catch (jsonError) {
+          try {
+            const decodedContent = decodeBase64(content);
+            message.info(`Base64解码成功，长度: ${decodedContent.length}`);
+            importData = JSON.parse(decodedContent);
+            message.info('JSON解析成功');
+          } catch (base64Error) {
+            loadingMsg.destroy();
+            console.error('Base64解码失败:', base64Error);
+            throw new Error('文件格式错误：既不是有效的JSON文件，也不是Base64编码的JSON文件');
+          }
+        }
+
+        const info = {
+          version: importData.version,
+          tokensCount: importData.tokens?.length,
+          binCount: Object.keys(importData.binFiles || {}).length,
+        };
+        message.info(`配置版本: v${info.version}, ${info.tokensCount}账号, ${info.binCount}BIN`);
+
+        if (!importData.version || !importData.tokens) {
+          message.error("无效的配置文件格式");
+          return;
+        }
+
+        let importedTokens = 0;
+        let restoredBinFiles = 0;
+
+        message.info('开始导入账号...');
+        if (Array.isArray(importData.tokens)) {
+          message.info(`找到 ${importData.tokens.length} 个账号`);
+          importData.tokens.forEach((token, idx) => {
+            try {
+              const existingToken = tokenStore.gameTokens.find(
+                (t) => t.token === token.token || t.id === token.id || t.name === token.name
+              );
+              if (existingToken) {
+                Object.assign(existingToken, token, {
+                  upgradedToPermanent: true,
+                  lastUsed: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                });
+                importedTokens++;
+              } else if (token.token) {
+                tokenStore.addToken({
+                  ...token,
+                  importMethod: token.importMethod || "import",
+                  upgradedToPermanent: true,
+                  createdAt: new Date().toISOString(),
+                  lastUsed: new Date().toISOString(),
+                });
+                importedTokens++;
+              }
+            } catch (tokenErr) {
+              message.warning(`导入账号失败 ${idx + 1}: ${token.name}`);
+              console.error(tokenErr);
+            }
+          });
+          message.success(`账号导入完成: ${importedTokens} 个`);
+        }
+
+        message.info('开始导入账号设置...');
+        if (Array.isArray(importData.tokenSettings)) {
+          const defaultSettings = {
+            arenaFormation: 1,
+            towerFormation: 1,
+            weirdTowerFormation: 1,
+            bossFormation: 1,
+            taskCompleteFormation: 1,
+            bossTimes: 2,
+            claimBottle: true,
+            payRecruit: true,
+            openBox: true,
+            arenaEnable: true,
+            claimHangUp: true,
+            claimEmail: true,
+            blackMarketPurchase: true,
+          };
+          importData.tokenSettings.forEach((item, idx) => {
+            try {
+              if (item.tokenId && item.settings) {
+                const mergedSettings = { ...defaultSettings, ...item.settings };
+                localStorage.setItem(
+                  `daily-settings:${item.tokenId}`,
+                  JSON.stringify(mergedSettings)
+                );
+              }
+            } catch (settingsErr) {
+              message.warning(`导入账号设置失败 ${idx + 1}`);
+              console.error(settingsErr);
+            }
+          });
+        }
+
+        message.info('开始导入BIN文件...');
+        if (importData.binFiles) {
+          loadingMsg.content = '正在写入BIN文件到IndexedDB...';
+          const ready = await waitForReady(3000);
+          if (!ready) {
+            message.warning('IndexedDB 未准备好，跳过BIN文件导入');
+          } else {
+            const entries = Object.entries(importData.binFiles);
+            message.info(`找到 ${entries.length} 个BIN文件`);
+            for (let i = 0; i < entries.length; i++) {
+              const [key, data] = entries[i];
+              try {
+                await storeArrayBuffer(key, new Uint8Array(data).buffer);
+                restoredBinFiles++;
+                if (i % 10 === 0) {
+                  loadingMsg.content = `已导入 ${restoredBinFiles}/${entries.length} 个BIN文件...`;
+                }
+              } catch (binErr) {
+                message.warning(`恢复BIN失败 ${key}`);
+                console.error(binErr);
+              }
+            }
+            message.success(`BIN文件导入完成: ${restoredBinFiles} 个`);
+          }
+        }
+
+        if (importData.taskTemplates && Array.isArray(importData.taskTemplates)) {
+          const defaultTemplateSettings = {
+            arenaFormation: 1,
+            towerFormation: 1,
+            weirdTowerFormation: 1,
+            bossFormation: 1,
+            taskCompleteFormation: 1,
+            bossTimes: 2,
+            claimBottle: true,
+            payRecruit: true,
+            openBox: true,
+            arenaEnable: true,
+            claimHangUp: true,
+            claimEmail: true,
+            blackMarketPurchase: true,
+          };
+          const mergedTemplates = importData.taskTemplates.map(template => ({
+            ...template,
+            settings: { ...defaultTemplateSettings, ...template.settings }
+          }));
+          try {
+            localStorage.setItem("task-templates", JSON.stringify(mergedTemplates));
+            message.info(`任务模板导入完成: ${mergedTemplates.length} 个`);
+          } catch (e) {
+            console.error('导入任务模板失败:', e);
+          }
+        }
+
+        if (importData.tokenSortConfig) {
+          try {
+            localStorage.setItem("tokenSortConfig", JSON.stringify(importData.tokenSortConfig));
+            message.info('账号排序配置已导入');
+          } catch (e) {
+            console.error('导入排序配置失败:', e);
+          }
+        }
+
+        if (importData.batchSettings) {
+          try {
+            localStorage.setItem("batchSettings", JSON.stringify(importData.batchSettings));
+            message.info('批量任务设置已导入');
+          } catch (e) {
+            console.error('导入批量任务设置失败:', e);
+          }
+        }
+
+        if (importData.scheduledTasks && Array.isArray(importData.scheduledTasks)) {
+          try {
+            localStorage.setItem("scheduledTasks_v2", JSON.stringify(importData.scheduledTasks));
+            message.info(`定时任务导入完成: ${importData.scheduledTasks.length} 个`);
+            
+            // 更新Pinia store中的定时任务状态
+            try {
+              if (scheduledTaskStore) {
+                // 清空现有的任务
+                while (scheduledTaskStore.scheduledTasks.length > 0) {
+                  scheduledTaskStore.removeTask(scheduledTaskStore.scheduledTasks[0].id);
+                }
+                // 添加新的任务
+                importData.scheduledTasks.forEach(task => {
+                  scheduledTaskStore.addTask({
+                    name: task.name,
+                    taskName: task.taskName,
+                    runType: task.runType,
+                    runTime: task.runTime,
+                    cronExpression: task.cronExpression,
+                    selectedTokens: task.selectedTokens,
+                    selectedTasks: task.selectedTasks,
+                    enableBatchExecution: task.enableBatchExecution,
+                    batchSize: task.batchSize,
+                    batchDelay: task.batchDelay
+                  });
+                });
+                // 重新启动调度器，确保状态同步
+                scheduledTaskStore.startScheduler();
+                message.info('定时任务已同步到状态管理');
+              }
+            } catch (storeError) {
+              console.error('更新定时任务状态失败:', storeError);
+              // 即使更新状态失败，也不影响导入结果
+            }
+          } catch (e) {
+            console.error('导入定时任务失败:', e);
+          }
+        }
+
+        if (importData.tokenGroups && Array.isArray(importData.tokenGroups)) {
+          try {
+            localStorage.setItem("tokenGroups", JSON.stringify(importData.tokenGroups));
+            message.info(`分组信息导入完成: ${importData.tokenGroups.length} 个`);
+          } catch (e) {
+            console.error('导入分组信息失败:', e);
+          }
+        }
+
+        loadingMsg.destroy();
+        message.success(`导入完成！账号: ${importedTokens}, BIN: ${restoredBinFiles}`);
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        location.reload();
+      } catch (parseErr) {
+        loadingMsg.destroy();
+        console.error('导入处理失败:', parseErr);
+        message.error('导入处理失败: ' + parseErr.message);
+      }
+    };
+
+    reader.onerror = () => {
+      loadingMsg.destroy();
+      message.error('读取文件失败');
+    };
+
+    reader.readAsText(file.file);
+  } catch (error) {
+    loadingMsg.destroy();
+    console.error('导入失败:', error);
+    message.error('导入失败: ' + error.message);
+  }
+};
+
+const cleanExpiredTokens = () => {
+  const count = tokenStore.cleanExpiredTokens();
   message.success(`已清理 ${count} 个过期Token`);
 };
 
@@ -1403,8 +1898,8 @@ const clearAllTokens = () => {
     content: "确定要清除所有Token吗？此操作无法恢复！",
     positiveText: "确定清除",
     negativeText: "取消",
-    onPositiveClick: async () => {
-      await tokenStore.clearAllTokens();
+    onPositiveClick: () => {
+      tokenStore.clearAllTokens();
       message.success("所有Token已清除");
     },
   });
@@ -1603,18 +2098,9 @@ const handleUrlParams = async () => {
 // 监听路由参数变化
 watch(() => [props.token, props.api], handleUrlParams, { immediate: false });
 
-// 限流等待事件处理
-const handleRateLimitWaiting = (data) => {
-  rateLimitWaiting.value = true;
-  rateLimitMessage.value = `Token刷新限流等待中，预计等待 ${data.waitSeconds} 秒（队列: ${data.queueSize}）`;
-};
-
 // 生命周期
 onMounted(async () => {
   tokenStore.initTokenStore();
-
-  // 监听限流等待事件
-  $emit.on("token:refresh:waiting", handleRateLimitWaiting);
 
   // 处理URL参数
   await handleUrlParams();
@@ -1623,11 +2109,6 @@ onMounted(async () => {
   if (!tokenStore.hasTokens && !props.token && !props.api) {
     showImportForm.value = true;
   }
-});
-
-onUnmounted(() => {
-  // 移除限流等待事件监听
-  $emit.off("token:refresh:waiting", handleRateLimitWaiting);
 });
 </script>
 
@@ -1883,10 +2364,26 @@ onUnmounted(() => {
 
 .header-actions {
   display: flex;
+  flex-direction: column;
   gap: var(--spacing-md);
   max-width: 100%;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
+}
+
+.main-actions {
+  display: flex;
+  gap: var(--spacing-md);
+  flex-wrap: nowrap;
+}
+
+.config-actions {
+  display: flex;
+  gap: var(--spacing-md);
+  flex-wrap: nowrap;
+}
+
+.bulk-actions {
+  display: flex;
+  gap: var(--spacing-md);
   flex-wrap: nowrap;
 }
 

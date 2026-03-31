@@ -70,11 +70,11 @@ if ($logContent -match "##\s*\[\d{4}-\d{2}-\d{2}\]\s*-\s*(.+)") {
 
 # 使用更稳定的变量拼接方式
 $backupName = "backup_${timestamp}_${suffix}"
-robocopy "." $backupName /MIR /XD node_modules .git dist "android\app\build" "android\.gradle" backup_* /XF *.log /NFL /NDL /NJH
+robocopy "." $backupName /MIR /XD node_modules .git dist "android\app\build" "android\.gradle" backup_* "鲨鱼之王离线版" temp-repo temp_current .git.old /XF *.log /NFL /NDL /NJH
 Write-Host "备份完成: $backupName"
 ```
 
-排除的目录：node_modules, .git, dist, android\app\build, android\.gradle, backup_*
+排除的目录：node_modules, .git, dist, android\app\build, android\.gradle, backup_*, 鲨鱼之王离线版, temp-repo, temp_current, .git.old
 
 **命名格式**：`backup_YYYYMMDD_HHmm_描述性后缀`
 - 例如：`backup_20260307_1840_分析任务冲突问题`
@@ -373,66 +373,33 @@ pnpm install
 |--------|----------|----------|
 | **构建APK** | 构建debug版APK | 按照APK构建流程执行 |
 | **创建备份** | 创建带描述性后缀的备份 | 按照创建备份流程执行 |
-| **推送代码** | 推送到GitHub仓库 | 按照GitHub推送流程执行 |
+| **推送代码** | 推送到我的仓库（linfsy） | 按照推送代码流程执行 |
 | **恢复备份** | 恢复指定备份 | 按照恢复备份流程执行 |
 | **运行服务器** | 启动开发服务器 | `pnpm dev` |
 | **构建项目** | 构建Web项目 | `pnpm build` |
 | **同步Capacitor** | 同步Capacitor项目 | `pnpm cap sync android` |
-| **更新上游仓库** | 从上游分仓库增量更新 | 按照增量更新流程执行 |
-| **拉取上游更新** | 从上游分仓库拉取最新代码 | 按照增量更新流程执行 |
+| **拉取上游主仓库更新** | 拉取w1249178256的仓库更新 | 按照拉取上游主仓库更新流程执行 |
+| **拉取上游分仓库更新** | 拉取yukong0529的仓库更新 | 按照拉取上游分仓库更新流程执行 |
+| **增量更新** | 从上游仓库增量更新 | 按照拉取上游分仓库更新流程（默认增量更新） |
+| **更新上游** | 更新上游仓库 | 按照拉取上游分仓库更新流程 |
+| **更新日志** | 更新修改日志 | 更新 `.trae/修改日志.md` |
+| **更新修改日志** | 更新修改日志 | 更新 `.trae/修改日志.md` |
+
+**快速识别说明：**
+- 看到 `linfsy` → 就是我的仓库
+- 看到 `origin` → 就是我的仓库的remote名称
+- 看到 `w1249178256` → 就是上游主仓库
+- 看到 `yukong0529` → 就是上游分仓库
+- 看到 `upstream_main` → 就是上游主仓库的remote名称
+- 看到 `upstream_fork` → 就是上游分仓库的remote名称
 
 ---
 
-## 增量更新流程
-
-当用户说 **"更新上游仓库"** 或 **"拉取上游更新"** 时，按以下顺序执行：
-
-1. **返回项目根目录**
-   ```powershell
-   cd "f:\XYZW_WEB\xyzw_web_helper-main"
-   ```
-
-2. **检查远程仓库配置**
-   ```powershell
-   git remote -v
-   ```
-
-3. **拉取上游仓库最新代码**
-   ```powershell
-   # 拉取上游主仓库
-   git fetch upstream main
-   # 拉取上游分仓库（如果配置）
-   git fetch fork main
-   ```
-
-4. **执行增量更新**（文件级更新，保留本地功能）
-   ```powershell
-   # 从上游分仓库更新（优先）
-   git checkout fork/main -- package.json src/
-   # 如果上游分仓库不可用，从上游主仓库更新
-   # git checkout upstream/main -- package.json src/
-   ```
-
-5. **安装依赖**（如果package.json有更新）
-   ```powershell
-   pnpm install
-   ```
-
-6. **检查核心功能**
-   - 打开Token管理页面，检查导出/导入配置按钮
-   - 检查批量任务页面功能
-   - 验证所有核心功能是否正常
-
-**特点**：
-- 只更新指定文件，保留本地其他文件和数据
-- 保持核心功能完整
-- 避免完全覆盖导致的功能丢失
-
----
-
-## 推送代码流程
+## 【我的仓库 - linfsy】推送代码
 
 当用户说 **"推送代码"** 时，按以下顺序执行：
+
+**【识别标记】**：linfsy、origin、我的仓库
 
 1. **返回项目根目录**
    ```powershell
@@ -488,6 +455,202 @@ pnpm install
    
    **注意**：只能推送到 `origin`，不能推送到 `upstream`（上游仓库）
 
+---
+
+## 【上游主仓库 - w1249178256】拉取更新
+
+当用户说 **"拉取上游主仓库更新"** 时，按以下顺序执行：
+
+**【识别标记】**：w1249178256、upstream_main
+
+1. **返回项目根目录**（重要！）
+   ```powershell
+   cd "f:\XYZW_WEB\xyzw_web_helper-main"
+   ```
+
+2. **创建备份**（重要！拉取前先备份当前状态）
+   ```powershell
+   # 创建临时目录用于备份
+   $timestamp = Get-Date -Format "yyyyMMdd_HHmm"
+   $tempDir = "temp-repo_$timestamp"
+   robocopy "." $tempDir /MIR /XD node_modules .git dist "android\app\build" "android\.gradle" backup_* "鲨鱼之王离线版" temp-repo temp_current .git.old /XF *.log /NFL /NDL /NJH
+   Write-Host "备份完成: $tempDir"
+   ```
+
+3. **拉取上游主仓库更新**
+   ```powershell
+   # 拉取最新代码
+   git fetch upstream_main
+   
+   # 显示更新日志
+   Write-Host "=== 上游主仓库最新提交 ==="
+   git log upstream_main/main --oneline -10
+   ```
+
+4. **智能检查上游更新内容**（重要！先检查哪些文件有更新）
+   ```powershell
+   Write-Host "`n=== 检查上游更新内容 ==="
+   
+   # 检查增量更新范围内的文件（package.json 和 src/）
+   Write-Host "`n📦 增量更新范围内的文件变更："
+   git diff --name-only HEAD upstream_main/main -- package.json src/
+   
+   # 检查增量更新范围外的文件变更
+   Write-Host "`n⚠️  增量更新范围外的文件变更（需要手动确认）："
+   $otherFiles = git diff --name-only HEAD upstream_main/main | Where-Object { $_ -ne "package.json" -and -not $_.StartsWith("src/") }
+   if ($otherFiles) {
+       $otherFiles | ForEach-Object { Write-Host "  - $_" }
+   } else {
+       Write-Host "  （无）"
+   }
+   
+   Write-Host "`n📋 说明："
+   Write-Host "  - 增量更新：只更新 package.json 和 src/ 目录，保留本地其他文件"
+   Write-Host "  - 完全合并：合并所有文件（包括 android/、public/、docker/ 等）"
+   Write-Host "  - 保留本地：保留 .trae/ 等核心配置不被覆盖"
+   ```
+
+5. **询问用户更新方式**
+   ```powershell
+   Write-Host "`n请选择更新方式："
+   Write-Host "1. 增量更新（推荐）- 只更新 package.json 和 src/"
+   Write-Host "2. 完全合并 - 合并所有文件"
+   Write-Host "3. 取消"
+   ```
+
+6. **执行更新**（根据用户选择）
+   - **如果选择增量更新**：
+     ```powershell
+     Write-Host "`n=== 执行增量更新 ==="
+     # 从上游主仓库更新 package.json 和 src/
+     git checkout upstream_main/main -- package.json src/
+     Write-Host "✅ 增量更新完成：已更新 package.json 和 src/ 目录"
+     ```
+   
+   - **如果选择完全合并**：
+     ```powershell
+     Write-Host "`n=== 执行完全合并 ==="
+     # 合并上游主仓库更新
+     git merge upstream_main/main --no-ff
+     Write-Host "⚠️  完全合并完成，请检查是否有冲突"
+     git status
+     ```
+
+7. **更新后检查**
+   ```powershell
+   # 安装依赖（如果 package.json 有更新）
+   pnpm install
+   
+   # 按照仓库覆盖更新后的快速检查清单检查
+   Write-Host "`n=== 更新后检查清单 ==="
+   Write-Host "1. 检查导出配置按钮是否存在"
+   Write-Host "2. 检查批量任务页面能否正常执行"
+   Write-Host "3. 查看修改日志"
+   Write-Host "4. 按日志恢复缺失的修改"
+   ```
+
+**上游主仓库**：`https://github.com/w1249178256/xyzw_web_helper`
+**Remote名称**：`upstream_main`
+
+---
+
+## 【上游分仓库 - yukong0529】拉取更新
+
+当用户说 **"拉取上游分仓库更新"** 时，按以下顺序执行：
+
+**【识别标记】**：yukong0529、upstream_fork
+
+1. **返回项目根目录**（重要！）
+   ```powershell
+   cd "f:\XYZW_WEB\xyzw_web_helper-main"
+   ```
+
+2. **创建备份**（重要！拉取前先备份当前状态）
+   ```powershell
+   # 创建临时目录用于备份
+   $timestamp = Get-Date -Format "yyyyMMdd_HHmm"
+   $tempDir = "temp-repo_$timestamp"
+   robocopy "." $tempDir /MIR /XD node_modules .git dist "android\app\build" "android\.gradle" backup_* "鲨鱼之王离线版" temp-repo temp_current .git.old /XF *.log /NFL /NDL /NJH
+   Write-Host "备份完成: $tempDir"
+   ```
+
+3. **拉取上游分仓库更新**
+   ```powershell
+   # 拉取最新代码
+   git fetch upstream_fork
+   
+   # 显示更新日志
+   Write-Host "=== 上游分仓库最新提交 ==="
+   git log upstream_fork/main --oneline -10
+   ```
+
+4. **智能检查上游更新内容**（重要！先检查哪些文件有更新）
+   ```powershell
+   Write-Host "`n=== 检查上游更新内容 ==="
+   
+   # 检查增量更新范围内的文件（package.json 和 src/）
+   Write-Host "`n📦 增量更新范围内的文件变更："
+   git diff --name-only HEAD upstream_fork/main -- package.json src/
+   
+   # 检查增量更新范围外的文件变更
+   Write-Host "`n⚠️  增量更新范围外的文件变更（需要手动确认）："
+   $otherFiles = git diff --name-only HEAD upstream_fork/main | Where-Object { $_ -ne "package.json" -and -not $_.StartsWith("src/") }
+   if ($otherFiles) {
+       $otherFiles | ForEach-Object { Write-Host "  - $_" }
+   } else {
+       Write-Host "  （无）"
+   }
+   
+   Write-Host "`n📋 说明："
+   Write-Host "  - 增量更新：只更新 package.json 和 src/ 目录，保留本地其他文件"
+   Write-Host "  - 完全合并：合并所有文件（包括 android/、public/、docker/ 等）"
+   Write-Host "  - 保留本地：保留 .trae/ 等核心配置不被覆盖"
+   ```
+
+5. **询问用户更新方式**
+   ```powershell
+   Write-Host "`n请选择更新方式："
+   Write-Host "1. 增量更新（推荐）- 只更新 package.json 和 src/"
+   Write-Host "2. 完全合并 - 合并所有文件"
+   Write-Host "3. 取消"
+   ```
+
+6. **执行更新**（根据用户选择）
+   - **如果选择增量更新**：
+     ```powershell
+     Write-Host "`n=== 执行增量更新 ==="
+     # 从上游分仓库更新 package.json 和 src/
+     git checkout upstream_fork/main -- package.json src/
+     Write-Host "✅ 增量更新完成：已更新 package.json 和 src/ 目录"
+     ```
+   
+   - **如果选择完全合并**：
+     ```powershell
+     Write-Host "`n=== 执行完全合并 ==="
+     # 合并上游分仓库更新
+     git merge upstream_fork/main --no-ff
+     Write-Host "⚠️  完全合并完成，请检查是否有冲突"
+     git status
+     ```
+
+7. **更新后检查**
+   ```powershell
+   # 安装依赖（如果 package.json 有更新）
+   pnpm install
+   
+   # 按照仓库覆盖更新后的快速检查清单检查
+   Write-Host "`n=== 更新后检查清单 ==="
+   Write-Host "1. 检查导出配置按钮是否存在"
+   Write-Host "2. 检查批量任务页面能否正常执行"
+   Write-Host "3. 查看修改日志"
+   Write-Host "4. 按日志恢复缺失的修改"
+   ```
+
+**上游分仓库**：`https://github.com/yukong0529/xyzw_web_helper`
+**Remote名称**：`upstream_fork`
+
+---
+
 ### 如何使用
 
 1. **构建APK**：发送"构建APK"，我会执行完整的APK构建流程
@@ -495,6 +658,10 @@ pnpm install
 3. **推送代码**：发送"推送代码"，我会将修改推送到GitHub仓库
 4. **恢复备份**：发送"恢复备份"，我会列出所有备份供你选择
 5. **运行服务器**：发送"运行服务器"，我会启动开发服务器
+6. **拉取上游主仓库更新**：发送"拉取上游主仓库更新"，我会拉取w1249178256的仓库更新（带智能检查）
+7. **拉取上游分仓库更新**：发送"拉取上游分仓库更新"，我会拉取yukong0529的仓库更新（带智能检查）
+8. **增量更新**：发送"增量更新"，我会从上游分仓库增量更新（只更新 package.json 和 src/）
+9. **更新上游**：发送"更新上游"，我会从上游分仓库更新（带智能检查）
 
 ### 示例
 
@@ -503,6 +670,10 @@ pnpm install
 - 发送：`推送代码` → 执行GitHub推送流程
 - 发送：`恢复备份` → 执行恢复备份流程
 - 发送：`运行服务器` → 启动开发服务器
+- 发送：`拉取上游主仓库更新` → 拉取w1249178256的仓库更新（带智能检查）
+- 发送：`拉取上游分仓库更新` → 拉取yukong0529的仓库更新（带智能检查）
+- 发送：`增量更新` → 从上游分仓库增量更新（只更新 package.json 和 src/）
+- 发送：`更新上游` → 从上游分仓库更新（带智能检查）
 
 ---
 

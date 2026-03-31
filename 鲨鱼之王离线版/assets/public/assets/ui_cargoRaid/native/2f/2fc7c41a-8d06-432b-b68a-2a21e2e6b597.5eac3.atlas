@@ -1,0 +1,90 @@
+
+huoche_yeqian1.png
+size: 512,512
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+huoche_yeqian2_bj1
+  rotate: false
+  xy: 246, 34
+  size: 130, 77
+  orig: 132, 79
+  offset: 1, 1
+  index: -1
+huoche_yeqian2_bj2
+  rotate: true
+  xy: 132, 81
+  size: 266, 112
+  orig: 268, 114
+  offset: 1, 1
+  index: -1
+huoche_yeqian2_che
+  rotate: true
+  xy: 280, 258
+  size: 219, 139
+  orig: 221, 141
+  offset: 1, 1
+  index: -1
+huoche_yeqian2_cheh
+  rotate: true
+  xy: 246, 113
+  size: 143, 66
+  orig: 145, 69
+  offset: 1, 2
+  index: -1
+huoche_yeqian2_ct
+  rotate: false
+  xy: 2, 349
+  size: 276, 128
+  orig: 278, 130
+  offset: 1, 1
+  index: -1
+huoche_yeqian2_deng
+  rotate: false
+  xy: 2, 29
+  size: 123, 40
+  orig: 123, 40
+  offset: 0, 0
+  index: -1
+huoche_yeqian2_kuang
+  rotate: true
+  xy: 2, 71
+  size: 276, 128
+  orig: 278, 130
+  offset: 1, 1
+  index: -1
+huoche_yeqian2_yu
+  rotate: false
+  xy: 132, 10
+  size: 78, 69
+  orig: 80, 71
+  offset: 1, 1
+  index: -1
+huoche_yeqian2_yuefu
+  rotate: true
+  xy: 2, 15
+  size: 12, 19
+  orig: 14, 21
+  offset: 1, 1
+  index: -1
+huoche_yeqian2_yuefu1
+  rotate: false
+  xy: 246, 260
+  size: 8, 8
+  orig: 10, 10
+  offset: 1, 1
+  index: -1
+huoche_yeqian2_zi1
+  rotate: true
+  xy: 246, 270
+  size: 77, 29
+  orig: 79, 31
+  offset: 1, 1
+  index: -1
+huoche_yeqian2_zi2
+  rotate: true
+  xy: 212, 2
+  size: 77, 29
+  orig: 79, 31
+  offset: 1, 1
+  index: -1
