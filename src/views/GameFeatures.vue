@@ -39,8 +39,8 @@
     <!-- 功能模块网格 -->
     <div class="features-grid-section">
       <div class="container">
-        <GameStatus :key="gameStatusKey" />
-      </div>
+          <GameStatus :key="gameStatusKey" />
+        </div>
     </div>
 
     <!-- WebSocket 连接状态 -->
@@ -79,6 +79,7 @@ import { useRouter } from "vue-router";
 import { useMessage } from "naive-ui";
 import { useTokenStore, gameTokens, selectedTokenId } from "@/stores/tokenStore";
 import { CloudDone } from "@vicons/ionicons5";
+import GameStatus from "@/components/GameStatus.vue";
 
 const router = useRouter();
 const message = useMessage();
@@ -97,19 +98,19 @@ const tokenOptions = computed(() => {
   }));
 });
 
-// 切换账号
+// 处理账号切换
 const handleTokenChange = async (tokenId) => {
   const token = tokenStore.selectToken(tokenId);
   if (token) {
     message.success(`已切换到账号: ${token.name || token.id}`);
-    // 等待连接建立成功后再刷新数据
+    // 等待连接建立
     await waitForConnection(tokenId);
-    // 触发页面数据刷新
+    // 刷新页面数据
     await refreshPageData();
   }
 };
 
-// 等待WebSocket连接建立
+// 等待WebSocket连接
 const waitForConnection = (tokenId, timeout = 5000) => {
   return new Promise((resolve) => {
     const startTime = Date.now();
@@ -137,11 +138,17 @@ const waitForConnection = (tokenId, timeout = 5000) => {
 
 // 刷新页面数据
 const refreshPageData = async () => {
+  if (!tokenStore.selectedToken) return;
+  const tokenId = tokenStore.selectedToken.id;
   // 重置游戏数据，让组件重新加载
   lastActivity.value = new Date().toLocaleString();
   // 强制刷新GameStatus组件
   gameStatusKey.value++;
-  // 可以在这里添加更多刷新逻辑
+  // 重新获取游戏数据
+  tokenStore.sendMessage(tokenId, "role_getroleinfo");
+  tokenStore.sendMessage(tokenId, "tower_getinfo");
+  tokenStore.sendMessage(tokenId, "evotower_getinfo");
+  tokenStore.sendMessage(tokenId, "presetteam_getinfo");
 };
 
 // 计算属性

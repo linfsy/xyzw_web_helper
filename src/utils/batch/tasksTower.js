@@ -3,6 +3,44 @@
  * 包含: climbTower, climbWeirdTower, batchClaimFreeEnergy
  */
 
+const getTokenSettings = (tokenId) => {
+  try {
+    const raw = localStorage.getItem(`daily-settings:${tokenId}`);
+    const defaultSettings = {
+      arenaFormation: 1,
+      towerFormation: 1,
+      weirdTowerFormation: 1,
+      bossFormation: 1,
+      taskCompleteFormation: 1,
+      bossTimes: 2,
+      claimBottle: true,
+      payRecruit: true,
+      openBox: true,
+      arenaEnable: true,
+      claimHangUp: true,
+      claimEmail: true,
+      blackMarketPurchase: true,
+    };
+    return raw ? { ...defaultSettings, ...JSON.parse(raw) } : defaultSettings;
+  } catch (e) {
+    return {
+      arenaFormation: 1,
+      towerFormation: 1,
+      weirdTowerFormation: 1,
+      bossFormation: 1,
+      taskCompleteFormation: 1,
+      bossTimes: 2,
+      claimBottle: true,
+      payRecruit: true,
+      openBox: true,
+      arenaEnable: true,
+      claimHangUp: true,
+      claimEmail: true,
+      blackMarketPurchase: true,
+    };
+  }
+};
+
 /**
  * 创建爬塔类任务执行器
  * @param {Object} deps - 依赖项
@@ -234,13 +272,19 @@ export function createTasksTower(deps) {
             }
           }
         }
-        if (Isswitching) {
+        if (tokenSettings.taskCompleteFormation && tokenSettings.taskCompleteFormation !== tokenSettings.towerFormation) {
+          await new Promise((r) => setTimeout(r, 1000));
           await tokenStore.sendMessageWithPromise(
             tokenId,
             "presetteam_saveteam",
-            { teamId: currentFormation },
+            { teamId: tokenSettings.taskCompleteFormation },
             5000,
           );
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `任务完成，切换到阵容${tokenSettings.taskCompleteFormation}`,
+            type: "info",
+          });
         }
         tokenStatus.value[tokenId] = "completed";
         addLog({
@@ -321,23 +365,23 @@ export function createTasksTower(deps) {
 
         const currentFormation = teamInfo?.presetTeamInfo?.useTeamId;
         let Isswitching = false;
-        if (currentFormation === tokenSettings.towerFormation) {
+        if (currentFormation === tokenSettings.weirdTowerFormation) {
           addLog({
             time: new Date().toLocaleTimeString(),
-            message: `当前已是阵容${tokenSettings.towerFormation}，无需切换`,
+            message: `当前已是阵容${tokenSettings.weirdTowerFormation}，无需切换`,
             type: "info",
           });
         } else {
           await tokenStore.sendMessageWithPromise(
             tokenId,
             "presetteam_saveteam",
-            { teamId: tokenSettings.towerFormation },
+            { teamId: tokenSettings.weirdTowerFormation },
             5000,
           );
           Isswitching = true;
           addLog({
             time: new Date().toLocaleTimeString(),
-            message: `成功切换到阵容${tokenSettings.towerFormation}`,
+            message: `成功切换到阵容${tokenSettings.weirdTowerFormation}`,
             type: "info",
           });
         }
@@ -465,22 +509,99 @@ export function createTasksTower(deps) {
             }
           } catch (err) {
             consecutiveFailures++;
-            addLog({
-              time: new Date().toLocaleTimeString(),
-              message: `战斗出错: ${err.message} (重试 ${consecutiveFailures}/3)`,
-              type: "warning",
-            });
 
-            if (consecutiveFailures >= 3) {
+            // 处理能量不足错误
+            if (err.message && err.message.includes("1500020")) {
               addLog({
                 time: new Date().toLocaleTimeString(),
-                message: `${token.name} 连续失败次数过多，停止爬怪异塔`,
-                type: "error",
+                message: `${token.name} 能量不足 (1500020)，停止爬怪异塔，切换到下一个账号`,
+                type: "info",
               });
               break;
             }
 
-            await new Promise((r) => setTimeout(r, 1000));
+            // 处理上座奖励未领错误
+            if (err.message && err.message.includes("1500040")) {
+              addLog({
+                time: new Date().toLocaleTimeString(),
+                message: `${token.name} 上座奖励未领 (1500040)，尝试领取...`,
+                type: "warning",
+              });
+
+              let rewardClaimed = false;
+
+              try {
+                // 尝试领取奖励
+                const claimResult = await tokenStore.sendMessageWithPromise(
+                  tokenId,
+                  "evotower_claimreward",
+                  {},
+                  10000
+                );
+
+                addLog({
+                  time: new Date().toLocaleTimeString(),
+                  message: `${token.name} 奖励领取成功，继续爬塔`,
+                  type: "success",
+                });
+                rewardClaimed = true;
+              } catch (rewardErr) {
+                addLog({
+                  time: new Date().toLocaleTimeString(),
+                  message: `${token.name} 奖励领取失败: ${rewardErr.message}`,
+                  type: "warning",
+                });
+              }
+
+              if (rewardClaimed) {
+                continue;
+              } else {
+                // 奖励领取失败，跳过当前账号，切换到下一个账号
+                addLog({
+                  time: new Date().toLocaleTimeString(),
+                  message: `${token.name} 奖励领取失败，跳过当前账号，切换到下一个账号`,
+                  type: "info",
+                });
+                break;
+              }
+            }
+
+            addLog({
+              time: new Date().toLocaleTimeString(),
+              message: `战斗出错(第${consecutiveFailures}次): ${err.message}`,
+              type: "warning",
+            });
+
+            // 如果是WebSocket未连接错误，主动重新连接
+            if (err.message && err.message.includes("WebSocket未连接")) {
+              addLog({
+                time: new Date().toLocaleTimeString(),
+                message: `${token.name} 发现WebSocket未连接，尝试重新连接...`,
+                type: "info",
+              });
+              
+              try {
+                // 重新建立连接
+                await ensureConnection(tokenId);
+                await new Promise((r) => setTimeout(r, 1000));
+                
+                addLog({
+                  time: new Date().toLocaleTimeString(),
+                  message: `${token.name} WebSocket重新连接成功`,
+                  type: "success",
+                });
+              } catch (reconnectErr) {
+                addLog({
+                  time: new Date().toLocaleTimeString(),
+                  message: `${token.name} WebSocket重新连接失败: ${reconnectErr.message}，跳过当前账号`,
+                  type: "error",
+                });
+                // 重连失败，退出当前账号的爬塔循环
+                break;
+              }
+            } else {
+              await new Promise((r) => setTimeout(r, 1000));
+            }
 
             try {
               const evotowerinfoRefresh2 = await tokenStore.sendMessageWithPromise(
@@ -490,18 +611,40 @@ export function createTasksTower(deps) {
                 5000,
               );
               currentEnergy = evotowerinfoRefresh2?.evoTower?.energy || 0;
+
+              if (currentEnergy <= 0) {
+                addLog({
+                  time: new Date().toLocaleTimeString(),
+                  message: `${token.name} 体力已用完，退出爬塔`,
+                  type: "info",
+                });
+                break;
+              }
             } catch (e) {
-              // 忽略刷新失败
+              if (consecutiveFailures >= 3) {
+                addLog({
+                  time: new Date().toLocaleTimeString(),
+                  message: `${token.name} 连续失败3次，退出当前账号`,
+                  type: "error",
+                });
+                break;
+              }
             }
           }
         }
-        if (Isswitching) {
+        if (tokenSettings.taskCompleteFormation && tokenSettings.taskCompleteFormation !== tokenSettings.weirdTowerFormation) {
+          await new Promise((r) => setTimeout(r, 1000));
           await tokenStore.sendMessageWithPromise(
             tokenId,
             "presetteam_saveteam",
-            { teamId: currentFormation },
+            { teamId: tokenSettings.taskCompleteFormation },
             5000,
           );
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `任务完成，切换到阵容${tokenSettings.taskCompleteFormation}`,
+            type: "info",
+          });
         }
         tokenStatus.value[tokenId] = "completed";
         addLog({

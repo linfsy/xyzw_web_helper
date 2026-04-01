@@ -115,7 +115,9 @@ export const taskColumns = [
 export const defaultSettings = {
   arenaFormation: 1,
   towerFormation: 1,
+  weirdTowerFormation: 1,
   bossFormation: 1,
+  taskCompleteFormation: 1,
   bossTimes: 2,
   claimBottle: true,
   payRecruit: true,
@@ -156,7 +158,9 @@ export const defaultBatchSettings = {
 export const defaultTemplate = {
   arenaFormation: 1,
   towerFormation: 1,
+  weirdTowerFormation: 1,
   bossFormation: 1,
+  taskCompleteFormation: 1,
   bossTimes: 2,
   claimBottle: true,
   payRecruit: true,

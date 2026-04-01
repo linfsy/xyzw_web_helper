@@ -89,12 +89,3 @@ dist.zip
 
 # Configuration files
 xyzw_config_*.json
-
-# Offline game files
-鲨鱼之王离线版/
-
-# Temporary directories
-temp-*/
-
-# Zip files
-*.zip

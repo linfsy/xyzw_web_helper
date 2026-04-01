@@ -27,7 +27,7 @@
 
 5. **打开APK所在文件夹**
    ```
-   explorer "项目根目录\android\app\build\outputs\apk\debug"
+   explorer "f:\XYZW_WEB\xyzw_web_helper-main\android\app\build\outputs\apk\debug"
    ```
    注意：必须使用绝对路径，避免因工作目录变化导致打开错误文件夹
 
@@ -70,11 +70,11 @@ if ($logContent -match "##\s*\[\d{4}-\d{2}-\d{2}\]\s*-\s*(.+)") {
 
 # 使用更稳定的变量拼接方式
 $backupName = "backup_${timestamp}_${suffix}"
-robocopy "." $backupName /MIR /XD node_modules .git dist "android\app\build" "android\.gradle" backup_* "鲨鱼之王离线版" temp-repo temp_current .git.old /XF *.log /NFL /NDL /NJH
+robocopy "." $backupName /MIR /XD node_modules .git dist "android\app\build" "android\.gradle" backup_* "鲨鱼之王离线版" temp-repo* temp_current* .git.old /XF *.log /NFL /NDL /NJH
 Write-Host "备份完成: $backupName"
 ```
 
-排除的目录：node_modules, .git, dist, android\app\build, android\.gradle, backup_*, 鲨鱼之王离线版, temp-repo, temp_current, .git.old
+排除的目录：node_modules, .git, dist, android\app\build, android\.gradle, backup_*, 鲨鱼之王离线版, temp-repo*, temp_current*, .git.old
 
 **命名格式**：`backup_YYYYMMDD_HHmm_描述性后缀`
 - 例如：`backup_20260307_1840_分析任务冲突问题`
@@ -418,8 +418,6 @@ pnpm install
    Remove-Item ".vscode" -Recurse -ErrorAction SilentlyContinue  # 排除VSCode配置
    Remove-Item ".idea" -Recurse -ErrorAction SilentlyContinue  # 排除IntelliJ配置
    Remove-Item "backup_*" -Recurse -ErrorAction SilentlyContinue  # 排除备份目录
-   Remove-Item "temp-*" -Recurse -ErrorAction SilentlyContinue  # 排除临时目录
-   Remove-Item "鲨鱼之王离线版" -Recurse -ErrorAction SilentlyContinue  # 排除离线游戏目录
    
    # 从Git暂存区移除账号配置文件
    git rm --cached "xyzw_config_*.json" -f 2>$null
@@ -431,8 +429,6 @@ pnpm install
    git rm --cached ".vscode" -r -f 2>$null  # 从暂存区移除VSCode配置
    git rm --cached ".idea" -r -f 2>$null  # 从暂存区移除IntelliJ配置
    git rm --cached "backup_*" -r -f 2>$null  # 从暂存区移除备份目录
-   git rm --cached "temp-*" -r -f 2>$null  # 从暂存区移除临时目录
-   git rm --cached "鲨鱼之王离线版" -r -f 2>$null  # 从暂存区移除离线游戏目录
    ```
 
 3. **添加所有修改**

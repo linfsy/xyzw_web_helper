@@ -324,7 +324,6 @@ import HangUpStatusCard from "./cards/HangUpStatusCard.vue";
 import MonthlyTasksCard from "./cards/MonthlyTasksCard.vue";
 import StudyChallengeCard from "./cards/StudyChallengeCard.vue";
 import SkinChallengeCard from "./cards/SkinChallengeCard.vue";
-import BlackMarketBuyer from "./cards/BlackMarketBuyer.vue";
 import ClubWarrank from "./Club/ClubWarrank.vue";
 import ClubMonthBattleRecords from "./Club/ClubMonthBattleRecords.vue";
 import ClubBattleRecords from "./Club/ClubBattleRecords.vue";
@@ -346,8 +345,8 @@ import PeachInfo from "./Club/PeachInfo.vue";
 import ServerRankList from "./cards/ServerRankListPageCard.vue";
 import LegionWarMap from "./Club/LegionWarMap.vue";
 import LegionWarStatistics from "./Club/LegionWarStatistics.vue";
-import TeamFormation from "./Team/TeamFormation.vue";
 import Unlimitedlineup from "./cards/Unlimitedlineup.vue";
+import BlackMarketBuyer from "./cards/BlackMarketBuyer.vue";
 
 const tokenStore = useTokenStore();
 const message = useMessage();

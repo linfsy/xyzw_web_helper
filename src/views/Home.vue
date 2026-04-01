@@ -152,6 +152,19 @@
                 >
                   {{ authStore.isAuthenticated ? "进入控制台" : "立即开始" }}
                 </n-button>
+                <n-upload
+                  :show-file-list="false"
+                  accept=".json"
+                  :custom-request="importConfig"
+                >
+                  <n-button
+                    type="warning"
+                    size="large"
+                    class="hero-button"
+                  >
+                    导入配置
+                  </n-button>
+                </n-upload>
                 <n-button
                   text
                   type="primary"
@@ -260,12 +273,39 @@
 import { ref, onMounted, markRaw } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
+import { useTokenStore } from "@/stores/tokenStore";
+import { useScheduledTaskStore } from "@/stores/scheduledTaskStore";
+import useIndexedDB from "@/hooks/useIndexedDB";
 import { PersonCircle, Cube, Ribbon, Settings, Menu } from "@vicons/ionicons5";
+import { NIcon, useMessage } from "naive-ui";
 
 const router = useRouter();
 const authStore = useAuthStore();
+const tokenStore = useTokenStore();
+const scheduledTaskStore = useScheduledTaskStore();
+const { getArrayBuffer, storeArrayBuffer, waitForReady } = useIndexedDB();
+const message = useMessage();
 const featuresSection = ref(null);
 const isMobileMenuOpen = ref(false);
+
+// 解码Base64编码的配置
+const decodeBase64 = (str) => {
+  try {
+    str = str.replace(/[\s\n\r]/g, '');
+    try {
+      return decodeURIComponent(escape(atob(str)));
+    } catch (e) {
+      const binary = atob(str);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      return new TextDecoder().decode(bytes);
+    }
+  } catch (e) {
+    throw new Error('Base64解码失败: ' + e.message);
+  }
+};
 
 // 功能卡片数据
 const featureCards = ref([
@@ -331,6 +371,246 @@ const scrollToFeatures = () => {
     featuresSection.value.scrollIntoView({
       behavior: "smooth",
     });
+  }
+};
+
+// 导入配置
+const importConfig = async ({ file }) => {
+  try {
+    const loadingMsg = message.loading('正在读取配置文件...', { duration: 0 });
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        let importData;
+        let content = e.target.result;
+
+        try {
+          importData = JSON.parse(content);
+          message.info('JSON格式，直接解析成功');
+        } catch (jsonError) {
+          try {
+            const decodedContent = decodeBase64(content);
+            message.info(`Base64解码成功，长度: ${decodedContent.length}`);
+            importData = JSON.parse(decodedContent);
+            message.info('JSON解析成功');
+          } catch (base64Error) {
+            console.error('Base64解码失败:', base64Error);
+            throw new Error('文件格式错误：既不是有效的JSON文件，也不是Base64编码的JSON文件');
+          }
+        }
+
+        const info = {
+          version: importData.version,
+          tokensCount: importData.tokens?.length,
+          tasksCount: importData.scheduledTasks?.length,
+          binCount: Object.keys(importData.binFiles || {}).length,
+        };
+        message.info(`配置版本: v${info.version}, ${info.tokensCount}账号, ${info.tasksCount}任务, ${info.binCount}BIN`);
+
+        if (!importData.version || !importData.tokens) {
+          message.error("无效的配置文件格式");
+          return;
+        }
+
+        let importedTokens = 0;
+        let restoredBinFiles = 0;
+
+        // 导入账号
+        if (Array.isArray(importData.tokens)) {
+          message.info(`找到 ${importData.tokens.length} 个账号`);
+          importData.tokens.forEach((token, idx) => {
+            try {
+              const existingToken = tokenStore.gameTokens.find(
+                (t) => t.token === token.token || t.id === token.id || t.name === token.name
+              );
+              if (existingToken) {
+                Object.assign(existingToken, token, {
+                  upgradedToPermanent: true,
+                  lastUsed: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                });
+                importedTokens++;
+              } else if (token.token) {
+                tokenStore.addToken({
+                  ...token,
+                  importMethod: token.importMethod || "import",
+                  upgradedToPermanent: true,
+                  createdAt: new Date().toISOString(),
+                  lastUsed: new Date().toISOString(),
+                });
+                importedTokens++;
+              }
+            } catch (tokenErr) {
+              message.warning(`导入账号失败 ${idx + 1}: ${token.name}`);
+              console.error(tokenErr);
+            }
+          });
+          message.success(`账号导入完成: ${importedTokens} 个`);
+        }
+
+        // 导入定时任务
+        if (Array.isArray(importData.scheduledTasks)) {
+          message.info(`找到 ${importData.scheduledTasks.length} 个定时任务`);
+          try {
+            localStorage.setItem("scheduledTasks_v2", JSON.stringify(importData.scheduledTasks));
+            message.success(`定时任务导入完成: ${importData.scheduledTasks.length} 个`);
+            
+            // 更新Pinia store中的定时任务状态
+            try {
+              if (scheduledTaskStore) {
+                // 清空现有的任务
+                while (scheduledTaskStore.scheduledTasks.length > 0) {
+                  scheduledTaskStore.removeTask(scheduledTaskStore.scheduledTasks[0].id);
+                }
+                // 添加新的任务
+                importData.scheduledTasks.forEach(task => {
+                  scheduledTaskStore.addTask({
+                    name: task.name,
+                    taskName: task.taskName,
+                    runType: task.runType,
+                    runTime: task.runTime,
+                    cronExpression: task.cronExpression,
+                    selectedTokens: task.selectedTokens,
+                    selectedTasks: task.selectedTasks,
+                    enableBatchExecution: task.enableBatchExecution,
+                    batchSize: task.batchSize,
+                    batchDelay: task.batchDelay
+                  });
+                });
+                // 重新启动调度器，确保状态同步
+                scheduledTaskStore.startScheduler();
+                message.info('定时任务已同步到状态管理');
+              }
+            } catch (storeError) {
+              console.error('更新定时任务状态失败:', storeError);
+            }
+          } catch (e) {
+            console.error('导入定时任务失败:', e);
+          }
+        }
+
+        // 导入批量设置
+        if (importData.batchSettings) {
+          try {
+            localStorage.setItem("batchSettings", JSON.stringify(importData.batchSettings));
+            message.success('批量设置导入完成');
+          } catch (e) {
+            console.error('导入批量设置失败:', e);
+          }
+        }
+
+        // 导入账号设置
+        if (Array.isArray(importData.tokenSettings)) {
+          message.info(`找到 ${importData.tokenSettings.length} 个账号设置`);
+          importData.tokenSettings.forEach((item, idx) => {
+            try {
+              if (item.tokenId && item.settings) {
+                localStorage.setItem(
+                  `daily-settings:${item.tokenId}`,
+                  JSON.stringify(item.settings)
+                );
+              }
+            } catch (settingsErr) {
+              message.warning(`导入账号设置失败 ${idx + 1}`);
+              console.error(settingsErr);
+            }
+          });
+        }
+
+        // 导入BIN文件
+        if (importData.binFiles) {
+          message.info('开始导入BIN文件...');
+          const ready = await waitForReady(3000);
+          if (!ready) {
+            message.error('IndexedDB 未准备好，无法导入BIN文件');
+          }
+          const binFiles = importData.binFiles;
+          message.info(`找到 ${Object.keys(binFiles).length} 个BIN文件`);
+          
+          for (const [tokenId, uint8Array] of Object.entries(binFiles)) {
+            try {
+              const arrayBuffer = new Uint8Array(uint8Array).buffer;
+              await storeArrayBuffer(tokenId, arrayBuffer);
+              restoredBinFiles++;
+            } catch (error) {
+              message.warning(`BIN导入失败: ${tokenId}`);
+              console.error(error);
+            }
+          }
+          message.success(`BIN文件导入完成: ${restoredBinFiles} 个`);
+        }
+
+        // 导入任务模板
+        if (importData.taskTemplates && Array.isArray(importData.taskTemplates)) {
+          try {
+            localStorage.setItem("task-templates", JSON.stringify(importData.taskTemplates));
+            message.info(`任务模板导入完成: ${importData.taskTemplates.length} 个`);
+          } catch (e) {
+            console.error('导入任务模板失败:', e);
+          }
+        }
+
+        // 导入账号排序配置
+        if (importData.tokenSortConfig) {
+          try {
+            localStorage.setItem("tokenSortConfig", JSON.stringify(importData.tokenSortConfig));
+            message.info('账号排序配置已导入');
+          } catch (e) {
+            console.error('导入排序配置失败:', e);
+          }
+        }
+
+        // 导入分组信息
+        if (importData.tokenGroups && Array.isArray(importData.tokenGroups)) {
+          try {
+            localStorage.setItem("tokenGroups", JSON.stringify(importData.tokenGroups));
+            message.info(`分组信息导入完成: ${importData.tokenGroups.length} 个`);
+          } catch (e) {
+            console.error('导入分组信息失败:', e);
+          }
+        }
+
+        // 导入阵容数据
+        if (importData.savedLineups && typeof importData.savedLineups === 'object') {
+          let lineupsCount = 0;
+          try {
+            Object.entries(importData.savedLineups).forEach(([tokenId, lineups]) => {
+              try {
+                const key = `saved_lineups_${tokenId}`;
+                localStorage.setItem(key, JSON.stringify(lineups));
+                lineupsCount++;
+              } catch (e) {
+                console.warn(`导入阵容数据失败 (${tokenId}):`, e);
+              }
+            });
+            if (lineupsCount > 0) {
+              message.info(`阵容数据导入完成: ${lineupsCount} 个账号`);
+            }
+          } catch (e) {
+            console.error('导入阵容数据失败:', e);
+          }
+        }
+
+        let successMessage = `导入成功: ${importedTokens} 个账号`;
+        if (restoredBinFiles > 0) {
+          successMessage += `, ${restoredBinFiles} 个BIN文件`;
+        }
+        message.success(successMessage);
+        
+        // 等待IndexedDB完全写入
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        location.reload();
+      } catch (parseError) {
+        console.error("Parse error:", parseError);
+        message.error("解析配置文件失败: " + parseError.message);
+      } finally {
+        loadingMsg.destroy();
+      }
+    };
+    reader.readAsText(file.file);
+  } catch (error) {
+    console.error("Import failed:", error);
+    message.error("导入失败: " + error.message);
   }
 };
 

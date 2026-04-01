@@ -183,7 +183,8 @@
 <script setup>
 import {
   useTokenStore,
-  selectedToken
+  selectedToken,
+  selectedTokenId,
 } from "@/stores/tokenStore";
 import ThemeToggle from "@/components/Common/ThemeToggle.vue";
 import {
@@ -200,7 +201,7 @@ import {
 
 import { useRouter } from 'vue-router'
 import { useMessage } from 'naive-ui'
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { isNowInLegionWarTime } from '@/utils/clubBattleUtils'
 
 const tokenStore = useTokenStore();
@@ -209,18 +210,12 @@ const message = useMessage();
 
 const isMobileMenuOpen = ref(false);
 
-const userMenuOptions = computed(() => {
-  const options = [];
-  
-  // 只添加退出选项
-  options.push({ type: "divider" });
-  options.push({
+const userMenuOptions = [
+  {
     label: "清除所有Token并退出",
     key: "logout",
-  });
-  
-  return options;
-});
+  },
+];
 
 // 方法
 const handleUserAction = async (key) => {

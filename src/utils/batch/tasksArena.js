@@ -5,6 +5,44 @@
 
 import { FISH_TARGET, ARENA_TARGET } from "./constants.js";
 
+const getTokenSettings = (tokenId) => {
+  try {
+    const raw = localStorage.getItem(`daily-settings:${tokenId}`);
+    const defaultSettings = {
+      arenaFormation: 1,
+      towerFormation: 1,
+      weirdTowerFormation: 1,
+      bossFormation: 1,
+      taskCompleteFormation: 1,
+      bossTimes: 2,
+      claimBottle: true,
+      payRecruit: true,
+      openBox: true,
+      arenaEnable: true,
+      claimHangUp: true,
+      claimEmail: true,
+      blackMarketPurchase: true,
+    };
+    return raw ? { ...defaultSettings, ...JSON.parse(raw) } : defaultSettings;
+  } catch (e) {
+    return {
+      arenaFormation: 1,
+      towerFormation: 1,
+      weirdTowerFormation: 1,
+      bossFormation: 1,
+      taskCompleteFormation: 1,
+      bossTimes: 2,
+      claimBottle: true,
+      payRecruit: true,
+      openBox: true,
+      arenaEnable: true,
+      claimHangUp: true,
+      claimEmail: true,
+      blackMarketPurchase: true,
+    };
+  }
+};
+
 /**
  * 创建竞技场、补齐类任务执行器
  * @param {Object} deps - 依赖项
@@ -177,13 +215,19 @@ export function createTasksArena(deps) {
           }
         }
         await new Promise((r) => setTimeout(r, delayConfig.battle));
-        if (Isswitching) {
+        if (tokenSettings.taskCompleteFormation && tokenSettings.taskCompleteFormation !== tokenSettings.arenaFormation) {
+          await new Promise((r) => setTimeout(r, 1000));
           await tokenStore.sendMessageWithPromise(
             tokenId,
             "presetteam_saveteam",
-            { teamId: currentFormation },
+            { teamId: tokenSettings.taskCompleteFormation },
             5000,
           );
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 任务完成，切换到阵容${tokenSettings.taskCompleteFormation}`,
+            type: "info",
+          });
         }
         tokenStatus.value[tokenId] = "completed";
         addLog({

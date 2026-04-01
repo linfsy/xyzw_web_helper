@@ -243,6 +243,14 @@ export function useIndexedDB(config: DBConfig = {}): UseIndexedDBReturn {
     }
   };
 
+  const waitForReady = async (timeout = 3000): Promise<boolean> => {
+    const startTime = Date.now();
+    while (!isReady.value && Date.now() - startTime < timeout) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    return isReady.value;
+  };
+
   initDB();
 
   return {
@@ -251,6 +259,7 @@ export function useIndexedDB(config: DBConfig = {}): UseIndexedDBReturn {
     error,
 
     // 方法
+    waitForReady,
     storeArrayBuffer,
     getArrayBuffer,
     getAllKeys,
