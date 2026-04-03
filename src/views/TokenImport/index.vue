@@ -1436,8 +1436,44 @@ const exportConfig = async () => {
     };
     const fileName = `xyzw_config_${getBeijingDateTime()}.json`;
 
-    loadingMsg.destroy();
-    saveFileByDownload(jsonString, fileName);
+    const isAndroidApp = typeof window !== 'undefined' && 
+                      window.Capacitor && 
+                      /android/i.test(navigator.userAgent);
+
+    if (isAndroidApp) {
+      try {
+        loadingMsg.content = '正在保存文件...';
+        const permStatus = await Filesystem.checkPermissions();
+        if (permStatus.publicStorage !== 'granted') {
+          const reqResult = await Filesystem.requestPermissions();
+          if (reqResult.publicStorage !== 'granted') {
+            loadingMsg.destroy();
+            message.error('存储权限被拒绝，请在设置中允许存储权限后重试');
+            return;
+          }
+        }
+
+        const encodedData = btoa(unescape(encodeURIComponent(jsonString)));
+        await Filesystem.writeFile({
+          path: fileName,
+          data: encodedData,
+          directory: Directory.Documents,
+          encoding: 'utf8'
+        });
+        
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        loadingMsg.destroy();
+        message.success(`设置导出成功！文件已保存到：/storage/emulated/0/Documents/${fileName}`);
+      } catch (fsError) {
+        loadingMsg.destroy();
+        console.error('文件系统保存失败:', fsError);
+        message.warning('存储权限可能不足，尝试使用浏览器下载方式');
+        saveFileByDownload(jsonString, fileName);
+      }
+    } else {
+      loadingMsg.destroy();
+      saveFileByDownload(jsonString, fileName);
+    }
   } catch (error) {
     loadingMsg.destroy();
     console.error("导出失败:", error);
@@ -1662,38 +1698,26 @@ const importConfig = async ({ file }) => {
 
         if (importData.scheduledTasks && Array.isArray(importData.scheduledTasks)) {
           try {
-            localStorage.setItem("scheduledTasks_v2", JSON.stringify(importData.scheduledTasks));
-            message.info(`定时任务导入完成: ${importData.scheduledTasks.length} 个`);
-            
-            // 更新Pinia store中的定时任务状态
-            try {
-              if (scheduledTaskStore) {
-                // 清空现有的任务
-                while (scheduledTaskStore.scheduledTasks.length > 0) {
-                  scheduledTaskStore.removeTask(scheduledTaskStore.scheduledTasks[0].id);
-                }
-                // 添加新的任务
-                importData.scheduledTasks.forEach(task => {
-                  scheduledTaskStore.addTask({
-                    name: task.name,
-                    taskName: task.taskName,
-                    runType: task.runType,
-                    runTime: task.runTime,
-                    cronExpression: task.cronExpression,
-                    selectedTokens: task.selectedTokens,
-                    selectedTasks: task.selectedTasks,
-                    enableBatchExecution: task.enableBatchExecution,
-                    batchSize: task.batchSize,
-                    batchDelay: task.batchDelay
-                  });
-                });
-                // 重新启动调度器，确保状态同步
-                scheduledTaskStore.startScheduler();
-                message.info('定时任务已同步到状态管理');
-              }
-            } catch (storeError) {
-              console.error('更新定时任务状态失败:', storeError);
-              // 即使更新状态失败，也不影响导入结果
+            // 直接使用store的replaceAllTasks方法替换所有任务
+            if (scheduledTaskStore) {
+              // 确保每个任务都有必要的属性
+              const formattedTasks = importData.scheduledTasks.map(task => ({
+                ...task,
+                id: task.id || Date.now() + Math.random(),
+                enabled: task.enabled !== false,
+                createdAt: task.createdAt || new Date().toISOString()
+              }));
+              
+              scheduledTaskStore.replaceAllTasks(formattedTasks);
+              message.info(`定时任务导入完成: ${formattedTasks.length} 个`);
+              
+              // 重新启动调度器，确保状态同步
+              scheduledTaskStore.startScheduler();
+              message.info('定时任务已同步到状态管理');
+            } else {
+              // 如果store不可用，回退到直接修改localStorage
+              localStorage.setItem("scheduledTasks_v2", JSON.stringify(importData.scheduledTasks));
+              message.info(`定时任务导入完成: ${importData.scheduledTasks.length} 个`);
             }
           } catch (e) {
             console.error('导入定时任务失败:', e);

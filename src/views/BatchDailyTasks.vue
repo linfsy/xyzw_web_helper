@@ -3570,6 +3570,8 @@ import { $emit } from "@/stores/events/index.ts";
 import { DailyTaskRunner } from "@/utils/dailyTaskRunner";
 import { preloadQuestions } from "@/utils/studyQuestionsFromJSON.js";
 import { useMessage } from "naive-ui";
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import useIndexedDB from "@/hooks/useIndexedDB";
 import { Settings } from "@vicons/ionicons5";
 import { sendTaskCompleteNotification, getPushConfig, savePushConfig, testPushNotification as testPushNotificationUtil } from '@/utils/pushNotification';
 
@@ -3634,6 +3636,8 @@ import BlackMarketBuyer from "@/components/cards/BlackMarketBuyer.vue";
 const tokenStore = useTokenStore();
 const batchTaskStore = useBatchTaskStore();
 const scheduledTaskStore = useScheduledTaskStore();
+const indexedDB = useIndexedDB();
+const { getArrayBuffer, waitForReady, getAllKeys } = indexedDB;
 const message = useMessage();
 
 // 安全的 localStorage 操作封装
@@ -4909,11 +4913,13 @@ const avatarLoadError = ref(false);
 // ======================
 
 // Scheduled Tasks State Management
-const scheduledTasks = ref([]); // List of all scheduled tasks
+// 使用scheduledTaskStore中的scheduledTasks，而不是本地ref
+const scheduledTasks = computed(() => scheduledTaskStore.scheduledTasks);
 const showTaskModal = ref(false); // Control the visibility of the add/edit task modal
 const showTasksModal = ref(false); // Control the visibility of the tasks list modal
 const showBlackMarketBuyerModal = ref(false); // Control the visibility of the black market buyer modal
 const editingTask = ref(null); // Currently editing task
+const selectedTasks = ref([]); // Selected task function names
 const taskForm = reactive({
   name: "", // Task name
   runType: "daily", // 'daily' or 'cron'
@@ -5037,8 +5043,12 @@ const manualExecuteTask = async (task) => {
   executingTaskIds.value.push(task.id);
   try {
     message.info(`开始执行任务: ${task.name}`);
-    await executeScheduledTask(task);
-    message.success(`任务 ${task.name} 执行完成`);
+    const taskExecuted = await executeScheduledTask(task);
+    if (taskExecuted !== false) {
+      message.success(`任务 ${task.name} 执行完成`);
+    } else {
+      message.info(`任务 ${task.name} 已加入积攒队列，将依次执行`);
+    }
   } catch (e) {
     console.error(`执行任务 ${task.name} 失败:`, e);
     message.error(`任务 ${task.name} 执行失败`);
@@ -5185,15 +5195,8 @@ const loadScheduledTasks = () => {
 
 // Save scheduled tasks to localStorage
 const saveScheduledTasks = () => {
-  try {
-    const dataToSave = JSON.stringify(scheduledTasks.value);
-
-    localStorage.setItem("scheduledTasks_v2", dataToSave);
-    // Verify save was successful
-    const saved = localStorage.getItem("scheduledTasks_v2");
-  } catch (error) {
-    console.error("Failed to save scheduled tasks:", error);
-  }
+  // 定时任务通过scheduledTaskStore自动保存，无需手动保存
+  console.log('定时任务已通过scheduledTaskStore自动保存');
 };
 
 // Open task modal for adding new task
@@ -5316,7 +5319,7 @@ const saveTask = () => {
   }
 
   const taskData = {
-    id: editingTask.value?.id || "task_" + Date.now(),
+    id: editingTask.value?.id || Date.now(),
     name: taskForm.name,
     runType: taskForm.runType,
     runTime: formattedRunTime,
@@ -5330,15 +5333,20 @@ const saveTask = () => {
 
   if (editingTask.value) {
     // Update existing task
-    const index = scheduledTasks.value.findIndex(
-      (t) => t.id === editingTask.value.id,
-    );
-    if (index !== -1) {
-      scheduledTasks.value[index] = taskData;
-    }
+    scheduledTaskStore.updateTask(editingTask.value.id, taskData);
   } else {
     // Add new task
-    scheduledTasks.value.push(taskData);
+    scheduledTaskStore.addTask({
+      id: taskData.id,
+      name: taskData.name,
+      taskName: taskData.name,
+      runType: taskData.runType,
+      runTime: taskData.runTime,
+      cronExpression: taskData.cronExpression,
+      selectedTokens: taskData.selectedTokens,
+      selectedTasks: taskData.selectedTasks,
+      enabled: taskData.enabled
+    });
   }
 
   saveScheduledTasks();
@@ -5354,7 +5362,7 @@ const saveTask = () => {
 const deleteTask = (taskId) => {
   const task = scheduledTasks.value.find((t) => t.id === taskId);
   if (task) {
-    scheduledTasks.value = scheduledTasks.value.filter((t) => t.id !== taskId);
+    scheduledTaskStore.removeTask(taskId);
     saveScheduledTasks();
     addLog({
       time: new Date().toLocaleTimeString(),
@@ -5369,7 +5377,7 @@ const deleteTask = (taskId) => {
 const toggleTaskEnabled = (taskId, enabled) => {
   const task = scheduledTasks.value.find((t) => t.id === taskId);
   if (task) {
-    task.enabled = enabled;
+    scheduledTaskStore.updateTask(taskId, { enabled });
     saveScheduledTasks();
     message.success(`定时任务已${enabled ? "启用" : "禁用"}`);
     addLog({
@@ -5416,13 +5424,21 @@ const deselectAllTasks = () => {
 // ======================
 
 // Export all tokens and scheduled tasks configuration
-const exportConfig = () => {
+const exportConfig = async () => {
   try {
-    // Get all valid token IDs
-    const validTokenIds = new Set(tokens.value.map((t) => t.id));
+    const loadingMsg = message.loading('正在导出配置，读取BIN文件中...', { duration: 0 });
+    
+    const { waitForReady, getAllKeys, getArrayBuffer } = indexedDB;
+    const ready = await waitForReady(3000);
+    if (!ready) {
+      console.warn('IndexedDB 未准备好，跳过BIN文件导出');
+    }
+
+    const tokensData = tokenStore.gameTokens;
+    const validTokenIds = new Set(tokensData.map((t) => t.id));
 
     // Filter scheduled tasks: remove invalid token IDs from selectedTokens
-    const filteredScheduledTasks = scheduledTasks.value
+    const filteredScheduledTasks = scheduledTaskStore.scheduledTasks
       .map((task) => ({
         ...task,
         selectedTokens:
@@ -5434,7 +5450,7 @@ const exportConfig = () => {
 
     // Gather token settings
     const tokenSettings = [];
-    tokens.value.forEach((token) => {
+    tokensData.forEach((token) => {
       const settings = localStorage.getItem(`daily-settings:${token.id}`);
       if (settings) {
         try {
@@ -5450,7 +5466,7 @@ const exportConfig = () => {
 
     // 导出阵容数据
     const savedLineups = {};
-    tokens.value.forEach((token) => {
+    tokensData.forEach((token) => {
       const key = `saved_lineups_${token.id}`;
       const data = localStorage.getItem(key);
       if (data) {
@@ -5496,10 +5512,35 @@ const exportConfig = () => {
       console.warn('获取分组配置失败', e);
     }
 
+    // 导出BIN文件
+    const binFiles = {};
+    if (ready) {
+      try {
+        const keys = await getAllKeys();
+        const existingKeys = new Set(keys);
+        
+        for (const token of tokensData) {
+          let arrayBuffer = null;
+          
+          if (existingKeys.has(token.id)) {
+            arrayBuffer = await getArrayBuffer(token.id);
+          } else if (existingKeys.has(token.name)) {
+            arrayBuffer = await getArrayBuffer(token.name);
+          }
+          
+          if (arrayBuffer) {
+            binFiles[token.id] = Array.from(new Uint8Array(arrayBuffer));
+          }
+        }
+      } catch (binError) {
+        console.error('获取BIN文件失败:', binError);
+      }
+    }
+
     const exportData = {
       version: "1.3",
       exportTime: new Date().toISOString(),
-      tokens: tokens.value.map((t) => ({
+      tokens: tokensData.map((t) => ({
         id: t.id,
         name: t.name,
         token: t.token,
@@ -5542,31 +5583,80 @@ const exportConfig = () => {
       tokenSortConfig: tokenSortConfig,
       tokenGroups: tokenGroupsData,
       savedLineups: savedLineups,
+      binFiles: binFiles,
     };
 
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], {
-      type: "application/json",
-    });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `xyzw_config_${new Date().toISOString().slice(0, 10)}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    const jsonString = JSON.stringify(exportData, null, 2);
+    const getBeijingDateTime = () => {
+      const now = new Date();
+      now.setHours(now.getHours() + 8);
+      return now.toISOString().slice(0, 16).replace('T', '_').replace(':', '');
+    };
+    const fileName = `xyzw_config_${getBeijingDateTime()}.json`;
 
-    const lineupsCount = Object.keys(exportData.savedLineups || {}).length;
-    const templatesCount = exportData.taskTemplates?.length || 0;
-    const groupsCount = exportData.tokenGroups?.length || 0;
-    message.success(
-      `导出成功: ${exportData.tokens.length} 个账号, ${exportData.scheduledTasks.length} 个定时任务${templatesCount > 0 ? `, ${templatesCount} 个任务模板` : ''}${groupsCount > 0 ? `, ${groupsCount} 个分组` : ''}${lineupsCount > 0 ? `, ${lineupsCount} 个账号的阵容` : ''}`,
-    );
+    const isAndroidApp = typeof window !== 'undefined' && 
+                      window.Capacitor && 
+                      /android/i.test(navigator.userAgent);
+
+    if (isAndroidApp) {
+      try {
+        loadingMsg.content = '正在保存文件...';
+        const permStatus = await Filesystem.checkPermissions();
+        if (permStatus.publicStorage !== 'granted') {
+          const reqResult = await Filesystem.requestPermissions();
+          if (reqResult.publicStorage !== 'granted') {
+            loadingMsg.destroy();
+            message.error('存储权限被拒绝，请在设置中允许存储权限后重试');
+            return;
+          }
+        }
+
+        const encodedData = btoa(unescape(encodeURIComponent(jsonString)));
+        await Filesystem.writeFile({
+          path: fileName,
+          data: encodedData,
+          directory: Directory.Documents,
+          encoding: 'utf8'
+        });
+        
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        loadingMsg.destroy();
+        message.success(`设置导出成功！文件已保存到：/storage/emulated/0/Documents/${fileName}`);
+      } catch (fsError) {
+        loadingMsg.destroy();
+        console.error('文件系统保存失败:', fsError);
+        message.warning('存储权限可能不足，尝试使用浏览器下载方式');
+        saveFileByDownload(jsonString, fileName);
+      }
+    } else {
+      loadingMsg.destroy();
+      saveFileByDownload(jsonString, fileName);
+    }
   } catch (error) {
     console.error("Export failed:", error);
     message.error("导出失败: " + error.message);
   }
 };
+
+function saveFileByDownload(jsonString, fileName) {
+  const blob = new Blob([jsonString], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+
+  const exportData = JSON.parse(jsonString);
+  const lineupsCount = Object.keys(exportData.savedLineups || {}).length;
+  const templatesCount = exportData.taskTemplates?.length || 0;
+  const groupsCount = exportData.tokenGroups?.length || 0;
+  message.success(
+    `导出成功: ${exportData.tokens.length} 个账号, ${exportData.scheduledTasks.length} 个定时任务, ${Object.keys(exportData.binFiles || {}).length} 个BIN文件${templatesCount > 0 ? `, ${templatesCount} 个任务模板` : ''}${groupsCount > 0 ? `, ${groupsCount} 个分组` : ''}${lineupsCount > 0 ? `, ${lineupsCount} 个账号的阵容` : ''}`,
+  );
+}
 
 // Import tokens and scheduled tasks configuration
 const importConfig = async ({ file }) => {
@@ -5667,22 +5757,26 @@ const importConfig = async ({ file }) => {
         // Import scheduled tasks
         if (Array.isArray(importData.scheduledTasks)) {
           message.info(`找到 ${importData.scheduledTasks.length} 个定时任务`);
-          importData.scheduledTasks.forEach((importedTask, idx) => {
-            try {
-              const existingIndex = scheduledTasks.value.findIndex((t) => t.name === importedTask.name);
-              if (existingIndex >= 0) {
-                scheduledTasks.value[existingIndex] = importedTask;
-              } else {
-                scheduledTasks.value.push(importedTask);
-              }
-              importedTasks++;
-            } catch (taskErr) {
-              message.warning(`导入定时任务失败 ${idx + 1}: ${importedTask.name}`);
-              console.error(taskErr);
-            }
-          });
-          saveScheduledTasks();
-          message.success(`定时任务导入完成: ${importedTasks} 个`);
+          try {
+            // 确保每个任务都有必要的属性
+            const formattedTasks = importData.scheduledTasks.map(task => ({
+              ...task,
+              id: task.id || Date.now() + Math.random(),
+              enabled: task.enabled !== false,
+              createdAt: task.createdAt || new Date().toISOString()
+            }));
+            
+            // 使用scheduledTaskStore的replaceAllTasks方法替换所有任务
+            scheduledTaskStore.replaceAllTasks(formattedTasks);
+            importedTasks = formattedTasks.length;
+            
+            // 重新启动调度器，确保状态同步
+            scheduledTaskStore.startScheduler();
+            message.success(`定时任务导入完成: ${importedTasks} 个`);
+          } catch (taskErr) {
+            message.warning(`导入定时任务失败: ${taskErr.message}`);
+            console.error(taskErr);
+          }
         }
 
         // Import batch settings if provided
@@ -5780,7 +5874,8 @@ const importConfig = async ({ file }) => {
 
 // Task countdowns ref
 const taskCountdowns = ref({});
-const nextExecutionTimes = ref({});
+// 从 Store 获取下次执行时间
+const nextExecutionTimes = computed(() => scheduledTaskStore.nextExecutionTimes);
 
 // Update countdowns for all tasks
 const updateCountdowns = () => {
@@ -5794,12 +5889,13 @@ const updateCountdowns = () => {
     }
 
     if (
-      !nextExecutionTimes.value[task.id] ||
-      nextExecutionTimes.value[task.id] <= now
-    ) {
-      // Calculate next execution time if not set or passed
-      nextExecutionTimes.value[task.id] = calculateNextExecutionTime(task);
-    }
+    !nextExecutionTimes.value[task.id] ||
+    nextExecutionTimes.value[task.id] <= now
+  ) {
+    // Calculate next execution time if not set or passed
+    const nextTime = calculateNextExecutionTime(task);
+    scheduledTaskStore.updateNextExecutionTime(task.id, nextTime);
+  }
 
     if (nextExecutionTimes.value[task.id]) {
       const timeDiff = nextExecutionTimes.value[task.id] - now;
@@ -5898,7 +5994,7 @@ const startResumeCheck = () => {
         type: "info",
       });
       // 暂停时间结束时，触发积攒队列执行（如果当前没有任务在执行）
-      if (queue.length > 0 && !batchTaskStore.isRunning && !isExecutingQueuedTasks.value) {
+      if (queue.length > 0 && !batchTaskStore.isRunning.value && !isExecutingQueuedTasks.value) {
         checkAndExecuteQueuedTasks();
       }
     }
@@ -5986,7 +6082,23 @@ const checkAndExecuteQueuedTasks = async () => {
           safeLocalStorage.setItem(`task_executing_${task.id}`, Date.now().toString());
         }
 
+        // 保存原始值
+        const originalRecipientId = recipientIdInput.value;
+        const originalSecurityPassword = securityPassword.value;
+        const originalGiftQuantity = giftQuantity.value;
+
         try {
+          // 如果任务包含功法赠送相关参数，临时设置这些值
+          if (task.recipientId !== undefined) {
+            recipientIdInput.value = task.recipientId;
+          }
+          if (task.securityPassword !== undefined) {
+            securityPassword.value = task.securityPassword;
+          }
+          if (task.giftQuantity !== undefined) {
+            giftQuantity.value = task.giftQuantity;
+          }
+
           if (hasDailyTask) {
             selectedTokens.value = currentTaskTokens;
             // 添加日志，确认分批执行设置
@@ -6022,6 +6134,10 @@ const checkAndExecuteQueuedTasks = async () => {
             type: "success",
           });
         } finally {
+          // 恢复原始值
+          recipientIdInput.value = originalRecipientId;
+          securityPassword.value = originalSecurityPassword;
+          giftQuantity.value = originalGiftQuantity;
           // 清除任务正在执行的标记
           if (task.id) {
             safeLocalStorage.removeItem(`task_executing_${task.id}`);
@@ -6092,7 +6208,6 @@ watch(
   scheduledTasks,
   (newVal) => {
     // Reset countdowns when tasks change
-    nextExecutionTimes.value = {};
     taskCountdowns.value = {};
     updateCountdowns();
   },
@@ -6127,14 +6242,14 @@ const healthCheck = () => {
   }
 
   // Add a safety mechanism to prevent isRunning from being stuck
-  if (isRunning.value) {
+  if (batchTaskStore.isRunning.value) {
     const now = Date.now();
     const tenMinutesAgo = now - 10 * 60 * 1000; // 10 minutes ago
     if (lastTaskExecution && lastTaskExecution < tenMinutesAgo) {
       console.error(
         `[${new Date().toISOString()}] isRunning has been true for more than 10 minutes, resetting to false`,
       );
-      isRunning.value = false;
+      batchTaskStore.isRunning.value = false;
       addLog({
         time: new Date().toLocaleTimeString(),
         message: "=== 检测到任务执行超时，已重置isRunning状态 ===",
@@ -6147,7 +6262,7 @@ const healthCheck = () => {
   if (batchSettings.enableRefresh && batchSettings.refreshInterval > 0) {
     const elapsedMinutes = (Date.now() - pageLoadTime) / 1000 / 60;
     if (elapsedMinutes >= batchSettings.refreshInterval) {
-      if (!isRunning.value) {
+      if (!batchTaskStore.isRunning.value) {
         console.log(
           `[${new Date().toISOString()}] Refreshing page as scheduled (Interval: ${batchSettings.refreshInterval}m, Elapsed: ${elapsedMinutes.toFixed(1)}m)`,
         );
@@ -6169,7 +6284,7 @@ const startScheduler = () => {
   }
 
   // Check every 10 seconds instead of 60 seconds for more timely task execution
-  intervalId.value = setInterval(() => {
+  intervalId.value = setInterval(async () => {
     try {
       const now = new Date();
       const currentTime = now.toLocaleTimeString("zh-CN", {
@@ -6186,7 +6301,7 @@ const startScheduler = () => {
         return;
       }
 
-      tasksToRun.forEach((task) => {
+      for (const task of tasksToRun) {
         let shouldRun = false;
         let reason = "";
 
@@ -6214,7 +6329,7 @@ const startScheduler = () => {
               message: `=== 解析定时任务 ${task.name} 的Cron表达式失败: ${error.message} ===`,
               type: "error",
             });
-            return;
+            continue;
           }
         }
 
@@ -6234,14 +6349,27 @@ const startScheduler = () => {
 
             // Execute the task
             lastTaskExecution = Date.now();
-            executeScheduledTask(task);
+            const taskExecuted = await executeScheduledTask(task);
+            if (taskExecuted !== false) {
+              addLog({
+                time: new Date().toLocaleTimeString(),
+                message: `=== 定时任务执行完成：${task.name} ===`,
+                type: "success",
+              });
+            } else {
+              addLog({
+                time: new Date().toLocaleTimeString(),
+                message: `=== 定时任务 ${task.name} 已加入积攒队列，将依次执行 ===`,
+                type: "info",
+              });
+            }
           } else {
             // Only log once per minute to avoid spamming logs
             // But since we check every 10s, this might log multiple times if we don't track logged state
             // For now, we can skip logging "already executed" to keep logs clean
           }
         }
-      });
+      }
     } catch (error) {
       console.error(
         `[${new Date().toISOString()}] Error in task scheduler:`,
@@ -6433,7 +6561,20 @@ onMounted(async () => {
             message: `=== 执行待处理的定时任务：${task.name} ===`,
             type: "info",
           });
-          await executeScheduledTask(task);
+          const taskExecuted = await executeScheduledTask(task);
+          if (taskExecuted !== false) {
+            addLog({
+              time: new Date().toLocaleTimeString(),
+              message: `=== 待处理定时任务执行完成：${task.name} ===`,
+              type: "success",
+            });
+          } else {
+            addLog({
+              time: new Date().toLocaleTimeString(),
+              message: `=== 待处理定时任务 ${task.name} 已加入积攒队列，将依次执行 ===`,
+              type: "info",
+            });
+          }
         }
         
         // 执行完成后清除待处理任务
@@ -6577,9 +6718,12 @@ const verifyTaskDependencies = async (task) => {
     return false;
   }
 
+  const taskTasks = task.selectedTasks || task.taskNames || [];
+  const taskTokens = task.selectedTokens || task.tokenIds || [];
+
   // Verify task functions exist
-  for (const taskName of task.selectedTasks) {
-    const taskFunction = eval(taskName);
+  for (const taskName of taskTasks) {
+    const taskFunction = getTaskFunction(taskName);
     if (typeof taskFunction !== "function") {
       addLog({
         time: new Date().toLocaleTimeString(),
@@ -6592,9 +6736,10 @@ const verifyTaskDependencies = async (task) => {
 
   // 直接使用所有选中的token，WebSocket连接由具体任务函数内部管理
   // ensureConnection函数会自动处理并行连接和连接池管理
-  const connectedTokens = task.selectedTokens.map((tokenId) => {
+  const storeTokens = tokenStore.gameTokens?.value || tokenStore.gameTokens || [];
+  const connectedTokens = taskTokens.map((tokenId) => {
     const tokenName =
-      tokenStore.gameTokens.find((t) => t.id === tokenId)?.name || tokenId;
+      storeTokens.find((t) => t.id === tokenId)?.name || tokenId;
     return { id: tokenId, name: tokenName };
   });
 
@@ -6624,28 +6769,26 @@ const executeScheduledTask = async (task, skipConflictCheck = false) => {
   const taskTaskNames = task.taskNames || task.selectedTasks || ['batchDaily'];
 
   // 安全检查：如果 isRunning 为 true 但没有实际任务在执行（可能是之前任务异常退出），则重置状态
-  if (batchTaskStore.isRunning.value) {
-    const now = Date.now();
-    const tenMinutesAgo = now - 10 * 60 * 1000;
-    // 检查是否有任何任务正在执行
-    const anyTaskExecuting = Array.from(scheduledTasks.value || []).some(task => {
-      const executingMarker = safeLocalStorage.getItem(`task_executing_${task.id}`);
-      return executingMarker;
-    });
+  const now = Date.now();
+  const tenMinutesAgo = now - 10 * 60 * 1000;
+  // 检查是否有任何任务正在执行
+  const anyTaskExecuting = Array.from(scheduledTasks.value || []).some(task => {
+    const executingMarker = safeLocalStorage.getItem(`task_executing_${task.id}`);
+    return executingMarker;
+  });
 
-    // 只有当没有任务正在执行且上次任务执行时间超过10分钟时，才认为状态异常，强制重置
-    if (!anyTaskExecuting && (!lastTaskExecution || lastTaskExecution < tenMinutesAgo)) {
-      addLog({
-        time: new Date().toLocaleTimeString(),
-        message: `=== 检测到任务状态异常（isRunning 卡在 true），强制重置状态 ===`,
-        type: "warning",
-      });
-      batchTaskStore.stopTask();
-    }
+  // 如果 isRunning 为 true 但没有实际任务在执行，并且上次任务执行时间超过10分钟，则重置状态
+  if (batchTaskStore.isRunning.value && !anyTaskExecuting && (!lastTaskExecution || lastTaskExecution < tenMinutesAgo)) {
+    addLog({
+      time: new Date().toLocaleTimeString(),
+      message: `=== 检测到任务状态异常（isRunning 卡在 true），强制重置状态 ===`,
+      type: "warning",
+    });
+    batchTaskStore.stopTask();
   }
 
   // 检测任务冲突：有任务正在运行
-  if (!skipConflictCheck && batchTaskStore.isRunning) {
+  if (!skipConflictCheck && batchTaskStore.isRunning.value) {
     // 检测到任务冲突，检查是否开启冲突加入积攒队列
     if (batchSettings.enableQueueOnConflict) {
       addLog({
@@ -6684,8 +6827,8 @@ const executeScheduledTask = async (task, skipConflictCheck = false) => {
   batchTaskStore.startTask();
   batchTaskStore.setProgress(0);
 
-  const now = new Date();
-  const taskExecutionKey = `${task.id}_${now.getDate()}_${now.getHours()}_${now.getMinutes()}`;
+  const currentDate = new Date();
+  const taskExecutionKey = `${task.id}_${currentDate.getDate()}_${currentDate.getHours()}_${currentDate.getMinutes()}`;
   safeLocalStorage.setItem(`lastTaskExecution_${task.id}`, taskExecutionKey);
 
   safeLocalStorage.setItem('executingState', JSON.stringify({
@@ -6709,7 +6852,7 @@ const executeScheduledTask = async (task, skipConflictCheck = false) => {
         message: `=== 定时任务 ${task.name} 依赖验证失败，取消执行 ===`,
         type: "error",
       });
-      return;
+      return false;
     }
 
     // Filter out tokens that don't exist in current tokens.value
@@ -6739,7 +6882,7 @@ const executeScheduledTask = async (task, skipConflictCheck = false) => {
         message: `=== 定时任务 ${task.name} 没有可用的Token，取消执行 ===`,
         type: "error",
       });
-      return;
+      return false;
     }
 
     // Always use the latest selectedTokens from the task that exist in current tokens.value
@@ -6821,7 +6964,7 @@ const executeScheduledTask = async (task, skipConflictCheck = false) => {
       });
 
       // Call the task function dynamically
-      const taskFunction = eval(taskName);
+      const taskFunction = getTaskFunction(taskName);
       if (typeof taskFunction === "function") {
         // For batch operations, pass isScheduledTask = true
         // 具体的batch任务函数内部会使用ensureConnection管理并行连接
@@ -6855,6 +6998,7 @@ const executeScheduledTask = async (task, skipConflictCheck = false) => {
       message: `=== 定时任务执行完成: ${task.name} ===`,
       type: "success",
     });
+    return true;
   } catch (error) {
     addLog({
       time: new Date().toLocaleTimeString(),
@@ -6865,6 +7009,7 @@ const executeScheduledTask = async (task, skipConflictCheck = false) => {
       `[${new Date().toISOString()}] Error executing scheduled task ${task.name}:`,
       error,
     );
+    return false;
   } finally {
     // 重要：恢复原始选中状态
     selectedTokens.value = originalSelectedTokens;
@@ -7984,7 +8129,7 @@ const createTaskDeps = () => ({
     long: batchSettings.longDelay,
   },
   // 其他特定依赖
-  logs,
+  logs: batchTaskStore.logs,
   logContainer,
   autoScrollLog,
   nextTick,
@@ -8092,7 +8237,7 @@ const startBatch = async (isFromQueue = false) => {
   }
 
   // 检测任务冲突：有任务正在运行（只有不是从积攒队列执行时才检测）
-  if (!isFromQueue && batchTaskStore.isRunning) {
+  if (!isFromQueue && batchTaskStore.isRunning.value) {
     // 检测到任务冲突，检查是否开启冲突加入积攒队列
     if (batchSettings.enableQueueOnConflict) {
       addLog({
@@ -8279,7 +8424,7 @@ const executeInBatches = async (taskFunction, taskName, taskFunctionName, isFrom
   // 只有在任务不是从队列中执行时才检查冲突
   if (!isFromQueue) {
     // 检测任务冲突：有任务正在运行
-    if (batchTaskStore.isRunning) {
+    if (batchTaskStore.isRunning.value) {
       // 检测到任务冲突，检查是否开启冲突加入积攒队列
       if (batchSettings.enableQueueOnConflict) {
         addLog({
@@ -8293,6 +8438,10 @@ const executeInBatches = async (taskFunction, taskName, taskFunctionName, isFrom
           runType: isScheduled ? 'scheduled' : 'manual',
           selectedTokens: [...selectedTokens.value],
           selectedTasks: [taskFunctionName || taskName],
+          // 保存功法赠送相关参数
+          recipientId: recipientIdInput.value,
+          securityPassword: securityPassword.value,
+          giftQuantity: giftQuantity.value,
         });
       } else {
         addLog({
@@ -8338,13 +8487,13 @@ const executeInBatches = async (taskFunction, taskName, taskFunctionName, isFrom
     if (batchSettings.enableQueueOnConflict) {
       // 顺序执行：使用 await 等待完成
       try {
-        await taskFunction();
+        await taskFunction(isScheduled);
       } catch (error) {
         console.error('执行任务失败:', error);
       }
     } else {
       // 并行执行：不使用 await，让任务在后台运行
-      taskFunction().then(() => {
+      taskFunction(isScheduled).then(() => {
         // 任务完成后检查并执行积攒队列
         if (!batchTaskStore.isRunning.value) {
           checkAndExecuteQueuedTasks();
@@ -8363,7 +8512,7 @@ const executeInBatches = async (taskFunction, taskName, taskFunctionName, isFrom
   }
 
   // 分批执行逻辑
-  const sortedTokens = [...selectedTokens.value].sort((a, b) => {
+  const sortedTokenIds = [...selectedTokens.value].sort((a, b) => {
     const tokenA = sortedTokens.value.find((t) => t.id === a);
     const tokenB = sortedTokens.value.find((t) => t.id === b);
     return (tokenA?.sortOrder || 0) - (tokenB?.sortOrder || 0);
@@ -8371,7 +8520,7 @@ const executeInBatches = async (taskFunction, taskName, taskFunctionName, isFrom
 
   const batchSize = batchSettings.batchSize || 10;
   const batchDelay = (batchSettings.batchDelay || 5) * 1000;
-  const totalTokens = sortedTokens.length;
+  const totalTokens = sortedTokenIds.length;
   const totalBatches = Math.ceil(totalTokens / batchSize);
 
   addLog({
@@ -8394,7 +8543,7 @@ const executeInBatches = async (taskFunction, taskName, taskFunctionName, isFrom
     
     // 检查是否进入暂停时间
     if (isPauseTime.value.paused) {
-      const remainingTokens = sortedTokens.slice(batchIndex * batchSize);
+      const remainingTokens = sortedTokenIds.slice(batchIndex * batchSize);
 
       if (remainingTokens.length === 0) {
         addLog({
@@ -8442,7 +8591,7 @@ const executeInBatches = async (taskFunction, taskName, taskFunctionName, isFrom
     
     const startIdx = batchIndex * batchSize;
     const endIdx = Math.min(startIdx + batchSize, totalTokens);
-    const batchTokens = sortedTokens.slice(startIdx, endIdx);
+    const batchTokens = sortedTokenIds.slice(startIdx, endIdx);
 
     selectedTokens.value = batchTokens;
     
@@ -8454,7 +8603,7 @@ const executeInBatches = async (taskFunction, taskName, taskFunctionName, isFrom
     const wasRunningBeforeTask = batchTaskStore.isRunning.value;
 
     try {
-      await taskFunction();
+      await taskFunction(isScheduled);
     } catch (error) {
       addLog({
         time: new Date().toLocaleTimeString(),

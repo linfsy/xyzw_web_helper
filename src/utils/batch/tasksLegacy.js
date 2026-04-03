@@ -159,10 +159,7 @@ export function createTasksLegacy(deps) {
 
           const roleInfo = await tokenStore.sendGetRoleInfo(tokenId);
           const legacyFragmentCount =
-            Math.min(
-              roleInfo?.role?.items?.[giftConfig.itemId]?.quantity,
-              9999,
-            ) || 0;
+            roleInfo?.role?.items?.[giftConfig.itemId]?.quantity || 0;
           if (isScheduledTask) {
             if (legacyFragmentCount === 0) {
               addLog({
@@ -203,12 +200,10 @@ export function createTasksLegacy(deps) {
           if (legacyFragmentCount < giftConfig.quantity) {
             addLog({
               time: new Date().toLocaleTimeString(),
-              message: `=== ${token.name} 功法残卷不足，当前拥有: ${legacyFragmentCount}，需要: ${giftConfig.quantity} ===`,
-              type: "error",
+              message: `=== ${token.name} 功法残卷不足，当前拥有: ${legacyFragmentCount}，需要: ${giftConfig.quantity}，将调整为: ${legacyFragmentCount} ===`,
+              type: "warning",
             });
-            tokenStatus.value[tokenId] = "failed";
-            totalFailed++;
-            break;
+            giftConfig.quantity = legacyFragmentCount;
           }
 
           addLog({
