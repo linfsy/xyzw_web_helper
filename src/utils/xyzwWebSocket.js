@@ -198,6 +198,8 @@ export function registerDefaultCommands(reg) {
     .register("legion_refuseapply")
     .register("legion_agree")
     .register("legion_ignore")
+    .register("legion_research")
+    .register("legion_resetresearch")
 
     .register("legion_getinfobyid")
     .register("legion_getarearank")
@@ -275,7 +277,6 @@ export function registerDefaultCommands(reg) {
 
     // 队伍相关
     .register("presetteam_getinfo")
-    .register("presetteam_getinfo")
     .register("presetteam_setteam")
     .register("presetteam_saveteam", { teamId: 1 })
     .register("role_gettargetteam")
@@ -318,6 +319,7 @@ export function registerDefaultCommands(reg) {
     .register("warguess_getrank")
     .register("warguess_startguess")
     .register("warguess_getguesscoinreward")
+    .register("legion_payloadsignup") // 蟠桃报名
 
     // 珍宝阁相关
     .register("collection_claimfreereward")
@@ -1095,12 +1097,19 @@ export class XyzwWebSocketClient {
       discount_getdiscountinforesp: "discount_getdiscountinfo",
       // 升星相关响应映射
       hero_heroupgradestarresp: "hero_heroupgradestar",
+      hero_heroupgradelevelresp: "hero_heroupgradelevel",
+      hero_heroupgradeorderresp: "hero_heroupgradeorder",
       book_upgraderesp: "book_upgrade",
       book_claimpointrewardresp: "book_claimpointreward",
       // 军团信息
       legion_getinforesp: "legion_getinfo",
       legion_getinforresp: "legion_getinfo",
       legion_signupresp: "legion_signup",
+      legion_researchresp: ["legion_research", "legion_resetresearch"],
+      legion_payloadsignupresp: "legion_payloadsignup",
+      pearl_replaceskillresp: "pearl_replaceskill",
+      pearl_exchangeskillresp: "pearl_exchangeskill",
+      pearl_unloadskillresp: "pearl_unloadskill",
       // 车辆相关响应映射
       car_getrolecarresp: "car_getrolecar",
       car_refreshresp: "car_refresh",
@@ -1108,6 +1117,8 @@ export class XyzwWebSocketClient {
       car_sendresp: "car_send",
       car_getmemberhelpingcntresp: "car_getmemberhelpingcnt",
       car_getmemberrankresp: "car_getmemberrank",
+      car_researchresp: "car_research",
+      car_claimpartconsumerewardresp: "car_claimpartconsumereward",
       role_gettargetteamresp: "role_gettargetteam",
       activity_warorderclaimresp: "activity_recyclewarorderrewardclaim",
       arena_getarearankresp: "arena_getarearank",
@@ -1151,7 +1162,6 @@ export class XyzwWebSocketClient {
     };
 
     // 获取原始命令名（支持一对一和一对多映射）
-    // 使用小写进行映射匹配，兼容服务端大小写差异
     let originalCmds = responseToCommandMap[respCmdKey];
     if (!originalCmds) {
       originalCmds = [respCmdKey]; // 如果没有映射，使用响应命令本身（小写）
@@ -1166,12 +1176,19 @@ export class XyzwWebSocketClient {
         delete this.promises[requestId];
 
         // 获取响应数据，优先使用 rawData（ProtoMsg 自动解码），然后 decodedBody（手动解码），最后 body
-        const responseBody =
+        let responseBody =
           packet.rawData !== undefined
             ? packet.rawData
             : packet.decodedBody !== undefined
               ? packet.decodedBody
               : packet.body;
+
+        // 附加原始命令名到响应对象
+        if (typeof responseBody === 'object' && responseBody !== null) {
+          responseBody.originalCmd = promiseData.originalCmd;
+        } else if (typeof packet === 'object' && packet !== null) {
+          packet.originalCmd = promiseData.originalCmd;
+        }
 
         if (packet.code === 0 || packet.code === undefined) {
           promiseData.resolve(responseBody || packet);

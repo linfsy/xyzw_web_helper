@@ -178,36 +178,36 @@
         style="width: 900px; max-width: 90vw"
         :bordered="false"
       >
+        <div class="team-tabs">
+          <div class="team-tabs-left">
+            <div
+              v-for="teamId in availableTeams"
+              :key="teamId"
+              class="team-tab"
+              :class="{ active: selectedTeamTab === teamId }"
+              @click="selectedTeamTab = teamId"
+            >
+              槽位{{ teamId }}
+              <span class="tab-count"
+                >({{ getLineupsByTeamId(teamId).length }})</span
+              >
+            </div>
+          </div>
+          <div class="team-tabs-right">
+            <n-button size="tiny" @click="exportLineups"> 导出 </n-button>
+            <n-upload
+              :show-file-list="false"
+              :custom-request="importLineups"
+              accept=".json"
+            >
+              <n-button size="tiny">导入</n-button>
+            </n-upload>
+          </div>
+        </div>
         <div v-if="savedLineups.length === 0" class="empty-tip">
           暂无保存的阵容，点击"保存阵容"开始使用
         </div>
         <div v-else class="saved-lineups-modal-content">
-          <div class="team-tabs">
-            <div class="team-tabs-left">
-              <div
-                v-for="teamId in availableTeams"
-                :key="teamId"
-                class="team-tab"
-                :class="{ active: selectedTeamTab === teamId }"
-                @click="selectedTeamTab = teamId"
-              >
-                槽位{{ teamId }}
-                <span class="tab-count"
-                  >({{ getLineupsByTeamId(teamId).length }})</span
-                >
-              </div>
-            </div>
-            <div class="team-tabs-right">
-              <n-button size="tiny" @click="exportLineups"> 导出 </n-button>
-              <n-upload
-                :show-file-list="false"
-                :custom-request="importLineups"
-                accept=".json"
-              >
-                <n-button size="tiny">导入</n-button>
-              </n-upload>
-            </div>
-          </div>
           <div class="lineups-list">
             <div
               v-for="(lineup, index) in getLineupsByTeamId(selectedTeamTab)"
@@ -810,29 +810,33 @@ const syncLegionResearch = async (tokenId, targetResearch) => {
   const typesToReset = new Set();
   const typesToResetResearch = new Set();
 
-  for (const type of [1, 2, 3, 4, 5, 6]) {
+  for (const type of [1, 2, 3, 4]) {
     const techIds = LEGION_TECH_RESET_TYPE_MAP[type];
-    for (const techId of techIds) {
-      const currentLevel = currentResearch[techId] || 0;
-      const targetLevel = targetResearch[techId] || 0;
-      if (
-        currentLevel !== targetLevel &&
-        (currentLevel > 0 || targetLevel > 0)
-      ) {
-        typesToResetResearch.add(type);
-        break;
+    if (techIds) {
+      for (const techId of techIds) {
+        const currentLevel = currentResearch[techId] || 0;
+        const targetLevel = targetResearch[techId] || 0;
+        if (
+          currentLevel !== targetLevel &&
+          (currentLevel > 0 || targetLevel > 0)
+        ) {
+          typesToResetResearch.add(type);
+          break;
+        }
       }
     }
     const techIds2 = LEGION_TECH_TYPE_MAP[type];
-    for (const techId of techIds2) {
-      const currentLevel = currentResearch[techId] || 0;
-      const targetLevel = targetResearch[techId] || 0;
-      if (
-        currentLevel !== targetLevel &&
-        (currentLevel > 0 || targetLevel > 0)
-      ) {
-        typesToReset.add(type);
-        break;
+    if (techIds2) {
+      for (const techId of techIds2) {
+        const currentLevel = currentResearch[techId] || 0;
+        const targetLevel = targetResearch[techId] || 0;
+        if (
+          currentLevel !== targetLevel &&
+          (currentLevel > 0 || targetLevel > 0)
+        ) {
+          typesToReset.add(type);
+          break;
+        }
       }
     }
   }
@@ -858,7 +862,8 @@ const syncLegionResearch = async (tokenId, targetResearch) => {
 
   for (const type of sortedTypes) {
     const techIds2 = LEGION_TECH_TYPE_MAP[type];
-    for (const techId of techIds2) {
+    if (techIds2) {
+      for (const techId of techIds2) {
       const targetLevel = targetResearch[techId] || 0;
       if (targetLevel > 0) {
         const maxLevel = LEGION_TECH_MAX_LEVEL[techId];
@@ -890,6 +895,7 @@ const syncLegionResearch = async (tokenId, targetResearch) => {
             await delay(COMMAND_DELAY);
           }
         }
+      }
       }
     }
   }
@@ -2309,6 +2315,7 @@ const applyLineup = async (lineup) => {
     }
 
     lastRefreshTime = 0;
+    await delay(COMMAND_DELAY);
     await refreshTeamInfo();
   } catch (error) {
     message.error(`应用阵容失败: ${error.message}`);

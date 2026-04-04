@@ -2,8 +2,7 @@ import { gameLogger } from "@/utils/logger";
 import type { EVM, XyzwSession } from ".";
 
 export const TeamPlugin = ({
-  onSome,
-  $emit
+  onSome
 }: EVM) => {
 
   onSome(
@@ -15,7 +14,7 @@ export const TeamPlugin = ({
     ],
     (data: XyzwSession) => {
       gameLogger.verbose(`收到队伍信息事件: ${data.tokenId}`, data);
-      const { body, gameData, cmd } = data;
+      const { body, gameData } = data;
       if (!body) {
         gameLogger.debug("队伍信息响应为空");
         return;
@@ -35,10 +34,12 @@ export const TeamPlugin = ({
       "presetteam_setteamresp",
       "presetteam_saveteam",
       "presetteam_saveteamresp",
+      "presetteam_getinfo",
+      "presetteam_getinforesp",
     ],
     (data: XyzwSession) => {
       gameLogger.verbose(`收到队伍信息事件: ${data.tokenId}`, data);
-      const { body, gameData, cmd } = data;
+      const { body, gameData } = data;
       if (!body) {
         gameLogger.debug("队伍信息响应为空");
         return;
