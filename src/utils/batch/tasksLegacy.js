@@ -28,6 +28,8 @@ export function createTasksLegacy(deps) {
     securityPassword,
     giftQuantity,
     delayConfig,
+    startTask,
+    stopTask,
   } = deps;
 
   /**
@@ -35,62 +37,105 @@ export function createTasksLegacy(deps) {
    */
   const batchLegacyClaim = async () => {
     if (selectedTokens.value.length === 0) return;
-    isRunning.value = true;
-    shouldStop.value = false;
+    if (startTask) startTask();
+    else { startTask(); }
 
     selectedTokens.value.forEach((id) => {
       tokenStatus.value[id] = "waiting";
     });
+
+    let totalSuccess = 0;
+    let totalFailed = 0;
 
     const taskPromises = selectedTokens.value.map(async (tokenId) => {
       if (shouldStop.value) return;
       tokenStatus.value[tokenId] = "running";
 
       const token = tokens.value.find((t) => t.id === tokenId);
-      try {
-        addLog({
-          time: new Date().toLocaleTimeString(),
-          message: `=== 开始领取功法残卷: ${token.name} ===`,
-          type: "info",
-        });
-        await ensureConnection(tokenId);
+      let consecutiveErrors = 0;
+      const maxRetries = 2;
 
-        const LegacyClaimHangUpResp = await tokenStore.sendMessageWithPromise(
-          tokenId,
-          "legacy_claimhangup",
-          {},
-          5000,
-        );
-        addLog({
-          time: new Date().toLocaleTimeString(),
-          message: `=== ${token.name} 成功领取功法残卷${LegacyClaimHangUpResp.reward[0].value}，共有${LegacyClaimHangUpResp.role.items[37007].quantity}个`,
-          type: "success",
-        });
-        tokenStatus.value[tokenId] = "completed";
-      } catch (error) {
-        console.error(error);
-        tokenStatus.value[tokenId] = "failed";
-        addLog({
-          time: new Date().toLocaleTimeString(),
-          message: `=== ${token.name} 领取功法残卷失败: ${error.message || "未知错误"}`,
-          type: "error",
-        });
-      } finally {
-        tokenStore.closeWebSocketConnection(tokenId);
-        releaseConnectionSlot();
-        addLog({
-          time: new Date().toLocaleTimeString(),
-          message: `${token.name} 连接已关闭  (队列: ${connectionQueue.active}/${batchSettings.maxActive})`,
-          type: "info",
-        });
+      while (consecutiveErrors <= maxRetries && !shouldStop.value) {
+        try {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `=== 开始领取功法残卷: ${token.name} (尝试 ${consecutiveErrors + 1}/${maxRetries + 1}) ===`,
+            type: "info",
+          });
+          await ensureConnection(tokenId);
+
+          const LegacyClaimHangUpResp = await tokenStore.sendMessageWithPromise(
+            tokenId,
+            "legacy_claimhangup",
+            {},
+            5000,
+          );
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `=== ${token.name} 成功领取功法残卷${LegacyClaimHangUpResp.reward[0].value}，共有${LegacyClaimHangUpResp.role.items[37007].quantity}个`,
+            type: "success",
+          });
+          tokenStatus.value[tokenId] = "completed";
+          totalSuccess++;
+          break;
+        } catch (error) {
+          consecutiveErrors++;
+          console.error(`领取失败: ${error.message}`);
+
+          let errorMsg = error.message || "未知错误";
+          let errorType = "error";
+
+          if (errorMsg.includes("timeout")) {
+            errorMsg = "请求超时";
+            errorType = "warning";
+          } else if (errorMsg.includes("网络")) {
+            errorMsg = "网络错误";
+            errorType = "warning";
+          }
+
+          if (consecutiveErrors <= maxRetries && !shouldStop.value) {
+            addLog({
+              time: new Date().toLocaleTimeString(),
+              message: `=== ${token.name} 领取功法残卷失败: ${errorMsg}，将在3秒后重试 ===`,
+              type: "warning",
+            });
+            await new Promise((r) => setTimeout(r, delayConfig.long));
+          } else {
+            addLog({
+              time: new Date().toLocaleTimeString(),
+              message: `=== ${token.name} 领取功法残卷失败: ${errorMsg}，已达最大重试次数 ===`,
+              type: "error",
+            });
+            tokenStatus.value[tokenId] = "failed";
+            totalFailed++;
+            break;
+          }
+        } finally {
+          tokenStore.closeWebSocketConnection(tokenId);
+          releaseConnectionSlot();
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 连接已关闭  (队列: ${connectionQueue.active}/${batchSettings.maxActive})`,
+            type: "info",
+          });
+        }
       }
     });
 
     await Promise.all(taskPromises);
 
-    isRunning.value = false;
-    currentRunningTokenId.value = null;
-    message.success("批量领取功法残卷结束");
+    if (stopTask) stopTask();
+    else { stopTask(); }
+    
+    addLog({
+      time: new Date().toLocaleTimeString(),
+      message: `=== 批量领取功法残卷完成: 成功 ${totalSuccess} 个，失败 ${totalFailed} 个 ===`,
+      type: "success",
+    });
+    
+    message.success(
+      `批量领取功法残卷结束，成功 ${totalSuccess} 个，失败 ${totalFailed} 个`,
+    );
   };
 
   /**
@@ -112,7 +157,7 @@ export function createTasksLegacy(deps) {
     const giftConfig = {
       recipientId: Number(recipientId),
       itemId: 37007,
-      quantity: Math.min(giftQuantity.value, 9999) || 0,
+      quantity: giftQuantity.value || 0,
       serverName: recipientInfo.value?.serverName || "",
       name: recipientInfo.value?.name || "",
     };
@@ -123,14 +168,14 @@ export function createTasksLegacy(deps) {
         return;
       }
 
-      if (giftConfig.quantity <= 0 || giftConfig.quantity > 9999) {
-        message.error("赠送数量必须在1-9999之间");
+      if (giftConfig.quantity <= 0) {
+        message.error("赠送数量必须大于0");
         return;
       }
     }
 
-    isRunning.value = true;
-    shouldStop.value = false;
+    if (startTask) startTask();
+    else { startTask(); }
 
     selectedTokens.value.forEach((id) => {
       tokenStatus.value[id] = "waiting";
@@ -247,19 +292,44 @@ export function createTasksLegacy(deps) {
             type: "info",
           });
 
-          const legacySendGiftResp = await tokenStore.sendMessageWithPromise(
-            tokenId,
-            "legacy_sendgift",
-            {
-              itemCnt: giftConfig.quantity,
-              legacyUIds: [],
-              targetId: giftConfig.recipientId,
-            },
-            5000,
-          );
-
-          if (!legacySendGiftResp) {
-            throw new Error("赠送请求无响应");
+          // 分批发送，每次最多9999个，间隔1000ms
+          let remainingQuantity = giftConfig.quantity;
+          const batchSize = 9999;
+          
+          while (remainingQuantity > 0 && !shouldStop.value) {
+            const currentBatchSize = Math.min(remainingQuantity, batchSize);
+            
+            addLog({
+              time: new Date().toLocaleTimeString(),
+              message: `${token.name} === 赠送第 ${Math.ceil((giftConfig.quantity - remainingQuantity + 1) / batchSize)} 批，数量: ${currentBatchSize}个 ===`,
+              type: "info",
+            });
+            
+            const legacySendGiftResp = await tokenStore.sendMessageWithPromise(
+              tokenId,
+              "legacy_sendgift",
+              {
+                itemCnt: currentBatchSize,
+                legacyUIds: [],
+                targetId: giftConfig.recipientId,
+              },
+              5000,
+            );
+            
+            if (!legacySendGiftResp) {
+              throw new Error("赠送请求无响应");
+            }
+            
+            remainingQuantity -= currentBatchSize;
+            
+            if (remainingQuantity > 0) {
+              addLog({
+                time: new Date().toLocaleTimeString(),
+                message: `${token.name} === 等待1000ms后继续发送 ===`,
+                type: "info",
+              });
+              await new Promise((r) => setTimeout(r, 1000));
+            }
           }
 
           await tokenStore.sendMessage(tokenId, "role_getroleinfo");
@@ -321,8 +391,8 @@ export function createTasksLegacy(deps) {
 
     await Promise.all(taskPromises);
 
-    isRunning.value = false;
-    currentRunningTokenId.value = null;
+    if (stopTask) stopTask();
+    else { stopTask(); }
 
     addLog({
       time: new Date().toLocaleTimeString(),

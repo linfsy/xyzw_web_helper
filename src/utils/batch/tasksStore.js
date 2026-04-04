@@ -24,6 +24,8 @@ export function createTasksStore(deps) {
     message,
     currentRunningTokenId,
     delayConfig,
+    startTask,
+    stopTask,
   } = deps;
 
   /**
@@ -32,8 +34,7 @@ export function createTasksStore(deps) {
   const legion_storebuygoods = async () => {
     if (selectedTokens.value.length === 0) return;
 
-    isRunning.value = true;
-    shouldStop.value = false;
+    // 移除startTask调用，由调用方管理isRunning状态
 
     selectedTokens.value.forEach((id) => {
       tokenStatus.value[id] = "waiting";
@@ -119,9 +120,7 @@ export function createTasksStore(deps) {
 
     await Promise.all(taskPromises);
 
-    currentRunningTokenId.value = null;
-    isRunning.value = false;
-    shouldStop.value = false;
+    // 移除stopTask调用，由调用方管理isRunning状态
   };
 
   /**
@@ -130,8 +129,7 @@ export function createTasksStore(deps) {
   const legionStoreBuySkinCoins = async () => {
     if (selectedTokens.value.length === 0) return;
 
-    isRunning.value = true;
-    shouldStop.value = false;
+    // 移除startTask调用，由调用方管理isRunning状态
 
     selectedTokens.value.forEach((id) => {
       tokenStatus.value[id] = "waiting";
@@ -222,9 +220,7 @@ export function createTasksStore(deps) {
 
     await Promise.all(taskPromises);
 
-    currentRunningTokenId.value = null;
-    isRunning.value = false;
-    shouldStop.value = false;
+    // 移除stopTask调用，由调用方管理isRunning状态
   };
 
   /**
@@ -232,8 +228,7 @@ export function createTasksStore(deps) {
    */
   const collection_claimfreereward = async () => {
     if (selectedTokens.value.length === 0) return;
-    isRunning.value = true;
-    shouldStop.value = false;
+    // 移除startTask调用，由调用方管理isRunning状态
     selectedTokens.value.forEach((id) => {
       tokenStatus.value[id] = "waiting";
     });
@@ -303,9 +298,7 @@ export function createTasksStore(deps) {
 
     await Promise.all(taskPromises);
 
-    currentRunningTokenId.value = null;
-    isRunning.value = false;
-    shouldStop.value = false;
+    // 移除stopTask调用，由调用方管理isRunning状态
   };
 
   /**
@@ -314,8 +307,7 @@ export function createTasksStore(deps) {
   const store_purchase = async () => {
     if (selectedTokens.value.length === 0) return;
 
-    isRunning.value = true;
-    shouldStop.value = false;
+    // 移除startTask调用，由调用方管理isRunning状态
 
     selectedTokens.value.forEach((id) => {
       tokenStatus.value[id] = "waiting";
@@ -386,9 +378,7 @@ export function createTasksStore(deps) {
 
     await Promise.all(taskPromises);
 
-    currentRunningTokenId.value = null;
-    isRunning.value = false;
-    shouldStop.value = false;
+    // 移除stopTask调用，由调用方管理isRunning状态
   };
 
   return {

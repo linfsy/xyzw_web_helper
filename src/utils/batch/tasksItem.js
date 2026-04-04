@@ -28,6 +28,8 @@ export function createTasksItem(deps) {
     currentRunningTokenId,
     helperSettings,
     delayConfig,
+    startTask,
+    stopTask,
   } = deps;
 
   const boxNames = {
@@ -47,8 +49,7 @@ export function createTasksItem(deps) {
   const batchHeroUpgrade = async () => {
     if (selectedTokens.value.length === 0) return;
 
-    isRunning.value = true;
-    shouldStop.value = false;
+    if (startTask) startTask();
 
     selectedTokens.value.forEach((id) => {
       tokenStatus.value[id] = "waiting";
@@ -127,8 +128,8 @@ export function createTasksItem(deps) {
     });
 
     await Promise.all(taskPromises);
-    isRunning.value = false;
-    currentRunningTokenId.value = null;
+    if (stopTask) stopTask();
+    else { stopTask(); }
     message.success("批量英雄升星结束");
   };
 
@@ -138,8 +139,7 @@ export function createTasksItem(deps) {
   const batchBookUpgrade = async () => {
     if (selectedTokens.value.length === 0) return;
 
-    isRunning.value = true;
-    shouldStop.value = false;
+    if (startTask) startTask();
 
     selectedTokens.value.forEach((id) => {
       tokenStatus.value[id] = "waiting";
@@ -218,8 +218,8 @@ export function createTasksItem(deps) {
     });
 
     await Promise.all(taskPromises);
-    isRunning.value = false;
-    currentRunningTokenId.value = null;
+    if (stopTask) stopTask();
+    else { stopTask(); }
     message.success("批量图鉴升星结束");
   };
 
@@ -229,8 +229,7 @@ export function createTasksItem(deps) {
   const batchClaimStarRewards = async () => {
     if (selectedTokens.value.length === 0) return;
 
-    isRunning.value = true;
-    shouldStop.value = false;
+    if (startTask) startTask();
 
     selectedTokens.value.forEach((id) => {
       tokenStatus.value[id] = "waiting";
@@ -301,8 +300,8 @@ export function createTasksItem(deps) {
     });
 
     await Promise.all(taskPromises);
-    isRunning.value = false;
-    currentRunningTokenId.value = null;
+    if (stopTask) stopTask();
+    else { stopTask(); }
     message.success("批量领取图鉴奖励结束");
   };
 
@@ -312,8 +311,7 @@ export function createTasksItem(deps) {
   const batchClaimBoxPointReward = async () => {
     if (selectedTokens.value.length === 0) return;
 
-    isRunning.value = true;
-    shouldStop.value = false;
+    if (startTask) startTask();
 
     selectedTokens.value.forEach((id) => {
       tokenStatus.value[id] = "waiting";
@@ -375,8 +373,8 @@ export function createTasksItem(deps) {
 
     await Promise.all(taskPromises);
 
-    isRunning.value = false;
-    currentRunningTokenId.value = null;
+    if (stopTask) stopTask();
+    else { stopTask(); }
     message.success("批量领取宝箱积分结束");
   };
 
@@ -386,8 +384,7 @@ export function createTasksItem(deps) {
   const batchClaimPeachTasks = async () => {
     if (selectedTokens.value.length === 0) return;
 
-    isRunning.value = true;
-    shouldStop.value = false;
+    if (startTask) startTask();
 
     selectedTokens.value.forEach((id) => {
       tokenStatus.value[id] = "waiting";
@@ -581,8 +578,8 @@ export function createTasksItem(deps) {
 
     await Promise.all(taskPromises);
 
-    isRunning.value = false;
-    currentRunningTokenId.value = null;
+    if (stopTask) stopTask();
+    else { stopTask(); }
     message.success("批量领取蟠桃园任务奖励结束");
   };
 
@@ -592,8 +589,7 @@ export function createTasksItem(deps) {
   const batchGenieSweep = async () => {
     if (selectedTokens.value.length === 0) return;
 
-    isRunning.value = true;
-    shouldStop.value = false;
+    if (startTask) startTask();
 
     selectedTokens.value.forEach((id) => {
       tokenStatus.value[id] = "waiting";
@@ -753,16 +749,15 @@ export function createTasksItem(deps) {
 
     await Promise.all(taskPromises);
 
-    isRunning.value = false;
-    currentRunningTokenId.value = null;
+    if (stopTask) stopTask();
+    else { stopTask(); }
     message.success("一键灯神扫荡结束");
   };
 
   const batchOpenBox = async (isScheduledTask = false) => {
     if (selectedTokens.value.length === 0) return;
 
-    isRunning.value = true;
-    shouldStop.value = false;
+    if (startTask) startTask();
 
     const boxType = isScheduledTask
       ? batchSettings.defaultBoxType
@@ -859,8 +854,8 @@ export function createTasksItem(deps) {
 
     await Promise.all(taskPromises);
 
-    isRunning.value = false;
-    currentRunningTokenId.value = null;
+    if (stopTask) stopTask();
+    else { stopTask(); }
     message.success("批量开箱结束");
   };
 
@@ -870,8 +865,7 @@ export function createTasksItem(deps) {
   const batchFish = async (isScheduledTask = false) => {
     if (selectedTokens.value.length === 0) return;
 
-    isRunning.value = true;
-    shouldStop.value = false;
+    if (startTask) startTask();
 
     const fishType = isScheduledTask
       ? batchSettings.defaultFishType
@@ -1086,8 +1080,8 @@ export function createTasksItem(deps) {
 
     await Promise.all(taskPromises);
 
-    isRunning.value = false;
-    currentRunningTokenId.value = null;
+    if (stopTask) stopTask();
+    else { stopTask(); }
     message.success("批量钓鱼结束");
   };
 
@@ -1097,8 +1091,7 @@ export function createTasksItem(deps) {
   const batchRecruit = async (isScheduledTask = false) => {
     if (selectedTokens.value.length === 0) return;
 
-    isRunning.value = true;
-    shouldStop.value = false;
+    if (startTask) startTask();
 
     const totalCount = isScheduledTask
       ? batchSettings.recruitCount
@@ -1188,8 +1181,8 @@ export function createTasksItem(deps) {
 
     await Promise.all(taskPromises);
 
-    isRunning.value = false;
-    currentRunningTokenId.value = null;
+    if (stopTask) stopTask();
+    else { stopTask(); }
     message.success("批量招募结束");
   };
 

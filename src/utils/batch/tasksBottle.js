@@ -23,6 +23,8 @@ export function createTasksBottle(deps) {
     addLog,
     message,
     currentRunningTokenId,
+    startTask,
+    stopTask,
   } = deps;
 
   /**
@@ -31,8 +33,7 @@ export function createTasksBottle(deps) {
   const resetBottles = async () => {
     if (selectedTokens.value.length === 0) return;
 
-    isRunning.value = true;
-    shouldStop.value = false;
+    if (startTask) startTask();
 
     selectedTokens.value.forEach((id) => {
       tokenStatus.value[id] = "waiting";
@@ -108,8 +109,8 @@ export function createTasksBottle(deps) {
 
     await Promise.all(taskPromises);
 
-    isRunning.value = false;
-    currentRunningTokenId.value = null;
+    if (stopTask) stopTask();
+    else { stopTask(); }
     message.success("批量重置罐子结束");
   };
 
@@ -118,8 +119,7 @@ export function createTasksBottle(deps) {
    */
   const batchlingguanzi = async () => {
     if (selectedTokens.value.length === 0) return;
-    isRunning.value = true;
-    shouldStop.value = false;
+    if (startTask) startTask();
 
     selectedTokens.value.forEach((id) => {
       tokenStatus.value[id] = "waiting";
@@ -170,8 +170,8 @@ export function createTasksBottle(deps) {
     });
 
     await Promise.all(taskPromises);
-    isRunning.value = false;
-    currentRunningTokenId.value = null;
+    if (stopTask) stopTask();
+    else { stopTask(); }
     message.success("批量领取盐罐结束");
   };
 

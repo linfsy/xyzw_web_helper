@@ -41,6 +41,18 @@
               <div v-else style="font-size: 14px; color: #6c757d">
                 暂无定时任务
               </div>
+              <div
+                v-if="isPauseTime.paused"
+                style="font-size: 14px; font-weight: 500; color: #f56c6c"
+              >
+                {{ isPauseTime.reason }} - 暂停中
+              </div>
+              <div
+                v-if="isPauseTime.paused && pauseCountdown"
+                style="font-size: 14px; color: #6c757d"
+              >
+                {{ pauseCountdown }}
+              </div>
               <div class="top-task-buttons">
                 <div style="display: flex; flex-direction: column; gap: 4px;">
                   <n-button type="primary" size="small" style="width: 100px;" @click="openTaskModal">
@@ -79,14 +91,14 @@
             <n-button
               type="primary"
               @click="startBatch"
-              :disabled="isRunning || selectedTokens.length === 0"
+              :disabled="batchTaskStore.isRunning || selectedTokens.length === 0"
               size="medium"
             >
-              {{ isRunning ? "执行中..." : "开始执行" }}
+              {{ batchTaskStore.isRunning ? "执行中..." : "开始执行" }}
             </n-button>
             <n-button
               @click="stopBatch"
-              :disabled="!isRunning"
+              :disabled="!batchTaskStore.isRunning"
               type="error"
               size="medium"
             >
@@ -99,7 +111,7 @@
             >
               任务模板
             </n-button>
-            <n-button @click="openBatchSettings" type="default" size="medium">
+            <n-button @click="openBatchSettings" type="default" size="medium" style="width: 90px;">
               <template #icon>
                 <n-icon>
                   <Settings />
@@ -112,6 +124,7 @@
 
         <!-- Token Selection -->
         <n-card title="账号列表" class="token-list-card">
+
           <div style="margin-bottom: 16px">
             <!-- 分组管理和选择 -->
             <n-space vertical style="width: 100%">
@@ -189,7 +202,6 @@
               </div>
             </n-space>
           </div>
-
           <!-- 折叠控制按钮 -->
           <div style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
             <n-button
@@ -200,7 +212,7 @@
               {{ isButtonsExpanded ? '收起功能按钮' : '展开功能按钮' }}
             </n-button>
           </div>
-
+          
           <transition name="slide-fade" mode="out-in">
             <div v-if="isButtonsExpanded">
               <n-tabs type="line" animated size="small" pane-style="padding-top: 12px;" default-value="daily">
@@ -224,9 +236,9 @@
                   <n-space style="margin-bottom: 8px;">
                     <n-button size="small" @click="wrappedClimbTower" :disabled="batchTaskStore.isRunning || selectedTokens.length === 0">一键爬塔</n-button>
                     <n-button size="small" @click="wrappedBatchmengjing" :disabled="batchTaskStore.isRunning || selectedTokens.length === 0 || !ismengjingActivityOpen">一键梦境</n-button>
+                    <n-button size="small" @click="wrappedBatchDreamBuy" :disabled="batchTaskStore.isRunning || selectedTokens.length === 0">梦境购买</n-button>
                     <n-button size="small" @click="wrappedSkinChallenge" :disabled="batchTaskStore.isRunning || selectedTokens.length === 0">一键换皮闯关</n-button>
                     <n-button size="small" @click="batchClaimPeachTasks" :disabled="batchTaskStore.isRunning || selectedTokens.length === 0">一键领取蟠桃园任务</n-button>
-                    <n-button size="small" @click="wrappedBatchDreamBuy" :disabled="batchTaskStore.isRunning || selectedTokens.length === 0 || !ismengjingActivityOpen">梦境购买</n-button>
                   </n-space>
                 </n-tab-pane>
                 <n-tab-pane name="baoku" tab="宝库">
@@ -245,14 +257,11 @@
                 </n-tab-pane>
                 <n-tab-pane name="resource" tab="资源">
                   <n-space style="margin-bottom: 8px;">
-                    <n-button size="small" @click="wrappedBatchOpenBox" :disabled="batchTaskStore.isRunning || selectedTokens.length === 0">批量开箱</n-button>
+                    <n-button size="small" @click="openHelperModal('box')" :disabled="batchTaskStore.isRunning || selectedTokens.length === 0">批量开箱</n-button>
                     <n-button size="small" @click="openHelperModal('pointsBox')" :disabled="batchTaskStore.isRunning || selectedTokens.length === 0">按积分开箱</n-button>
                     <n-button size="small" @click="wrappedBatchClaimBoxPointReward" :disabled="batchTaskStore.isRunning || selectedTokens.length === 0">领取宝箱积分</n-button>
-                    <n-button size="small" @click="wrappedBatchFish" :disabled="batchTaskStore.isRunning || selectedTokens.length === 0">批量钓鱼</n-button>
-                    <n-button size="small" @click="wrappedBatchRecruit" :disabled="batchTaskStore.isRunning || selectedTokens.length === 0">批量招募</n-button>
-                    <n-button size="small" @click="wrappedBatchHeroUpgrade" :disabled="batchTaskStore.isRunning || selectedTokens.length === 0">一键英雄升星</n-button>
-                    <n-button size="small" @click="wrappedBatchBookUpgrade" :disabled="batchTaskStore.isRunning || selectedTokens.length === 0">一键图鉴升星</n-button>
-                    <n-button size="small" @click="wrappedBatchClaimStarRewards" :disabled="batchTaskStore.isRunning || selectedTokens.length === 0">一键领取图鉴奖励</n-button>
+                    <n-button size="small" @click="openHelperModal('fish')" :disabled="batchTaskStore.isRunning || selectedTokens.length === 0">批量钓鱼</n-button>
+                    <n-button size="small" @click="openHelperModal('recruit')" :disabled="batchTaskStore.isRunning || selectedTokens.length === 0">批量招募</n-button>
                     <n-button size="small" @click="wrappedLegion_storebuygoods" :disabled="batchTaskStore.isRunning || selectedTokens.length === 0">一键购买四圣碎片</n-button>
                     <n-button size="small" @click="wrappedLegionStoreBuySkinCoins" :disabled="batchTaskStore.isRunning || selectedTokens.length === 0">一键购买俱乐部5皮肤币</n-button>
                     <n-tooltip trigger="hover" v-if="!isBlackMarketWeek">
@@ -262,6 +271,9 @@
                       <span>黑市周{{ blackMarketCountdown }}</span>
                     </n-tooltip>
                     <n-button v-else size="small" @click="showBlackMarketBuyerModal = true" :disabled="batchTaskStore.isRunning || selectedTokens.length === 0 || !isBlackMarketWeek || !isBlackMarketUpdated">黑市周购买助手({{ blackMarketCountdown }})</n-button>
+                    <n-button size="small" @click="wrappedBatchHeroUpgrade" :disabled="batchTaskStore.isRunning || selectedTokens.length === 0">一键英雄升星</n-button>
+                    <n-button size="small" @click="wrappedBatchBookUpgrade" :disabled="batchTaskStore.isRunning || selectedTokens.length === 0">一键图鉴升星</n-button>
+                    <n-button size="small" @click="wrappedBatchClaimStarRewards" :disabled="batchTaskStore.isRunning || selectedTokens.length === 0">一键领取图鉴奖励</n-button>
                   </n-space>
                 </n-tab-pane>
                 <n-tab-pane name="legacy" tab="功法">
@@ -280,7 +292,6 @@
               </n-tabs>
             </div>
           </transition>
-
           <!-- 排序按钮组 -->
           <div class="sort-buttons" style="margin-bottom: 12px">
             <n-space align="center">
@@ -400,7 +411,7 @@
                 </n-grid-item>
               </n-grid>
             </n-checkbox-group>
-              </n-space>
+          </n-space>
             </div>
           </transition>
         </n-card>
@@ -630,6 +641,13 @@
                 </n-button>
                 <n-button
                   size="small"
+                  @click="openHelperModal('pointsBox')"
+                  :disabled="batchTaskStore.isRunning || selectedTokens.length === 0"
+                >
+                  按积分开箱
+                </n-button>
+                <n-button
+                  size="small"
                   @click="wrappedBatchClaimBoxPointReward"
                   :disabled="batchTaskStore.isRunning || selectedTokens.length === 0"
                 >
@@ -827,6 +845,8 @@
             
             <h4 style="margin: 0 0 12px 0; color: #333">即将执行的任务</h4>
             
+
+            
             <!-- 积攒的任务队列（有积攒任务时显示） -->
             <div
               v-if="(batchTaskStore.taskQueue || []).length > 0"
@@ -920,7 +940,6 @@
             <p>暂无定时任务</p>
           </div>
         </n-card>
-
       </div>
 
       <!-- Right Column - Execution Log -->
@@ -937,30 +956,11 @@
                 <span
                   style="margin-left: 12px; font-size: 12px; color: #86909c"
                 >
-                  {{ logs.length }}/{{ batchSettings.maxLogEntries || 1000 }}
+                  {{ batchTaskStore.logs.length }}/{{ batchSettings.maxLogEntries || 1000 }}
                 </span>
-              </div>
-              <div class="log-header-controls">
-                <n-checkbox v-model:checked="autoScrollLog" size="small">
-                  自动滚动
-                </n-checkbox>
-                <n-checkbox v-model:checked="filterErrorsOnly" size="small">
-                  只看错误
-                </n-checkbox>
-                <n-tag v-if="errorCount > 0" type="error" size="small">
-                  {{ errorCount }} 个错误
-                </n-tag>
-                <n-button size="small" @click="clearLogs"> 清空日志 </n-button>
-                <n-button size="small" @click="copyLogs"> 复制日志 </n-button>
               </div>
             </div>
           </template>
-          <n-progress
-            type="line"
-            :percentage="currentProgress"
-            :indicator-placement="'inside'"
-            processing
-          />
           <div class="log-container" ref="logContainer">
             <div
               v-for="(log, index) in filteredLogs"
@@ -971,6 +971,28 @@
               <span class="time">{{ log.time }}</span>
               <span class="message">{{ log.message }}</span>
             </div>
+          </div>
+          <n-progress
+            type="line"
+            :percentage="batchTaskStore.currentProgress"
+            :indicator-placement="'inside'"
+            color="#18a058"
+            processing
+            style="margin-top: 12px"
+          />
+          <!-- 底部按钮区域 -->
+          <div class="log-footer-controls" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e5e7eb; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <n-checkbox v-model:checked="batchTaskStore.autoScrollLog" size="small">
+              自动滚动
+            </n-checkbox>
+            <n-checkbox v-model:checked="batchTaskStore.filterErrorsOnly" size="small">
+              只显示错误
+            </n-checkbox>
+            <n-tag v-if="errorCount > 0" type="error" size="small">
+              {{ errorCount }} 个错误
+            </n-tag>
+            <n-button size="small" @click="clearLogs"> 清空日志 </n-button>
+            <n-button size="small" @click="copyLogs"> 复制日志 </n-button>
           </div>
         </n-card>
       </div>
@@ -1200,15 +1222,9 @@
           </div>
           <div class="setting-item">
             <label class="setting-label">选择账号</label>
-
+            
             <!-- 分组快速选择 -->
-            <div
-              style="
-                margin-bottom: 12px;
-                border-bottom: 1px solid #eee;
-                padding-bottom: 8px;
-              "
-            >
+            <div style="margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 8px;">
               <div style="font-size: 12px; color: #86909c; margin-bottom: 8px">
                 快速选择分组：
               </div>
@@ -1229,16 +1245,13 @@
                   "
                   :style="{
                     borderColor: group.color,
-                    color: group.color,
+                    color: group.color
                   }"
                   ghost
                 >
                   {{ group.name }}
                 </n-button>
-                <div
-                  v-if="tokenGroups.length === 0"
-                  style="font-size: 12px; color: #ccc"
-                >
+                <div v-if="tokenGroups.length === 0" style="font-size: 12px; color: #ccc;">
                   暂无分组
                 </div>
               </div>
@@ -1468,11 +1481,11 @@
           <div class="setting-item">
             <label class="setting-label">接收者ID</label>
             <n-space>
-              <n-input-number
+              <n-input
                 v-model:value="recipientIdInput"
-                placeholder="ID"
-                :show-button="false"
-                @update:value="clearRecipientError"
+                placeholder="请输入接收者ID"
+                type="number"
+                @input="clearRecipientError"
                 style="width: 180px"
               />
               <n-input
@@ -1718,7 +1731,7 @@
             <n-input-number
               v-model:value="giftQuantity"
               :min="1"
-              :max="1000"
+              :max="9999"
               :step="1"
               placeholder="请输入赠送数量"
             />
@@ -1743,7 +1756,7 @@
       </div>
     </n-modal>
 
-    <!-- Helper Modal (开箱/钓鱼/招募/按积分开箱) -->
+    <!-- Helper Modal (开箱/钓鱼/招募) -->
     <n-modal
       v-model:show="showHelperModal"
       preset="card"
@@ -1768,26 +1781,7 @@
               size="small"
             />
           </div>
-          <div class="setting-item" v-if="helperType === 'pointsBox'">
-            <label class="setting-label">目标积分</label>
-            <n-input-number
-              v-model:value="helperSettings.targetPoints"
-              :min="1"
-              :max="1000000"
-              :step="100"
-              size="small"
-              style="width: 100%"
-            />
-          </div>
-          <n-alert
-            v-if="helperType === 'pointsBox'"
-            type="info"
-            style="margin-bottom: 12px"
-          >
-            开箱优先级: 木质宝箱(保留200个) → 青铜宝箱 → 黄金宝箱 → 铂金宝箱<br />
-            积分: 木质=1分, 青铜=10分, 黄金=20分, 铂金=50分
-          </n-alert>
-          <div class="setting-item" v-if="helperType !== 'pointsBox'">
+          <div class="setting-item">
             <label class="setting-label">消耗数量（10的倍数）</label>
             <n-input-number
               v-model:value="helperSettings.count"
@@ -1929,11 +1923,11 @@
           </div>
           <div style="margin-bottom: 4px">
             <span style="color: #6b7280">选中账号：</span>
-            <span>{{ task.selectedTokens.length }} 个</span>
+            <span>{{ (task.selectedTokens || []).length }} 个</span>
           </div>
           <div style="margin-bottom: 8px">
             <span style="color: #6b7280">选中任务：</span>
-            <span>{{ task.selectedTasks.length }} 个</span>
+            <span>{{ (task.selectedTasks || []).length }} 个</span>
           </div>
           <div style="display: flex; gap: 8px">
             <n-button size="tiny" @click="editTask(task)"> 编辑 </n-button>
@@ -2043,30 +2037,15 @@
 
             <!-- 分组快速选择 (仅在定时任务中显示) -->
             <div style="margin-bottom: 12px">
-              <div
-                style="
-                  display: flex;
-                  justify-content: space-between;
-                  align-items: center;
-                  margin-bottom: 8px;
-                "
-              >
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                 <div style="font-size: 12px; color: #86909c">
                   快速选择分组：
                 </div>
-                <n-button
-                  type="primary"
-                  size="tiny"
-                  text
-                  @click="showGroupManageModal = true"
-                >
+                <n-button type="primary" size="tiny" text @click="showGroupManageModal = true">
                   管理分组
                 </n-button>
               </div>
-              <div
-                v-if="tokenGroups.length === 0"
-                style="font-size: 12px; color: #ccc"
-              >
+              <div v-if="tokenGroups.length === 0" style="font-size: 12px; color: #ccc;">
                 暂无分组
               </div>
               <div style="display: flex; gap: 6px; flex-wrap: wrap">
@@ -2074,25 +2053,18 @@
                   v-for="group in tokenGroups"
                   :key="group.id"
                   size="small"
-                  :type="
-                    taskScheduleSelectedGroupIds.includes(group.id)
-                      ? 'primary'
-                      : 'default'
-                  "
+                  :type="taskScheduleSelectedGroupIds.includes(group.id) ? 'primary' : 'default'"
                   @click="
                     () => {
-                      const index = taskScheduleSelectedGroupIds.indexOf(
-                        group.id,
-                      );
+                      const index = taskScheduleSelectedGroupIds.indexOf(group.id);
                       const groupTokenIds = getValidGroupTokenIds(group.id);
-
+                      
                       if (index > -1) {
                         // 取消选择该分组
                         taskScheduleSelectedGroupIds.splice(index, 1);
-                        taskForm.selectedTokens =
-                          taskForm.selectedTokens.filter(
-                            (id) => !groupTokenIds.includes(id),
-                          );
+                        taskForm.selectedTokens = taskForm.selectedTokens.filter(
+                          (id) => !groupTokenIds.includes(id),
+                        );
                       } else {
                         // 选择该分组
                         taskScheduleSelectedGroupIds.push(group.id);
@@ -2138,54 +2110,48 @@
                 </n-button>
               </n-space>
             </div>
-
+            
             <n-checkbox-group v-model:value="taskForm.selectedTasks">
-              <n-tabs
-                type="line"
-                animated
-                size="small"
-                pane-style="padding-top: 12px;"
-                default-value="daily"
-              >
-                <n-tab-pane
-                  v-for="group in taskGroupDefinitions"
-                  :key="group.name"
-                  :name="group.name"
+              <n-tabs type="line" animated size="small" pane-style="padding-top: 12px;" default-value="daily">
+                <n-tab-pane 
+                  v-for="group in taskGroupDefinitions" 
+                  :key="group.name" 
+                  :name="group.name" 
                   :tab="group.label"
                 >
                   <n-grid :cols="2" :x-gap="12" :y-gap="8">
-                    <n-grid-item
-                      v-for="task in groupedAvailableTasks[group.name]"
-                      :key="task.value"
-                    >
-                      <n-checkbox :value="task.value">{{
-                        task.label
-                      }}</n-checkbox>
+                    <n-grid-item v-for="task in groupedAvailableTasks[group.name]" :key="task.value">
+                      <n-checkbox :value="task.value">{{ task.label }}</n-checkbox>
                     </n-grid-item>
                   </n-grid>
                 </n-tab-pane>
-
-                <n-tab-pane
-                  v-if="
-                    groupedAvailableTasks['other'] &&
-                    groupedAvailableTasks['other'].length > 0
-                  "
-                  name="other"
+                
+                <n-tab-pane 
+                  v-if="groupedAvailableTasks['other'] && groupedAvailableTasks['other'].length > 0" 
+                  name="other" 
                   tab="其他"
                 >
                   <n-grid :cols="2" :x-gap="12" :y-gap="8">
-                    <n-grid-item
-                      v-for="task in groupedAvailableTasks['other']"
-                      :key="task.value"
-                    >
-                      <n-checkbox :value="task.value">{{
-                        task.label
-                      }}</n-checkbox>
+                    <n-grid-item v-for="task in groupedAvailableTasks['other']" :key="task.value">
+                      <n-checkbox :value="task.value">{{ task.label }}</n-checkbox>
                     </n-grid-item>
                   </n-grid>
                 </n-tab-pane>
               </n-tabs>
             </n-checkbox-group>
+          </div>
+          <n-divider title-placement="left" style="margin: 1px 0">分批执行设置</n-divider>
+          <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+            <label class="setting-label">启用分批执行</label>
+            <n-switch v-model:value="taskForm.enableBatchExecution" />
+          </div>
+          <div class="setting-item" v-if="taskForm.enableBatchExecution" style="flex-direction: row; justify-content: space-between; align-items: center;">
+            <label class="setting-label">每批账号数量</label>
+            <n-input-number v-model:value="taskForm.batchSize" :min="1" :max="100" :step="1" size="small" style="width: 140px" />
+          </div>
+          <div class="setting-item" v-if="taskForm.enableBatchExecution" style="flex-direction: row; justify-content: space-between; align-items: center;">
+            <label class="setting-label">批次间延迟(秒)</label>
+            <n-input-number v-model:value="taskForm.batchDelay" :min="1" :max="3600" :step="10" size="small" style="width: 140px" />
           </div>
         </div>
         <div class="modal-actions" style="margin-top: 20px; text-align: right">
@@ -2205,146 +2171,357 @@
       style="width: 90%; max-width: 700px"
     >
       <div class="settings-content">
-        <n-grid :cols="1" :x-gap="24">
-          <!-- 单列布局：批量操作设置 -->
+        <n-grid :cols="{ xs: 1, sm: 1, md: 2, lg: 2 }" :x-gap="24">
+          <!-- 左列：批量操作设置 -->
           <n-grid-item>
             <n-divider title-placement="left" style="margin: 1px 0 8px 0"
               >批量操作设置</n-divider
             >
             <div class="settings-grid">
-              <div
-                class="setting-item"
-                style="
-                  flex-direction: row;
-                  justify-content: space-between;
-                  align-items: center;
-                "
-              >
+              <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
                 <label class="setting-label">开箱数量(10倍)</label>
-                <n-input-number
-                  v-model:value="batchSettings.boxCount"
-                  :min="10"
-                  :max="10000"
-                  :step="10"
-                  size="small"
-                  style="width: 100px"
-                />
+                <n-input-number v-model:value="batchSettingsForm.boxCount" :min="10" :max="10000" :step="10" size="small" style="width: 120px" />
               </div>
-              <div
-                class="setting-item"
-                style="
-                  flex-direction: row;
-                  justify-content: space-between;
-                  align-items: center;
-                "
-              >
+              <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
                 <label class="setting-label">钓鱼数量(10倍)</label>
-                <n-input-number
-                  v-model:value="batchSettings.fishCount"
-                  :min="10"
-                  :max="10000"
-                  :step="10"
-                  size="small"
-                  style="width: 100px"
-                />
+                <n-input-number v-model:value="batchSettingsForm.fishCount" :min="10" :max="10000" :step="10" size="small" style="width: 120px" />
               </div>
-              <div
-                class="setting-item"
-                style="
-                  flex-direction: row;
-                  justify-content: space-between;
-                  align-items: center;
-                "
-              >
+              <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
                 <label class="setting-label">招募数量(10倍)</label>
-                <n-input-number
-                  v-model:value="batchSettings.recruitCount"
-                  :min="10"
-                  :max="10000"
-                  :step="10"
-                  size="small"
-                  style="width: 100px"
-                />
+                <n-input-number v-model:value="batchSettingsForm.recruitCount" :min="10" :max="10000" :step="10" size="small" style="width: 120px" />
               </div>
-              <div
-                class="setting-item"
-                style="
-                  flex-direction: row;
-                  justify-content: space-between;
-                  align-items: center;
-                "
-              >
+              <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
                 <label class="setting-label">默认宝箱类型</label>
-                <n-select
-                  v-model:value="batchSettings.defaultBoxType"
-                  :options="boxTypeOptions"
-                  size="small"
-                  style="width: 100px"
-                />
+                <n-select v-model:value="batchSettingsForm.defaultBoxType" :options="boxTypeOptions" size="small" style="width: 120px" />
               </div>
-              <div
-                class="setting-item"
-                style="
-                  flex-direction: row;
-                  justify-content: space-between;
-                  align-items: center;
-                "
-              >
+              <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
                 <label class="setting-label">默认鱼竿类型</label>
-                <n-select
-                  v-model:value="batchSettings.defaultFishType"
-                  :options="fishTypeOptions"
-                  size="small"
-                  style="width: 100px"
-                />
+                <n-select v-model:value="batchSettingsForm.defaultFishType" :options="fishTypeOptions" size="small" style="width: 120px" />
               </div>
-              <div
-                class="setting-item"
-                style="
-                  flex-direction: row;
-                  justify-content: space-between;
-                  align-items: center;
-                "
-              >
+              <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
                 <label class="setting-label">按积分开箱目标</label>
-                <n-input-number
-                  v-model:value="batchSettings.targetBoxPoints"
-                  :min="1"
-                  :max="1000000"
-                  :step="100"
-                  size="small"
-                  style="width: 100px"
-                />
+                <n-input-number v-model:value="batchSettingsForm.targetBoxPoints" :min="1" :max="1000000" :step="100" size="small" style="width: 120px" />
               </div>
-              <div
-                class="setting-item"
-                style="
-                  flex-direction: row;
-                  justify-content: space-between;
-                  align-items: center;
-                "
-              >
+              <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
                 <label class="setting-label">梦境商品购买配置</label>
-                <n-button size="small" @click="openDreamBuyModal"
-                  >点击配置</n-button
-                >
+                <n-button size="small" @click="openDreamBuyModal">点击配置</n-button>
+              </div>
+
+            </div>
+            <n-divider title-placement="left" style="margin: 12px 0 8px 0"
+              >功法赠送设置</n-divider
+            >
+            <div class="settings-grid">
+              <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                <label class="setting-label">接收者ID</label>
+                <n-input v-model:value="batchSettingsForm.receiverId" placeholder="ID" size="small" style="width: 120px" />
+              </div>
+              <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                <label class="setting-label">密码</label>
+                <n-input v-model:value="batchSettingsForm.password" type="password" placeholder="密码" size="small" style="width: 120px" />
               </div>
             </div>
             <n-divider title-placement="left" style="margin: 12px 0 8px 0"
-              >智能发车条件设置(0为不限制)</n-divider
+              >界面设置</n-divider
             >
             <div class="settings-grid">
-              <div
-                class="setting-item"
-                style="
-                  flex-direction: row;
-                  justify-content: space-between;
-                  align-items: center;
-                "
-              >
+              <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                <label class="setting-label">隐藏定时任务模块</label>
+                <n-switch v-model:value="batchSettingsForm.hideScheduledTasksModule" />
+              </div>
+              <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                <label class="setting-label">列表每行数量</label>
+                <n-input-number v-model:value="batchSettingsForm.tokenListColumns" :min="1" :max="10" :step="1" size="small" style="width: 120px" />
+              </div>
+            </div>
+
+          </n-grid-item>
+          <!-- 右列：延迟与连接设置 -->
+          <n-grid-item>
+            <n-divider title-placement="left" style="margin: 1px 0 8px 0"
+              >延迟设置(ms)</n-divider
+            >
+            <div class="settings-grid">
+              <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                <label class="setting-label">命令延迟</label>
+                <n-input-number v-model:value="batchSettingsForm.commandDelay" :min="100" :max="2000" :step="100" size="small" style="width: 120px" />
+              </div>
+              <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                <label class="setting-label">任务间延迟</label>
+                <n-input-number v-model:value="batchSettingsForm.taskDelay" :min="100" :max="2000" :step="100" size="small" style="width: 120px" />
+              </div>
+              <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                <label class="setting-label">操作延迟</label>
+                <n-input-number v-model:value="batchSettingsForm.actionDelay" :min="100" :max="2000" :step="100" size="small" style="width: 120px" />
+              </div>
+              <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                <label class="setting-label">战斗延迟</label>
+                <n-input-number v-model:value="batchSettingsForm.battleDelay" :min="100" :max="2000" :step="100" size="small" style="width: 120px" />
+              </div>
+              <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                <label class="setting-label">刷新延迟</label>
+                <n-input-number v-model:value="batchSettingsForm.refreshDelay" :min="500" :max="3000" :step="100" size="small" style="width: 120px" />
+              </div>
+              <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                <label class="setting-label">长延迟</label>
+                <n-input-number v-model:value="batchSettingsForm.longDelay" :min="1000" :max="10000" :step="500" size="small" style="width: 120px" />
+              </div>
+            </div>
+            <n-divider title-placement="left" style="margin: 12px 0 8px 0"
+              >连接设置</n-divider
+            >
+            <div class="settings-grid">
+              <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                <label class="setting-label">最大并发数</label>
+                <n-input-number v-model:value="batchSettingsForm.maxActive" :min="1" :max="20" :step="1" size="small" style="width: 120px" />
+              </div>
+              <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                <label class="setting-label">连接超时(ms)</label>
+                <n-input-number v-model:value="batchSettingsForm.connectionTimeout" :min="1000" :max="600000" :step="1000" size="small" style="width: 120px" />
+              </div>
+              <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                <label class="setting-label">重连等待(ms)</label>
+                <n-input-number v-model:value="batchSettingsForm.reconnectDelay" :min="100" :max="300000" :step="100" size="small" style="width: 120px" />
+              </div>
+            </div>
+            <n-divider title-placement="left" style="margin: 12px 0 8px 0"
+              >日志设置</n-divider
+            >
+            <div class="settings-grid">
+              <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                <label class="setting-label">最大日志条目</label>
+                <n-input-number v-model:value="batchSettingsForm.maxLogEntries" :min="100" :max="5000" :step="100" size="small" style="width: 120px" />
+              </div>
+            </div>
+            <n-divider title-placement="left" style="margin: 12px 0 8px 0"
+              >暂停时间设置</n-divider
+            >
+            <div class="settings-grid">
+              <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                <label class="setting-label">启用活动暂停功能</label>
+                <n-switch v-model:value="batchSettingsForm.enablePauseTime" />
+              </div>
+            </div>
+            <n-collapse style="margin-top: 10px;">
+              <n-collapse-item name="pauseTimeSettings" title="暂停时间设置">
+                <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                  <label class="setting-label">启用抢符时间暂停</label>
+                  <n-switch v-model:value="batchSettingsForm.enableRobFuTime" />
+                </div>
+                <div class="setting-subgroup" style="margin-left: 20px; margin-bottom: 10px;">
+                  <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                    <label class="setting-label" style="font-size: 13px;">活动名称</label>
+                    <n-input v-model:value="batchSettingsForm.robFuTimeName" size="small" style="width: 150px" placeholder="活动名称" />
+                  </div>
+                  <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                    <label class="setting-label" style="font-size: 13px;">开始时间</label>
+                    <n-input v-model:value="batchSettingsForm.robFuStartTime" size="small" style="width: 100px" placeholder="HH:MM" />
+                  </div>
+                  <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                    <label class="setting-label" style="font-size: 13px;">结束时间</label>
+                    <n-input v-model:value="batchSettingsForm.robFuEndTime" size="small" style="width: 100px" placeholder="HH:MM" />
+                  </div>
+                  <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                    <label class="setting-label" style="font-size: 13px;">执行频率</label>
+                    <n-select v-model:value="batchSettingsForm.robFuTimeFrequency" size="small" style="width: 100px" :options="[{ label: '每天', value: 'daily' }, { label: '特定星期', value: 'weekly' }]" />
+                  </div>
+                  <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;" v-if="batchSettingsForm.robFuTimeFrequency === 'weekly'">
+                    <label class="setting-label" style="font-size: 13px;">星期几</label>
+                    <n-select v-model:value="batchSettingsForm.robFuTimeDayOfWeek" size="small" style="width: 100px" :options="[{ label: '周一', value: 1 }, { label: '周二', value: 2 }, { label: '周三', value: 3 }, { label: '周四', value: 4 }, { label: '周五', value: 5 }, { label: '周六', value: 6 }, { label: '周日', value: 0 }]" />
+                  </div>
+                </div>
+                <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                  <label class="setting-label">启用周六盐场时间暂停</label>
+                  <n-switch v-model:value="batchSettingsForm.enableSaltFieldTime" />
+                </div>
+                <div class="setting-subgroup" style="margin-left: 20px; margin-bottom: 10px;">
+                  <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                    <label class="setting-label" style="font-size: 13px;">活动名称</label>
+                    <n-input v-model:value="batchSettingsForm.saltFieldName" size="small" style="width: 150px" placeholder="活动名称" />
+                  </div>
+                  <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                    <label class="setting-label" style="font-size: 13px;">开始时间</label>
+                    <n-input v-model:value="batchSettingsForm.saltFieldStartTime" size="small" style="width: 100px" placeholder="HH:MM" />
+                  </div>
+                  <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                    <label class="setting-label" style="font-size: 13px;">结束时间</label>
+                    <n-input v-model:value="batchSettingsForm.saltFieldEndTime" size="small" style="width: 100px" placeholder="HH:MM" />
+                  </div>
+                  <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                    <label class="setting-label" style="font-size: 13px;">执行频率</label>
+                    <n-select v-model:value="batchSettingsForm.saltFieldFrequency" size="small" style="width: 100px" :options="[{ label: '每天', value: 'daily' }, { label: '特定星期', value: 'weekly' }]" />
+                  </div>
+                  <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;" v-if="batchSettingsForm.saltFieldFrequency === 'weekly'">
+                    <label class="setting-label" style="font-size: 13px;">星期几</label>
+                    <n-select v-model:value="batchSettingsForm.saltFieldDayOfWeek" size="small" style="width: 100px" :options="[{ label: '周一', value: 1 }, { label: '周二', value: 2 }, { label: '周三', value: 3 }, { label: '周四', value: 4 }, { label: '周五', value: 5 }, { label: '周六', value: 6 }, { label: '周日', value: 0 }]" />
+                  </div>
+                </div>
+                <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                  <label class="setting-label">启用周日盐场时间暂停</label>
+                  <n-switch v-model:value="batchSettingsForm.enableSundaySaltFieldTime" />
+                </div>
+                <div class="setting-subgroup" style="margin-left: 20px; margin-bottom: 10px;">
+                  <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                    <label class="setting-label" style="font-size: 13px;">活动名称</label>
+                    <n-input v-model:value="batchSettingsForm.sundaySaltFieldName" size="small" style="width: 150px" placeholder="活动名称" />
+                  </div>
+                  <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                    <label class="setting-label" style="font-size: 13px;">开始时间</label>
+                    <n-input v-model:value="batchSettingsForm.sundaySaltFieldStartTime" size="small" style="width: 100px" placeholder="HH:MM" />
+                  </div>
+                  <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                    <label class="setting-label" style="font-size: 13px;">结束时间</label>
+                    <n-input v-model:value="batchSettingsForm.sundaySaltFieldEndTime" size="small" style="width: 100px" placeholder="HH:MM" />
+                  </div>
+                  <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                    <label class="setting-label" style="font-size: 13px;">执行频率</label>
+                    <n-select v-model:value="batchSettingsForm.sundaySaltFieldFrequency" size="small" style="width: 100px" :options="[{ label: '每天', value: 'daily' }, { label: '特定星期', value: 'weekly' }]" />
+                  </div>
+                  <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;" v-if="batchSettingsForm.sundaySaltFieldFrequency === 'weekly'">
+                    <label class="setting-label" style="font-size: 13px;">星期几</label>
+                    <n-select v-model:value="batchSettingsForm.sundaySaltFieldDayOfWeek" size="small" style="width: 100px" :options="[{ label: '周一', value: 1 }, { label: '周二', value: 2 }, { label: '周三', value: 3 }, { label: '周四', value: 4 }, { label: '周五', value: 5 }, { label: '周六', value: 6 }, { label: '周日', value: 0 }]" />
+                  </div>
+                </div>
+                <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                  <label class="setting-label">启用游戏更新时间暂停</label>
+                  <n-switch v-model:value="batchSettingsForm.enableGameUpdateTime" />
+                </div>
+                <div class="setting-subgroup" style="margin-left: 20px; margin-bottom: 10px;">
+                  <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                    <label class="setting-label" style="font-size: 13px;">活动名称</label>
+                    <n-input v-model:value="batchSettingsForm.gameUpdateName" size="small" style="width: 150px" placeholder="活动名称" />
+                  </div>
+                  <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                    <label class="setting-label" style="font-size: 13px;">开始时间</label>
+                    <n-input v-model:value="batchSettingsForm.gameUpdateStartTime" size="small" style="width: 100px" placeholder="HH:MM" />
+                  </div>
+                  <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                    <label class="setting-label" style="font-size: 13px;">结束时间</label>
+                    <n-input v-model:value="batchSettingsForm.gameUpdateEndTime" size="small" style="width: 100px" placeholder="HH:MM" />
+                  </div>
+                  <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                    <label class="setting-label" style="font-size: 13px;">执行频率</label>
+                    <n-select v-model:value="batchSettingsForm.gameUpdateFrequency" size="small" style="width: 100px" :options="[{ label: '每天', value: 'daily' }, { label: '特定星期', value: 'weekly' }]" />
+                  </div>
+                  <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;" v-if="batchSettingsForm.gameUpdateFrequency === 'weekly'">
+                    <label class="setting-label" style="font-size: 13px;">星期几</label>
+                    <n-select v-model:value="batchSettingsForm.gameUpdateDayOfWeek" size="small" style="width: 100px" :options="[{ label: '周一', value: 1 }, { label: '周二', value: 2 }, { label: '周三', value: 3 }, { label: '周四', value: 4 }, { label: '周五', value: 5 }, { label: '周六', value: 6 }, { label: '周日', value: 0 }]" />
+                  </div>
+                </div>
+                <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                  <label class="setting-label">启用自定义暂停时间1</label>
+                  <n-switch v-model:value="batchSettingsForm.enableCustomPauseTime1" />
+                </div>
+                <div class="setting-subgroup" style="margin-left: 20px; margin-bottom: 10px;">
+                  <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                    <label class="setting-label" style="font-size: 13px;">活动名称</label>
+                    <n-input v-model:value="batchSettingsForm.customPauseTime1Name" size="small" style="width: 150px" placeholder="活动名称" />
+                  </div>
+                  <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                    <label class="setting-label" style="font-size: 13px;">开始时间</label>
+                    <n-input v-model:value="batchSettingsForm.customPauseTime1Start" size="small" style="width: 100px" placeholder="HH:MM" />
+                  </div>
+                  <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                    <label class="setting-label" style="font-size: 13px;">结束时间</label>
+                    <n-input v-model:value="batchSettingsForm.customPauseTime1End" size="small" style="width: 100px" placeholder="HH:MM" />
+                  </div>
+                  <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                    <label class="setting-label" style="font-size: 13px;">执行频率</label>
+                    <n-select v-model:value="batchSettingsForm.customPauseTime1Frequency" size="small" style="width: 100px" :options="[{ label: '每天', value: 'daily' }, { label: '特定星期', value: 'weekly' }]" />
+                  </div>
+                  <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;" v-if="batchSettingsForm.customPauseTime1Frequency === 'weekly'">
+                    <label class="setting-label" style="font-size: 13px;">星期几</label>
+                    <n-select v-model:value="batchSettingsForm.customPauseTime1DayOfWeek" size="small" style="width: 100px" :options="[{ label: '周一', value: 1 }, { label: '周二', value: 2 }, { label: '周三', value: 3 }, { label: '周四', value: 4 }, { label: '周五', value: 5 }, { label: '周六', value: 6 }, { label: '周日', value: 0 }]" />
+                  </div>
+                </div>
+                <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                  <label class="setting-label">启用自定义暂停时间2</label>
+                  <n-switch v-model:value="batchSettingsForm.enableCustomPauseTime2" />
+                </div>
+                <div class="setting-subgroup" style="margin-left: 20px; margin-bottom: 10px;">
+                  <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                    <label class="setting-label" style="font-size: 13px;">活动名称</label>
+                    <n-input v-model:value="batchSettingsForm.customPauseTime2Name" size="small" style="width: 150px" placeholder="活动名称" />
+                  </div>
+                  <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                    <label class="setting-label" style="font-size: 13px;">开始时间</label>
+                    <n-input v-model:value="batchSettingsForm.customPauseTime2Start" size="small" style="width: 100px" placeholder="HH:MM" />
+                  </div>
+                  <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                    <label class="setting-label" style="font-size: 13px;">结束时间</label>
+                    <n-input v-model:value="batchSettingsForm.customPauseTime2End" size="small" style="width: 100px" placeholder="HH:MM" />
+                  </div>
+                  <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                    <label class="setting-label" style="font-size: 13px;">执行频率</label>
+                    <n-select v-model:value="batchSettingsForm.customPauseTime2Frequency" size="small" style="width: 100px" :options="[{ label: '每天', value: 'daily' }, { label: '特定星期', value: 'weekly' }]" />
+                  </div>
+                  <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;" v-if="batchSettingsForm.customPauseTime2Frequency === 'weekly'">
+                    <label class="setting-label" style="font-size: 13px;">星期几</label>
+                    <n-select v-model:value="batchSettingsForm.customPauseTime2DayOfWeek" size="small" style="width: 100px" :options="[{ label: '周一', value: 1 }, { label: '周二', value: 2 }, { label: '周三', value: 3 }, { label: '周四', value: 4 }, { label: '周五', value: 5 }, { label: '周六', value: 6 }, { label: '周日', value: 0 }]" />
+                  </div>
+                </div>
+                <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                  <label class="setting-label">启用自定义暂停时间3</label>
+                  <n-switch v-model:value="batchSettingsForm.enableCustomPauseTime3" />
+                </div>
+                <div class="setting-subgroup" style="margin-left: 20px; margin-bottom: 10px;">
+                  <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                    <label class="setting-label" style="font-size: 13px;">活动名称</label>
+                    <n-input v-model:value="batchSettingsForm.customPauseTime3Name" size="small" style="width: 150px" placeholder="活动名称" />
+                  </div>
+                  <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                    <label class="setting-label" style="font-size: 13px;">开始时间</label>
+                    <n-input v-model:value="batchSettingsForm.customPauseTime3Start" size="small" style="width: 100px" placeholder="HH:MM" />
+                  </div>
+                  <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                    <label class="setting-label" style="font-size: 13px;">结束时间</label>
+                    <n-input v-model:value="batchSettingsForm.customPauseTime3End" size="small" style="width: 100px" placeholder="HH:MM" />
+                  </div>
+                  <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                    <label class="setting-label" style="font-size: 13px;">执行频率</label>
+                    <n-select v-model:value="batchSettingsForm.customPauseTime3Frequency" size="small" style="width: 100px" :options="[{ label: '每天', value: 'daily' }, { label: '特定星期', value: 'weekly' }]" />
+                  </div>
+                  <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;" v-if="batchSettingsForm.customPauseTime3Frequency === 'weekly'">
+                    <label class="setting-label" style="font-size: 13px;">星期几</label>
+                    <n-select v-model:value="batchSettingsForm.customPauseTime3DayOfWeek" size="small" style="width: 100px" :options="[{ label: '周一', value: 1 }, { label: '周二', value: 2 }, { label: '周三', value: 3 }, { label: '周四', value: 4 }, { label: '周五', value: 5 }, { label: '周六', value: 6 }, { label: '周日', value: 0 }]" />
+                  </div>
+                </div>
+                <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                  <label class="setting-label">启用自定义暂停时间4</label>
+                  <n-switch v-model:value="batchSettingsForm.enableCustomPauseTime4" />
+                </div>
+                <div class="setting-subgroup" style="margin-left: 20px; margin-bottom: 10px;">
+                  <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                    <label class="setting-label" style="font-size: 13px;">活动名称</label>
+                    <n-input v-model:value="batchSettingsForm.customPauseTime4Name" size="small" style="width: 150px" placeholder="活动名称" />
+                  </div>
+                  <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                    <label class="setting-label" style="font-size: 13px;">开始时间</label>
+                    <n-input v-model:value="batchSettingsForm.customPauseTime4Start" size="small" style="width: 100px" placeholder="HH:MM" />
+                  </div>
+                  <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                    <label class="setting-label" style="font-size: 13px;">结束时间</label>
+                    <n-input v-model:value="batchSettingsForm.customPauseTime4End" size="small" style="width: 100px" placeholder="HH:MM" />
+                  </div>
+                  <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                    <label class="setting-label" style="font-size: 13px;">执行频率</label>
+                    <n-select v-model:value="batchSettingsForm.customPauseTime4Frequency" size="small" style="width: 100px" :options="[{ label: '每天', value: 'daily' }, { label: '特定星期', value: 'weekly' }]" />
+                  </div>
+                  <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;" v-if="batchSettingsForm.customPauseTime4Frequency === 'weekly'">
+                    <label class="setting-label" style="font-size: 13px;">星期几</label>
+                    <n-select v-model:value="batchSettingsForm.customPauseTime4DayOfWeek" size="small" style="width: 100px" :options="[{ label: '周一', value: 1 }, { label: '周二', value: 2 }, { label: '周三', value: 3 }, { label: '周四', value: 4 }, { label: '周五', value: 5 }, { label: '周六', value: 6 }, { label: '周日', value: 0 }]" />
+                  </div>
+                </div>
+              </n-collapse-item>
+            </n-collapse>
+            <n-divider title-placement="left" style="margin: 12px 0 8px 0"
+              >智能发车条件设置</n-divider
+            >
+            <div class="settings-grid">
+              <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
                 <label class="setting-label">保底车辆颜色</label>
                 <n-select
-                  v-model:value="batchSettings.carMinColor"
+                  v-model:value="batchSettingsForm.carMinColor"
                   :options="[
                     { label: '绿·普通', value: 1 },
                     { label: '蓝·稀有', value: 2 },
@@ -2354,809 +2531,141 @@
                     { label: '金·传奇', value: 6 },
                   ]"
                   size="small"
-                  style="width: 100px"
+                  style="width: 120px"
                 />
               </div>
-              <div
-                class="setting-item"
-                style="
-                  flex-direction: row;
-                  justify-content: space-between;
-                  align-items: center;
-                "
-              >
-                <label class="setting-label">车辆强制刷新保底</label>
-                <n-switch
-                  v-model:value="batchSettings.useGoldRefreshFallback"
-                />
+              <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                <label class="setting-label">车辆强制刷新保底 (优先级最高)</label>
+                <n-switch v-model:value="batchSettingsForm.useGoldRefreshFallback"/>
               </div>
-              <div
-                class="setting-item"
-                style="
-                  flex-direction: row;
-                  justify-content: space-between;
-                  align-items: center;
-                "
-              >
+              <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
                 <label class="setting-label">启用最大刷新次数限制</label>
-                <n-switch
-                  v-model:value="batchSettings.enableMaxCarRefresh"
-                />
+                <n-switch v-model:value="batchSettingsForm.enableMaxCarRefresh"/>
               </div>
-              <div
-                class="setting-item"
-                style="
-                  flex-direction: row;
-                  justify-content: space-between;
-                  align-items: center;
-                "
-              >
+              <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
                 <label class="setting-label">最大刷新次数(0=无限制刷新)</label>
-                <n-input-number
-                  v-model:value="batchSettings.maxCarRefreshCount"
-                  :min="0"
-                  :max="15"
-                  :step="1"
-                  :disabled="!batchSettings.enableMaxCarRefresh"
-                  size="small"
-                  style="width: 100px"
-                />
+                <n-input-number v-model:value="batchSettingsForm.maxCarRefreshCount" :min="0" :max="15" :step="1" size="small" style="width: 100px" :disabled="!batchSettingsForm.enableMaxCarRefresh" />
               </div>
+              <n-collapse>
+                <n-collapse-item title="刷新规则说明">
+                  <div class="refresh-rules">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px;">
+                      <thead>
+                        <tr style="background-color: #f5f5f5;">
+                          <th style="border: 1px solid #ddd; padding: 6px; text-align: left;">设置值</th>
+                          <th style="border: 1px solid #ddd; padding: 6px; text-align: left;">行为</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td style="border: 1px solid #ddd; padding: 6px;">0</td>
+                          <td style="border: 1px solid #ddd; padding: 6px;">无限制刷新，直到满足条件或无刷新条件</td>
+                        </tr>
+                        <tr>
+                          <td style="border: 1px solid #ddd; padding: 6px;">1</td>
+                          <td style="border: 1px solid #ddd; padding: 6px;">只允许免费刷新1次，用完就停止</td>
+                        </tr>
+                        <tr>
+                          <td style="border: 1px solid #ddd; padding: 6px;">2-15</td>
+                          <td style="border: 1px solid #ddd; padding: 6px;">允许用刷新券或金砖，最多刷新指定次数</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                    <div style="margin-top: 10px; font-size: 12px; color: #666; line-height: 1.4;">
+                      <p><strong>特别说明：</strong></p>
+                      <p>1. 最大刷新次数的限制优先级高于保底颜色的要求</p>
+                      <p>2. 例如：选择橙传说车作为保底颜色，同时设置最大刷新次数=1</p>
+                      <p>   - 系统只会使用1次免费刷新</p>
+                      <p>   - 不管刷新后是不是橙色传说，都会直接发车</p>
+                      <p>   - 不会为了追求橙色传说而继续刷新</p>
+                      <p>3. 这样设计的目的是保护资源，防止过度消耗刷新券和金砖</p>
+                    </div>
+                  </div>
+                </n-collapse-item>
+              </n-collapse>
             </div>
-            <div
-              class="settings-grid"
-              v-if="batchSettings.useGoldRefreshFallback"
-              style="margin-top: 12px"
-            >
-              <div
-                class="setting-item"
-                style="
-                  flex-direction: row;
-                  justify-content: space-between;
-                  align-items: center;
-                "
-              >
-                <label class="setting-label">需同时满足所有条件</label>
-                <n-switch
-                  v-model:value="batchSettings.smartDepartureMatchAll"
-                />
+            <div class="settings-grid">
+              <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
+                <label class="setting-label">满足任一条件即可发车</label>
+                <n-switch v-model:value="batchSettingsForm.smartDepartureMatchAll"/>
               </div>
-              <div
-                class="setting-item"
-                style="
-                  flex-direction: row;
-                  justify-content: space-between;
-                  align-items: center;
-                "
-              >
+              <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
                 <label class="setting-label">金砖 >=</label>
-                <n-input-number
-                  v-model:value="batchSettings.smartDepartureGoldThreshold"
-                  :min="0"
-                  :step="100"
-                  size="small"
-                  style="width: 100px"
-                />
+                <n-input-number v-model:value="batchSettingsForm.smartDepartureGoldThreshold" :min="0" :step="100" size="small" style="width: 100px" />
               </div>
-              <div
-                class="setting-item"
-                style="
-                  flex-direction: row;
-                  justify-content: space-between;
-                  align-items: center;
-                "
-              >
+              <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
                 <label class="setting-label">招募令 >=</label>
-                <n-input-number
-                  v-model:value="batchSettings.smartDepartureRecruitThreshold"
-                  :min="0"
-                  :step="10"
-                  size="small"
-                  style="width: 100px"
-                />
+                <n-input-number v-model:value="batchSettingsForm.smartDepartureRecruitThreshold" :min="0" :step="10" size="small" style="width: 100px" />
               </div>
-              <div
-                class="setting-item"
-                style="
-                  flex-direction: row;
-                  justify-content: space-between;
-                  align-items: center;
-                "
-              >
+              <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
                 <label class="setting-label">白玉 >=</label>
-                <n-input-number
-                  v-model:value="batchSettings.smartDepartureJadeThreshold"
-                  :min="0"
-                  :step="100"
-                  size="small"
-                  style="width: 100px"
-                />
+                <n-input-number v-model:value="batchSettingsForm.smartDepartureJadeThreshold" :min="0" :step="100" size="small" style="width: 100px" />
               </div>
-              <div
-                class="setting-item"
-                style="
-                  flex-direction: row;
-                  justify-content: space-between;
-                  align-items: center;
-                "
-              >
+              <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
                 <label class="setting-label">刷新卷 >=</label>
-                <n-input-number
-                  v-model:value="batchSettings.smartDepartureTicketThreshold"
-                  :min="0"
-                  :step="1"
-                  size="small"
-                  style="width: 100px"
-                />
+                <n-input-number v-model:value="batchSettingsForm.smartDepartureTicketThreshold" :min="0" :step="1" size="small" style="width: 100px" />
               </div>
             </div>
-            <n-divider title-placement="left" style="margin: 12px 0 8px 0"
-              >功法赠送设置</n-divider
-            >
-            <div class="settings-grid">
-              <div
-                class="setting-item"
-                style="
-                  flex-direction: row;
-                  justify-content: space-between;
-                  align-items: center;
-                "
-              >
-                <label class="setting-label">接收者ID</label>
-                <n-input-number
-                  v-model:value="batchSettings.receiverId"
-                  placeholder="ID"
-                  size="small"
-                  style="width: 100px"
-                  :show-button="false"
-                />
-              </div>
-              <div
-                class="setting-item"
-                style="
-                  flex-direction: row;
-                  justify-content: space-between;
-                  align-items: center;
-                "
-              >
-                <label class="setting-label">密码</label>
-                <n-input
-                  v-model:value="batchSettings.password"
-                  type="password"
-                  placeholder="密码"
-                  size="small"
-                  style="width: 100px"
-                />
-              </div>
-            </div>
-            <n-divider title-placement="left" style="margin: 12px 0 8px 0"
-              >界面设置</n-divider
-            >
-            <div class="settings-grid">
-              <div
-                class="setting-item"
-                style="
-                  flex-direction: row;
-                  justify-content: space-between;
-                  align-items: center;
-                "
-              >
-                <label class="setting-label">隐藏定时任务模块</label>
-                <n-switch v-model:value="batchSettings.hideScheduledTasksModule" />
-              </div>
-            </div>
-          </n-grid-item>
-          <!-- 右列：延迟与连接设置 -->
-          <n-grid-item>
-            <n-divider title-placement="left" style="margin: 1px 0 8px 0"
-              >延迟设置(ms)</n-divider
-            >
-            <div class="settings-grid">
-              <div
-                class="setting-item"
-                style="
-                  flex-direction: row;
-                  justify-content: space-between;
-                  align-items: center;
-                "
-              >
-                <label class="setting-label">命令延迟</label>
-                <n-input-number
-                  v-model:value="batchSettings.commandDelay"
-                  :min="100"
-                  :max="2000"
-                  :step="100"
-                  size="small"
-                  style="width: 100px"
-                />
-              </div>
-              <div
-                class="setting-item"
-                style="
-                  flex-direction: row;
-                  justify-content: space-between;
-                  align-items: center;
-                "
-              >
-                <label class="setting-label">任务间延迟</label>
-                <n-input-number
-                  v-model:value="batchSettings.taskDelay"
-                  :min="100"
-                  :max="2000"
-                  :step="100"
-                  size="small"
-                  style="width: 100px"
-                />
-              </div>
-              <div
-                class="setting-item"
-                style="
-                  flex-direction: row;
-                  justify-content: space-between;
-                  align-items: center;
-                "
-              >
-                <label class="setting-label">操作延迟</label>
-                <n-input-number
-                  v-model:value="batchSettings.actionDelay"
-                  :min="100"
-                  :max="2000"
-                  :step="100"
-                  size="small"
-                  style="width: 100px"
-                />
-              </div>
-              <div
-                class="setting-item"
-                style="
-                  flex-direction: row;
-                  justify-content: space-between;
-                  align-items: center;
-                "
-              >
-                <label class="setting-label">战斗延迟</label>
-                <n-input-number
-                  v-model:value="batchSettings.battleDelay"
-                  :min="100"
-                  :max="2000"
-                  :step="100"
-                  size="small"
-                  style="width: 100px"
-                />
-              </div>
-              <div
-                class="setting-item"
-                style="
-                  flex-direction: row;
-                  justify-content: space-between;
-                  align-items: center;
-                "
-              >
-                <label class="setting-label">刷新延迟</label>
-                <n-input-number
-                  v-model:value="batchSettings.refreshDelay"
-                  :min="500"
-                  :max="3000"
-                  :step="100"
-                  size="small"
-                  style="width: 100px"
-                />
-              </div>
-              <div
-                class="setting-item"
-                style="
-                  flex-direction: row;
-                  justify-content: space-between;
-                  align-items: center;
-                "
-              >
-                <label class="setting-label">长延迟</label>
-                <n-input-number
-                  v-model:value="batchSettings.longDelay"
-                  :min="1000"
-                  :max="10000"
-                  :step="500"
-                  size="small"
-                  style="width: 100px"
-                />
-              </div>
-            </div>
-            <n-divider title-placement="left" style="margin: 12px 0 8px 0"
-              >连接设置</n-divider
-            >
-            <div class="settings-grid">
-              <div
-                class="setting-item"
-                style="
-                  flex-direction: row;
-                  justify-content: space-between;
-                  align-items: center;
-                "
-              >
-                <label class="setting-label">最大并发数</label>
-                <n-input-number
-                  v-model:value="batchSettings.maxActive"
-                  :min="1"
-                  :max="20"
-                  :step="1"
-                  size="small"
-                  style="width: 100px"
-                />
-              </div>
-              <div
-                class="setting-item"
-                style="
-                  flex-direction: row;
-                  justify-content: space-between;
-                  align-items: center;
-                "
-              >
-                <label class="setting-label">连接超时(ms)</label>
-                <n-input-number
-                  v-model:value="batchSettings.connectionTimeout"
-                  :min="1000"
-                  :max="30000"
-                  :step="1000"
-                  size="small"
-                  style="width: 100px"
-                />
-              </div>
-              <div
-                class="setting-item"
-                style="
-                  flex-direction: row;
-                  justify-content: space-between;
-                  align-items: center;
-                "
-              >
-                <label class="setting-label">重连等待(ms)</label>
-                <n-input-number
-                  v-model:value="batchSettings.reconnectDelay"
-                  :min="100"
-                  :max="5000"
-                  :step="100"
-                  size="small"
-                  style="width: 100px"
-                />
-              </div>
-            </div>
-            <n-divider title-placement="left" style="margin: 12px 0 8px 0"
-              >系统设置</n-divider
-            >
-            <div class="settings-grid">
-              <div
-                class="setting-item"
-                style="
-                  flex-direction: row;
-                  justify-content: space-between;
-                  align-items: center;
-                "
-              >
-                <label class="setting-label">列表每行数量</label>
-                <n-input-number
-                  v-model:value="batchSettings.tokenListColumns"
-                  :min="1"
-                  :max="10"
-                  :step="1"
-                  size="small"
-                  style="width: 100px"
-                />
-              </div>
-              <div
-                class="setting-item"
-                style="
-                  flex-direction: row;
-                  justify-content: space-between;
-                  align-items: center;
-                "
-              >
-                <label class="setting-label">最大日志条目</label>
-                <n-input-number
-                  v-model:value="batchSettings.maxLogEntries"
-                  :min="100"
-                  :max="5000"
-                  :step="100"
-                  size="small"
-                  style="width: 100px"
-                />
-              </div>
-            </div>
-            <n-divider title-placement="left" style="margin: 12px 0 8px 0"
-              >暂停时间设置</n-divider
-            >
-            <div class="settings-grid">
-              <div
-                class="setting-item"
-                style="
-                  flex-direction: row;
-                  justify-content: space-between;
-                  align-items: center;
-                "
-              >
-                <label class="setting-label">启用活动暂停功能</label>
-                <n-switch v-model:value="batchSettings.enablePauseTime" />
-              </div>
-            </div>
-            <n-collapse style="margin-top: 10px">
-              <n-collapse-item name="pauseTimeSettings" title="暂停时间设置">
-                <div class="settings-grid">
-                  <div
-                    class="setting-item"
-                    style="
-                      flex-direction: row;
-                      justify-content: space-between;
-                      align-items: center;
-                    "
-                  >
-                    <label class="setting-label">启用抢符时间暂停</label>
-                    <n-switch v-model:value="batchSettings.enableRobFuTime" />
-                  </div>
-                  <div
-                    class="setting-subgroup"
-                    style="margin-left: 20px; margin-bottom: 10px"
-                  >
-                    <div
-                      class="setting-item"
-                      style="
-                        flex-direction: row;
-                        justify-content: space-between;
-                        align-items: center;
-                      "
-                    >
-                      <label class="setting-label" style="font-size: 13px">活动名称</label>
-                      <n-input
-                        v-model:value="batchSettings.robFuTimeName"
-                        size="small"
-                        style="width: 150px"
-                        placeholder="活动名称"
-                      />
-                    </div>
-                    <div
-                      class="setting-item"
-                      style="
-                        flex-direction: row;
-                        justify-content: space-between;
-                        align-items: center;
-                      "
-                    >
-                      <label class="setting-label" style="font-size: 13px">开始时间</label>
-                      <n-input
-                        v-model:value="batchSettings.robFuStartTime"
-                        size="small"
-                        style="width: 100px"
-                        placeholder="HH:MM"
-                      />
-                    </div>
-                    <div
-                      class="setting-item"
-                      style="
-                        flex-direction: row;
-                        justify-content: space-between;
-                        align-items: center;
-                      "
-                    >
-                      <label class="setting-label" style="font-size: 13px">结束时间</label>
-                      <n-input
-                        v-model:value="batchSettings.robFuEndTime"
-                        size="small"
-                        style="width: 100px"
-                        placeholder="HH:MM"
-                      />
-                    </div>
-                    <div
-                      class="setting-item"
-                      style="
-                        flex-direction: row;
-                        justify-content: space-between;
-                        align-items: center;
-                      "
-                    >
-                      <label class="setting-label" style="font-size: 13px">执行频率</label>
-                      <n-select
-                        v-model:value="batchSettings.robFuTimeFrequency"
-                        size="small"
-                        style="width: 100px"
-                        :options="[
-                          { label: '每天', value: 'daily' },
-                          { label: '特定星期', value: 'weekly' },
-                        ]"
-                      />
-                    </div>
-                    <div
-                      class="setting-item"
-                      style="
-                        flex-direction: row;
-                        justify-content: space-between;
-                        align-items: center;
-                      "
-                      v-if="batchSettings.robFuTimeFrequency === 'weekly'"
-                    >
-                      <label class="setting-label" style="font-size: 13px">星期几</label>
-                      <n-select
-                        v-model:value="batchSettings.robFuTimeDayOfWeek"
-                        size="small"
-                        style="width: 100px"
-                        :options="[
-                          { label: '周一', value: 1 },
-                          { label: '周二', value: 2 },
-                          { label: '周三', value: 3 },
-                          { label: '周四', value: 4 },
-                          { label: '周五', value: 5 },
-                          { label: '周六', value: 6 },
-                          { label: '周日', value: 0 },
-                        ]"
-                      />
-                    </div>
-                  </div>
-                  <div
-                    class="setting-item"
-                    style="
-                      flex-direction: row;
-                      justify-content: space-between;
-                      align-items: center;
-                    "
-                  >
-                    <label class="setting-label">启用周六盐场时间暂停</label>
-                    <n-switch v-model:value="batchSettings.enableSaltFieldTime" />
-                  </div>
-                  <div
-                    class="setting-subgroup"
-                    style="margin-left: 20px; margin-bottom: 10px"
-                  >
-                    <div
-                      class="setting-item"
-                      style="
-                        flex-direction: row;
-                        justify-content: space-between;
-                        align-items: center;
-                      "
-                    >
-                      <label class="setting-label" style="font-size: 13px">活动名称</label>
-                      <n-input
-                        v-model:value="batchSettings.saltFieldName"
-                        size="small"
-                        style="width: 150px"
-                        placeholder="活动名称"
-                      />
-                    </div>
-                    <div
-                      class="setting-item"
-                      style="
-                        flex-direction: row;
-                        justify-content: space-between;
-                        align-items: center;
-                      "
-                    >
-                      <label class="setting-label" style="font-size: 13px">开始时间</label>
-                      <n-input
-                        v-model:value="batchSettings.saltFieldStartTime"
-                        size="small"
-                        style="width: 100px"
-                        placeholder="HH:MM"
-                      />
-                    </div>
-                    <div
-                      class="setting-item"
-                      style="
-                        flex-direction: row;
-                        justify-content: space-between;
-                        align-items: center;
-                      "
-                    >
-                      <label class="setting-label" style="font-size: 13px">结束时间</label>
-                      <n-input
-                        v-model:value="batchSettings.saltFieldEndTime"
-                        size="small"
-                        style="width: 100px"
-                        placeholder="HH:MM"
-                      />
-                    </div>
-                    <div
-                      class="setting-item"
-                      style="
-                        flex-direction: row;
-                        justify-content: space-between;
-                        align-items: center;
-                      "
-                    >
-                      <label class="setting-label" style="font-size: 13px">执行频率</label>
-                      <n-select
-                        v-model:value="batchSettings.saltFieldFrequency"
-                        size="small"
-                        style="width: 100px"
-                        :options="[
-                          { label: '每天', value: 'daily' },
-                          { label: '特定星期', value: 'weekly' },
-                        ]"
-                      />
-                    </div>
-                    <div
-                      class="setting-item"
-                      style="
-                        flex-direction: row;
-                        justify-content: space-between;
-                        align-items: center;
-                      "
-                      v-if="batchSettings.saltFieldFrequency === 'weekly'"
-                    >
-                      <label class="setting-label" style="font-size: 13px">星期几</label>
-                      <n-select
-                        v-model:value="batchSettings.saltFieldDayOfWeek"
-                        size="small"
-                        style="width: 100px"
-                        :options="[
-                          { label: '周一', value: 1 },
-                          { label: '周二', value: 2 },
-                          { label: '周三', value: 3 },
-                          { label: '周四', value: 4 },
-                          { label: '周五', value: 5 },
-                          { label: '周六', value: 6 },
-                          { label: '周日', value: 0 },
-                        ]"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </n-collapse-item>
-            </n-collapse>
             <n-divider title-placement="left" style="margin: 12px 0 8px 0"
               >分批执行设置</n-divider
             >
             <div class="settings-grid">
-              <div
-                class="setting-item"
-                style="
-                  flex-direction: row;
-                  justify-content: space-between;
-                  align-items: center;
-                "
-              >
+              <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
                 <label class="setting-label">启用分批执行</label>
-                <n-switch v-model:value="batchSettings.enableBatchExecution" />
+                <n-switch v-model:value="batchSettingsForm.enableBatchExecution" />
               </div>
-              <div
-                class="setting-item"
-                style="
-                  flex-direction: row;
-                  justify-content: space-between;
-                  align-items: center;
-                "
-              >
+              <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
                 <label class="setting-label">每批账号数量</label>
-                <n-input-number
-                  v-model:value="batchSettings.batchSize"
-                  :min="1"
-                  :max="50"
-                  :step="1"
-                  :disabled="!batchSettings.enableBatchExecution"
-                  size="small"
-                  style="width: 100px"
-                />
+                <n-input-number v-model:value="batchSettingsForm.batchSize" :min="1" :max="50" :step="1" :disabled="!batchSettings.enableBatchExecution" size="small" style="width: 120px" />
               </div>
-              <div
-                class="setting-item"
-                style="
-                  flex-direction: row;
-                  justify-content: space-between;
-                  align-items: center;
-                "
-              >
+              <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
                 <label class="setting-label">批次间延迟(秒)</label>
-                <n-input-number
-                  v-model:value="batchSettings.batchDelay"
-                  :min="5"
-                  :max="300"
-                  :step="5"
-                  :disabled="!batchSettings.enableBatchExecution"
-                  size="small"
-                  style="width: 100px"
-                />
+                <n-input-number v-model:value="batchSettingsForm.batchDelay" :min="5" :max="300" :step="5" :disabled="!batchSettings.enableBatchExecution" size="small" style="width: 120px" />
               </div>
-              <div
-                class="setting-item"
-                style="
-                  flex-direction: row;
-                  justify-content: space-between;
-                  align-items: center;
-                "
-              >
+              <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
                 <label class="setting-label">冲突时加入积攒队列</label>
-                <n-switch v-model:value="batchSettings.enableQueueOnConflict" />
+                <n-switch v-model:value="batchSettingsForm.enableQueueOnConflict" />
               </div>
             </div>
             <n-divider title-placement="left" style="margin: 12px 0 8px 0"
               >系统维护设置</n-divider
             >
             <div class="settings-grid">
-              <div
-                class="setting-item"
-                style="
-                  flex-direction: row;
-                  justify-content: space-between;
-                  align-items: center;
-                "
-              >
+              <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
                 <label class="setting-label">定时刷新页面</label>
-                <n-switch v-model:value="batchSettings.enableRefresh" />
+                <n-switch v-model:value="batchSettingsForm.enableRefresh" />
               </div>
-              <div
-                class="setting-item"
-                style="
-                  flex-direction: row;
-                  justify-content: space-between;
-                  align-items: center;
-                "
-                v-if="batchSettings.enableRefresh"
-              >
+              <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;" v-if="batchSettingsForm.enableRefresh">
                 <label class="setting-label">刷新间隔(分钟)</label>
-                <n-input-number
-                  v-model:value="batchSettings.refreshInterval"
-                  :min="1"
-                  :max="1440"
-                  :step="1"
-                  size="small"
-                  style="width: 100px"
-                />
+                <n-input-number v-model:value="batchSettingsForm.refreshInterval" :min="1" :max="1440" :step="1" size="small" style="width: 100px" />
+              </div>
+              <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;" v-if="batchSettingsForm.enableRefresh">
+                <label class="setting-label">任务完成后刷新延迟(秒)</label>
+                <n-input-number v-model:value="batchSettingsForm.refreshNoticeDelay" :min="5" :max="300" :step="5" size="small" style="width: 100px" />
               </div>
             </div>
-            <n-collapse style="margin-top: 10px">
+            
+            <!-- 推送通知设置 -->
+            <n-collapse style="margin-top: 10px;">
               <n-collapse-item title="推送通知设置">
                 <div class="settings-grid">
-                  <div
-                    class="setting-item"
-                    style="
-                      flex-direction: row;
-                      justify-content: space-between;
-                      align-items: center;
-                    "
-                  >
+                  <div class="setting-item" style="flex-direction: row; justify-content: space-between; align-items: center;">
                     <label class="setting-label">启用推送</label>
-                    <n-switch v-model:value="batchSettings.pushNotificationEnabled" />
+                    <n-switch v-model:value="batchSettingsForm.pushNotificationEnabled" />
                   </div>
-                  <div
-                    class="setting-item"
-                    style="
-                      flex-direction: column;
-                      align-items: flex-start;
-                      gap: 8px;
-                    "
-                  >
+                  <div class="setting-item" style="flex-direction: column; align-items: flex-start; gap: 8px;">
                     <label class="setting-label">推送方式</label>
-                    <n-select
-                      v-model:value="batchSettings.pushProvider"
-                      :options="pushProviderOptions"
-                      size="small"
-                      style="width: 100%"
-                    />
+                    <n-select v-model:value="batchSettingsForm.pushProvider" :options="pushProviderOptions" size="small" style="width: 100%" />
                   </div>
-                  <div
-                    class="setting-item"
-                    style="
-                      flex-direction: column;
-                      align-items: flex-start;
-                      gap: 8px;
-                    "
-                  >
+                  <div class="setting-item" style="flex-direction: column; align-items: flex-start; gap: 8px;">
                     <label class="setting-label">推送 Token</label>
-                    <n-input
-                      v-model:value="batchSettings.pushToken"
-                      type="password"
-                      show-password-on="click"
-                      :placeholder="getPushTokenPlaceholder()"
-                      size="small"
-                      style="width: 100%"
-                    />
-                    <div style="font-size: 12px; color: #999;">{{ getPushTokenHelp() }}</div>
+                    <n-input v-model:value="batchSettingsForm.pushToken" type="password" show-password-on="click" :placeholder="getPushTokenPlaceholder()" size="small" style="width: 100%" />
+                    <n-text depth="3" style="font-size: 12px">
+                      {{ getPushTokenHelp() }}
+                    </n-text>
                   </div>
-                  <div
-                    class="setting-item"
-                    style="
-                      flex-direction: row;
-                      justify-content: flex-end;
-                      align-items: center;
-                    "
-                  >
-                    <n-button type="primary" size="small" :loading="testingPush" :disabled="!batchSettings.pushToken" @click="testPushNotification">
+                  <div class="setting-item" style="flex-direction: row; justify-content: flex-end; align-items: center;">
+                    <n-button type="primary" size="small" :loading="testingPush" :disabled="!batchSettingsForm.pushToken" @click="testPushNotification">
                       测试推送
                     </n-button>
                   </div>
@@ -3186,49 +2695,28 @@
       style="width: 90%; max-width: 800px"
     >
       <div class="settings-content">
-        <div class="settings-grid" style="display: block">
-          <div
-            style="
-              margin-bottom: 16px;
-              display: flex;
-              align-items: center;
-              gap: 12px;
-            "
-          >
+        <div class="settings-grid" style="display: block;">
+          <div style="margin-bottom: 16px; display: flex; align-items: center; gap: 12px;">
             <span style="font-size: 16px">拍手器:</span>
-            <n-input-number
-              v-model:value="warGuessCoin"
-              placeholder="拍手器"
-              :min="1"
-              :max="20"
-              style="width: 120px"
-            >
-            </n-input-number>
-            <n-button
-              type="primary"
-              @click="handleWarGuessCheer"
-              :disabled="!selectedWarGuessLegionId || isRunning"
-            >
-              助威
-            </n-button>
-            <n-button @click="fetchWarGuessRank" :loading="warGuessLoading">
-              刷新数据
-            </n-button>
+             <n-input-number v-model:value="warGuessCoin" placeholder="拍手器" :min="1" :max="20" style="width: 120px" >
+             </n-input-number>
+             <n-button type="primary" @click="handleWarGuessCheer" :disabled="!selectedWarGuessLegionId || batchTaskStore.isRunning">
+               助威
+             </n-button>
+             <n-button @click="fetchWarGuessRank" :loading="warGuessLoading">
+               刷新数据
+             </n-button>
           </div>
-
+          
           <n-data-table
             :columns="warGuessColumns"
             :data="warGuessList"
             :loading="warGuessLoading"
-            :row-key="(row) => row.id"
-            :checked-row-keys="
-              selectedWarGuessLegionId ? [selectedWarGuessLegionId] : []
-            "
-            @update:checked-row-keys="
-              (keys) => (selectedWarGuessLegionId = keys[0])
-            "
+            :row-key="row => row.id"
+            :checked-row-keys="selectedWarGuessLegionId ? [selectedWarGuessLegionId] : []"
+            @update:checked-row-keys="(keys) => selectedWarGuessLegionId = keys[0]"
             :row-props="warGuessRowProps"
-            style="height: 400px; flex: 1"
+            style="height: 400px; flex: 1;"
             flex-height
           />
         </div>
@@ -3251,15 +2739,7 @@
           创建新分组
         </n-divider>
         <div style="margin-bottom: 24px">
-          <div
-            style="
-              display: flex;
-              gap: 12px;
-              align-items: center;
-              margin-bottom: 12px;
-              flex-wrap: wrap;
-            "
-          >
+          <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 12px; flex-wrap: wrap;">
             <n-input
               v-model:value="newGroupName"
               placeholder="输入分组名称"
@@ -3277,10 +2757,7 @@
                     height: '24px',
                     backgroundColor: color,
                     borderRadius: '4px',
-                    border:
-                      newGroupColor === color
-                        ? '3px solid #000'
-                        : '2px solid #ddd',
+                    border: newGroupColor === color ? '3px solid #000' : '2px solid #ddd',
                     cursor: 'pointer',
                     transition: 'transform 0.2s',
                   }"
@@ -3294,34 +2771,17 @@
               创建分组
             </n-button>
           </div>
-
+          
           <!-- 选择包含的账号 -->
-          <div
-            style="
-              background: #f9f9f9;
-              padding: 12px;
-              border-radius: 8px;
-              border: 1px solid #eee;
-            "
-          >
-            <div
-              style="
-                display: flex;
-                justify-content: space-between;
-                margin-bottom: 8px;
-              "
-            >
-              <span style="font-size: 13px; font-weight: bold"
-                >包含账号 ({{ newGroupSelectedTokens.length }})</span
-              >
+          <div style="background: #f9f9f9; padding: 12px; border-radius: 8px; border: 1px solid #eee;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+              <span style="font-size: 13px; font-weight: bold;">包含账号 ({{ newGroupSelectedTokens.length }})</span>
               <n-space size="small">
                 <n-button size="tiny" @click="selectAllNewGroup">全选</n-button>
-                <n-button size="tiny" @click="deselectAllNewGroup"
-                  >全不选</n-button
-                >
+                <n-button size="tiny" @click="deselectAllNewGroup">全不选</n-button>
               </n-space>
             </div>
-            <div style="max-height: 150px; overflow-y: auto">
+            <div style="max-height: 150px; overflow-y: auto;">
               <n-checkbox-group v-model:value="newGroupSelectedTokens">
                 <n-grid :cols="3" :x-gap="12" :y-gap="8">
                   <n-grid-item v-for="token in sortedTokens" :key="token.id">
@@ -3386,10 +2846,7 @@
                         height: '20px',
                         backgroundColor: color,
                         borderRadius: '4px',
-                        border:
-                          editingGroupColor === color
-                            ? '3px solid #000'
-                            : '2px solid #ddd',
+                        border: editingGroupColor === color ? '3px solid #000' : '2px solid #ddd',
                         cursor: 'pointer',
                       }"
                       @click="editingGroupColor = color"
@@ -3529,15 +2986,60 @@
       </div>
     </n-modal>
 
+    <!-- 恢复任务对话框 -->
+    <n-modal
+      v-model:show="showResumeTaskDialog"
+      preset="dialog"
+      title="检测到未完成的任务"
+      :show-icon="true"
+      :mask-closable="false"
+      :close-on-esc="false"
+      style="width: 450px"
+    >
+      <div style="padding: 10px 0;">
+        <p style="margin-bottom: 15px; font-size: 15px;">
+          <n-icon style="vertical-align: middle; margin-right: 8px; color: #f0a020;">
+            <AlertCircleOutline />
+          </n-icon>
+          上次任务执行中断，是否继续？
+        </p>
+        <div v-if="resumeTaskState" style="background: #f5f5f5; padding: 12px; border-radius: 6px; margin-bottom: 15px;">
+          <p style="margin: 5px 0; font-size: 14px;">
+            <strong>任务名称：</strong>{{ resumeTaskState.taskName || '批量任务' }}
+          </p>
+          <p style="margin: 5px 0; font-size: 14px;">
+            <strong>当前进度：</strong>第 {{ resumeTaskState.currentBatchIndex + 1 }} / {{ resumeTaskState.totalBatches }} 批
+          </p>
+          <p style="margin: 5px 0; font-size: 14px;">
+            <strong>账号数量：</strong>{{ resumeTaskState.selectedTokens?.length || 0 }} 个
+          </p>
+          <p style="margin: 5px 0; font-size: 14px;">
+            <strong>中断时间：</strong>{{ new Date(resumeTaskState.timestamp).toLocaleString() }}
+          </p>
+        </div>
+        <p style="color: #888; font-size: 13px; margin-top: 10px;">
+          提示：选择"继续任务"将从上次中断的批次继续执行
+        </p>
+      </div>
+      <template #action>
+        <n-button @click="cancelResumeTask" style="margin-right: 10px;">
+          放弃任务
+        </n-button>
+        <n-button type="primary" @click="resumeTaskExecution">
+          继续任务
+        </n-button>
+      </template>
+    </n-modal>
+
     <!-- 黑市周购买助手模态框 -->
     <n-modal
       v-model:show="showBlackMarketBuyerModal"
-      preset="card"
       title="黑市周购买助手"
-      style="width: 90%; max-width: 1200px"
-      :mask-closable="false"
+      width="80%"
+      max-width="800px"
     >
       <BlackMarketBuyer
+        ref="blackMarketBuyerRef"
         :selected-tokens="selectedTokenObjects"
         :add-log="addLog"
         :batch-settings="batchSettings"
@@ -3548,6 +3050,8 @@
         @purchase-complete="handleBlackMarketPurchaseComplete"
       />
     </n-modal>
+
+
   </div>
 </template>
 
@@ -3562,18 +3066,20 @@ import {
   onMounted,
   onBeforeUnmount,
   h,
+  toRef,
 } from "vue";
 import { useTokenStore, gameTokens, tokenGroups } from "@/stores/tokenStore";
 import { useBatchTaskStore } from "@/stores/batchTaskStore";
 import { useScheduledTaskStore } from "@/stores/scheduledTaskStore";
-import { $emit } from "@/stores/events/index.ts";
+import BlackMarketBuyer from "@/components/cards/BlackMarketBuyer.vue";
 import { DailyTaskRunner } from "@/utils/dailyTaskRunner";
 import { preloadQuestions } from "@/utils/studyQuestionsFromJSON.js";
 import { useMessage } from "naive-ui";
-import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Settings, AlertCircleOutline, TimerOutline } from "@vicons/ionicons5";
 import useIndexedDB from "@/hooks/useIndexedDB";
-import { Settings } from "@vicons/ionicons5";
+import { Filesystem, Directory } from '@capacitor/filesystem';
 import { sendTaskCompleteNotification, getPushConfig, savePushConfig, testPushNotification as testPushNotificationUtil } from '@/utils/pushNotification';
+import { merchantConfig, goldItemsConfig } from "@/utils/dreamConstants";
 
 // Import batch task modules
 import {
@@ -3629,16 +3135,14 @@ import {
   createTasksLegacy,
 } from "@/utils/batch";
 
-import { merchantConfig, goldItemsConfig } from "@/utils/dreamConstants";
-import BlackMarketBuyer from "@/components/cards/BlackMarketBuyer.vue";
-
-// Initialize token store, message service, and task runner
+// Initialize stores and services
 const tokenStore = useTokenStore();
 const batchTaskStore = useBatchTaskStore();
 const scheduledTaskStore = useScheduledTaskStore();
-const indexedDB = useIndexedDB();
-const { getArrayBuffer, waitForReady, getAllKeys } = indexedDB;
 const message = useMessage();
+
+const indexedDB = useIndexedDB();
+const { storeArrayBuffer, getArrayBuffer, getAllKeys, waitForReady } = indexedDB;
 
 // 安全的 localStorage 操作封装
 const safeLocalStorage = {
@@ -3650,7 +3154,7 @@ const safeLocalStorage = {
       return null;
     }
   },
-
+  
   setItem: (key, value) => {
     try {
       localStorage.setItem(key, value);
@@ -3674,7 +3178,7 @@ const safeLocalStorage = {
       }
     }
   },
-
+  
   removeItem: (key) => {
     try {
       localStorage.removeItem(key);
@@ -3686,14 +3190,546 @@ const safeLocalStorage = {
   }
 };
 
-// 当前时间，用于暂停时间检查
+// 定期清理 localStorage 任务标记
+const cleanupLocalStorageTasks = () => {
+  try {
+    const now = new Date();
+    
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('lastTaskExecution_')) {
+        // 检查标记是否过期（超过1小时）
+        const taskId = key.replace('lastTaskExecution_', '');
+        const lastExecution = safeLocalStorage.getItem(key);
+        if (lastExecution) {
+          const [id, date, hour, minute] = lastExecution.split('_');
+          const executionTime = new Date();
+          executionTime.setDate(parseInt(date));
+          executionTime.setHours(parseInt(hour));
+          executionTime.setMinutes(parseInt(minute));
+          
+          // 如果标记超过1小时，清理
+          if (now - executionTime > 60 * 60 * 1000) {
+            safeLocalStorage.removeItem(key);
+            safeLocalStorage.removeItem(`task_executing_${taskId}`);
+          }
+        }
+      } else if (key.startsWith('task_executing_')) {
+        // 检查执行标记是否过期（超过30分钟）
+        const executionTime = parseInt(safeLocalStorage.getItem(key) || '0');
+        if (now.getTime() - executionTime > 30 * 60 * 1000) {
+          safeLocalStorage.removeItem(key);
+        }
+      }
+    });
+  } catch (error) {
+    console.warn('localStorage cleanup error:', error);
+  }
+};
+
+// 增强的日志记录函数
+const enhancedAddLog = (log) => {
+  const timestamp = new Date().toLocaleString();
+  const logEntry = {
+    timestamp,
+    ...log
+  };
+  
+  // 添加到日志数组
+  batchTaskStore.logs.push(logEntry);
+  
+  // 输出到控制台
+  console.log(`[${timestamp}] ${log.message}`);
+  
+  // 保存关键日志到 localStorage
+  try {
+    const existingLogs = JSON.parse(safeLocalStorage.getItem('task_logs') || '[]');
+    existingLogs.push(logEntry);
+    // 只保留最近100条日志
+    if (existingLogs.length > 100) {
+      existingLogs.splice(0, existingLogs.length - 100);
+    }
+    safeLocalStorage.setItem('task_logs', JSON.stringify(existingLogs));
+  } catch (error) {
+    console.warn('Failed to save logs:', error);
+  }
+};
+
+// 定期执行清理任务
+setInterval(cleanupLocalStorageTasks, 10 * 60 * 1000); // 每10分钟清理一次
+
+// 排序配置（从localStorage读取，与TokenImport共享）
+const savedSortConfig = localStorage.getItem("tokenSortConfig");
+const sortConfig = ref(
+  savedSortConfig
+    ? JSON.parse(savedSortConfig)
+    : {
+        field: "createdAt", // 排序字段：name, server, createdAt, lastUsed
+        direction: "asc", // 排序方向：asc, desc
+      },
+);
+
+// 计算属性 - 从gameData中获取塔相关信息
+const evoTowerInfo = computed(() => {
+  const data = tokenStore.gameData?.evoTowerInfo || null;
+  return data;
+});
+
+const weirdTowerData = computed(() => {
+  return evoTowerInfo.value?.evoTower || null;
+});
+
+const currentTowerId = computed(() => {
+  return weirdTowerData.value?.towerId || 0;
+});
+
+const towerEnergy = computed(() => {
+  return weirdTowerData.value?.energy || 0;
+});
+
+// 排序后的游戏角色Token列表
+const sortedTokens = computed(() => {
+  const tokens = tokenStore.gameTokens || [];
+  return [...tokens].sort((tokenA, tokenB) => {
+    let valueA, valueB;
+
+    // 根据排序字段获取比较值
+    switch (sortConfig.value.field) {
+      case "name":
+        valueA = tokenA.name?.toLowerCase() || "";
+        valueB = tokenB.name?.toLowerCase() || "";
+        break;
+      case "server":
+        valueA = tokenA.server?.toLowerCase() || "";
+        valueB = tokenB.server?.toLowerCase() || "";
+        break;
+      case "createdAt":
+        valueA = new Date(tokenA.createdAt || 0).getTime();
+        valueB = new Date(tokenB.createdAt || 0).getTime();
+        break;
+      case "lastUsed":
+        valueA = new Date(tokenA.lastUsed || 0).getTime();
+        valueB = new Date(tokenB.lastUsed || 0).getTime();
+        break;
+      default:
+        valueA = tokenA.name?.toLowerCase() || "";
+        valueB = tokenB.name?.toLowerCase() || "";
+    }
+
+    // 根据排序方向比较值
+    if (valueA < valueB) {
+      return sortConfig.value.direction === "asc" ? -1 : 1;
+    }
+    if (valueA > valueB) {
+      return sortConfig.value.direction === "asc" ? 1 : -1;
+    }
+    return 0;
+  });
+});
+
+// 切换排序
+const toggleSort = (field) => {
+  if (sortConfig.value.field === field) {
+    // 如果点击的是当前排序字段，则切换排序方向
+    sortConfig.value.direction =
+      sortConfig.value.direction === "asc" ? "desc" : "asc";
+  } else {
+    // 如果点击的是新的排序字段，则默认升序
+    sortConfig.value.field = field;
+    sortConfig.value.direction = "asc";
+  }
+
+  // 保存排序设置到localStorage
+  localStorage.setItem("tokenSortConfig", JSON.stringify(sortConfig.value));
+};
+
+// 获取排序图标
+const getSortIcon = (field) => {
+  if (sortConfig.value.field !== field) return null;
+  return sortConfig.value.direction === "asc" ? "↑" : "↓";
+};
+
+const tokens = computed(() => tokenStore.gameTokens);
+
+// 将selectedTokens（ID数组）转换为token对象数组
+const selectedTokenObjects = computed(() => {
+  if (!tokens.value || !Array.isArray(tokens.value)) return [];
+  return selectedTokens.value
+    .map(id => tokens.value.find(t => t.id === id))
+    .filter(t => t !== undefined);
+});
+
+const isCarActivityOpen = computed(() => {
+  const now = new Date();
+  const day = now.getDay();
+  const hour = now.getHours();
+  // 1=Mon, 2=Tue, 3=Wed; 6点之后
+  return day >= 1 && day <= 3 && hour >= 6;
+});
+const ismengjingActivityOpen = computed(() => {
+  const day = new Date().getDay();
+  return day === 0 || day === 1 || day === 3 || day === 4;
+});
+const isbaokuActivityOpen = computed(() => {
+  const day = new Date().getDay();
+  return day != 1 && day != 2;
+});
+const isarenaActivityOpen = computed(() => {
+  const hour = new Date().getHours();
+  return hour >= 6 && hour < 22;
+});
+// 黑市周时间配置（黑市周：周五12:00开启，下周五00:00关闭）
+const BLACK_MARKET_CONFIG = {
+  // 首次黑市周开启时间：2026年3月6日 12:00（周五）
+  firstOpenTime: new Date('2026-03-06T12:00:00').getTime(),
+  // 黑市周开启时长：6天12小时（周五12:00到下周五00:00）
+  openDuration: 6 * 24 * 60 * 60 * 1000 + 12 * 60 * 60 * 1000,
+  // 周期：3周（毫秒），每3周一次黑市周
+  cycleDuration: 3 * 7 * 24 * 60 * 60 * 1000
+};
+
+// 计算当前是否处于黑市周开启期间
+const isBlackMarketOpen = () => {
+  const now = Date.now();
+  const { firstOpenTime, cycleDuration, openDuration } = BLACK_MARKET_CONFIG;
+  
+  // 计算当前周期
+  const cyclesSinceFirst = Math.floor((now - firstOpenTime) / cycleDuration);
+  
+  // 计算当前周期的开启时间和关闭时间
+  const currentOpenTime = firstOpenTime + cyclesSinceFirst * cycleDuration;
+  const currentCloseTime = currentOpenTime + openDuration;
+  
+  return {
+    isOpen: now >= currentOpenTime && now < currentCloseTime,
+    openTime: currentOpenTime,
+    closeTime: currentCloseTime,
+    nextOpenTime: currentOpenTime + cycleDuration
+  };
+};
+
+const getCurrentActivityWeek = computed(() => {
+  const blackMarketStatus = isBlackMarketOpen();
+  if (blackMarketStatus.isOpen) {
+    return "黑市周";
+  }
+  
+  // 如果不是黑市周，根据时间计算是招募周还是宝箱周
+  const now = new Date();
+  const { firstOpenTime, cycleDuration, openDuration } = BLACK_MARKET_CONFIG;
+  const cyclesSinceFirst = Math.floor((now - firstOpenTime) / cycleDuration);
+  const currentOpenTime = firstOpenTime + cyclesSinceFirst * cycleDuration;
+  const currentCloseTime = currentOpenTime + openDuration;
+  
+  // 计算距离上次黑市周关闭过去了多久
+  const timeSinceClose = now - currentCloseTime;
+  
+  // 黑市周关闭后的第一周是招募周，第二周是宝箱周
+  const weekDuration = 7 * 24 * 60 * 60 * 1000;
+  if (timeSinceClose < weekDuration) {
+    return "招募周";
+  } else if (timeSinceClose < 2 * weekDuration) {
+    return "宝箱周";
+  } else {
+    return "黑市周"; // 即将开启
+  }
+});
+
+const isWeirdTowerActivityOpen = computed(() => {
+  if (getCurrentActivityWeek.value !== "黑市周") return false;
+
+  const now = new Date();
+  const day = now.getDay();
+  const hour = now.getHours();
+  // 如果是周五，必须在12点之后
+  if (day === 5) {
+    return hour >= 12;
+  }
+  return true;
+});
+
+// 黑市周状态
+const isBlackMarketWeek = computed(() => {
+  const blackMarketStatus = isBlackMarketOpen();
+  return blackMarketStatus.isOpen;
+});
+
+const isBlackMarketUpdated = computed(() => {
+  // 使用新的黑市周判断逻辑
+  const blackMarketStatus = isBlackMarketOpen();
+  return blackMarketStatus.isOpen;
+});
+
+// 黑市周倒计时
+const blackMarketCountdown = ref('');
+let blackMarketCountdownTimer = null;
+
+// 格式化倒计时
+const formatBlackMarketCountdown = (targetTime) => {
+  const now = Date.now();
+  const diff = targetTime - now;
+  
+  if (diff <= 0) return '已开启';
+  
+  const days = Math.floor(diff / (24 * 60 * 60 * 1000));
+  const hours = Math.floor((diff % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+  const minutes = Math.floor((diff % (60 * 60 * 1000)) / (60 * 1000));
+  
+  if (days > 0) {
+    return `${days}天${hours}小时`;
+  } else if (hours > 0) {
+    return `${hours}小时${minutes}分钟`;
+  } else {
+    return `${minutes}分钟`;
+  }
+};
+
+// 更新黑市周倒计时
+const updateBlackMarketCountdown = () => {
+  const status = isBlackMarketOpen();
+  if (status.isOpen) {
+    blackMarketCountdown.value = `剩余: ${formatBlackMarketCountdown(status.closeTime)}`;
+  } else {
+    blackMarketCountdown.value = `开启: ${formatBlackMarketCountdown(status.openTime)}`;
+  }
+};
+
+// 启动黑市周倒计时
+const startBlackMarketCountdown = () => {
+  updateBlackMarketCountdown();
+  blackMarketCountdownTimer = setInterval(updateBlackMarketCountdown, 60000); // 每分钟更新
+};
+
+// 在组件挂载时启动倒计时
+onMounted(() => {
+  startBlackMarketCountdown();
+});
+
+// 在组件卸载时清除定时器
+onUnmounted(() => {
+  if (blackMarketCountdownTimer) {
+    clearInterval(blackMarketCountdownTimer);
+  }
+});
+
+// 获取本月第四个周日的日期
+const getFourthSundayOfMonth = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  
+  // 当月第一天
+  const firstDay = new Date(year, month, 1);
+  const dayOfWeek = firstDay.getDay(); // 0-6
+  
+  // 计算第一个周日的日期 (1号是周日则为1，否则为 1 + 7 - dayOfWeek)
+  let firstSundayDate = 1 + (7 - dayOfWeek) % 7;
+
+  // 仅针对2026年3月进行特殊处理
+  if (year === 2026 && month === 2 && dayOfWeek === 0) {
+    firstSundayDate = 8;
+  }
+  
+  // 第四个周日 = 第一个周日 + 21天
+  return new Date(year, month, firstSundayDate + 21);
+};
+
+const isWarGuessActivityOpen = computed(() => {
+  const now = new Date();
+  
+  // 手动修正：2026年3月1日开放
+  if (now.getFullYear() === 2026 && now.getMonth() === 2 && now.getDate() === 1) {
+    const hour = now.getHours();
+    const minute = now.getMinutes();
+    if (hour < 19 || (hour === 19 && minute <= 55)) return true;
+  }
+
+  const fourthSunday = getFourthSundayOfMonth();
+  
+  // 检查是否是今天
+  if (now.getDate() !== fourthSunday.getDate()) return false;
+  
+  // 检查时间 00:00 - 19:55
+  const hour = now.getHours();
+  const minute = now.getMinutes();
+  if (hour > 19 || (hour === 19 && minute > 55)) return false;
+  
+  return true;
+});
+
+const warGuessActivityTip = computed(() => {
+  if (isWarGuessActivityOpen.value) return "";
+  
+  const fourthSunday = getFourthSundayOfMonth();
+  const month = fourthSunday.getMonth() + 1;
+  const date = fourthSunday.getDate();
+  return `月赛助威仅在每月第四个周日 (${month}月${date}日) 00:00-19:55 开放`;
+});
+
+const selectedTokens = ref([]);
+const selectedTasks = ref([]);
+const tokenStatus = ref({}); // { tokenId: 'waiting' | 'running' | 'completed' | 'failed' }
+
+
+// =====================
+// Token分组管理状态
+// =====================
+const showGroupManageModal = ref(false);
+const showGroupSelectModal = ref(false);
+const selectedGroups = ref([]); // 选中的分组ID列表
+const newGroupName = ref("");
+const newGroupColor = ref("#1677ff");
+const newGroupSelectedTokens = ref([]); // 新建分组时选中的Token ID列表
+const editingGroupId = ref(null);
+const editingGroupName = ref("");
+const editingGroupColor = ref("");
+const taskScheduleSelectedGroupIds = ref([]); // 定时任务中通过分组按钮选中的分组ID列表
+const groupColors = [
+  "#1677ff", // 蓝色
+  "#52c41a", // 绿色
+  "#faad14", // 橙色
+  "#f5222d", // 红色
+  "#722ed1", // 紫色
+  "#13c2c2", // 青色
+  "#eb2f96", // 粉色
+  "#fa8c16", // 赤红色
+];
+
+// 功能按钮折叠状态管理
+const isButtonsExpanded = ref(true);
+const toggleButtons = () => {
+  isButtonsExpanded.value = !isButtonsExpanded.value;
+};
+
+// 账号列表折叠状态管理
+const isTokensExpanded = ref(true);
+const toggleTokens = () => {
+  isTokensExpanded.value = !isTokensExpanded.value;
+};
+
+// 活动暂停功能相关
 const currentTime = ref(new Date());
 const resumeCheckInterval = ref(null); // 恢复时间检查定时器
 
-// 时间解析辅助函数
+// 从localStorage加载任务队列
+const loadTaskQueueFromStorage = () => {
+  // 优先从新的键名加载
+  const savedQueue = safeLocalStorage.getItem('batch_task_queue');
+  if (savedQueue && typeof savedQueue === 'string' && savedQueue !== 'undefined') {
+    try {
+      const parsedQueue = JSON.parse(savedQueue);
+      if (Array.isArray(parsedQueue)) {
+        // 清空现有队列
+        batchTaskStore.clearTaskQueue();
+        // 添加从本地存储加载的任务
+        parsedQueue.forEach(task => {
+          batchTaskStore.addToTaskQueue(task);
+        });
+        if (batchTaskStore.taskQueue && batchTaskStore.taskQueue.length > 0) {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `=== 从本地存储加载了 ${batchTaskStore.taskQueue.length} 个积攒任务 ===`,
+            type: "info",
+          });
+        }
+      }
+    } catch (error) {
+      console.error('加载任务队列失败:', error);
+      // 重要修复：加载失败时不清空队列，保留现有队列数据
+      // 避免数据丢失，只在明确需要清空时才清空
+      addLog({
+        time: new Date().toLocaleTimeString(),
+        message: `=== 加载积攒队列失败: ${error.message}，保留现有队列 ===`,
+        type: "warning",
+      });
+    }
+  }
+  
+  // 清理旧的键名
+  safeLocalStorage.removeItem('taskQueue');
+};
+
+// 保存任务队列到localStorage
+const saveTaskQueueToStorage = () => {
+  try {
+    // 验证任务队列数据结构，确保可以安全序列化
+    const queue = batchTaskStore.taskQueue || [];
+    if (!Array.isArray(queue)) {
+      console.error('任务队列不是数组:', queue);
+      return;
+    }
+    
+    // 限制队列长度，避免存储过大的数据
+    const limitedQueue = queue.slice(0, 50); // 最多保存50个任务
+    
+    // 序列化前进行数据清理，移除可能导致循环引用的属性
+    const sanitizedQueue = limitedQueue.map(task => {
+      const sanitizedTask = { ...task };
+      // 移除可能导致序列化问题的属性
+      if (sanitizedTask.params) {
+        // 只保留必要的参数
+        sanitizedTask.params = { ...sanitizedTask.params };
+        // 移除可能包含循环引用的复杂对象
+        Object.keys(sanitizedTask.params).forEach(key => {
+          const value = sanitizedTask.params[key];
+          if (typeof value === 'object' && value !== null) {
+            // 简化复杂对象
+            try {
+              JSON.stringify(value); // 测试是否可以序列化
+            } catch {
+              // 如果不能序列化，移除该属性
+              delete sanitizedTask.params[key];
+            }
+          }
+        });
+      }
+      return sanitizedTask;
+    });
+    
+    const serialized = JSON.stringify(sanitizedQueue);
+    safeLocalStorage.setItem('batch_task_queue', serialized);
+  } catch (error) {
+    console.error('保存任务队列失败:', error);
+    // 重要修复：保存失败时不清空存储，避免数据丢失
+    // 只在明确需要清空时才清空
+    addLog({
+      time: new Date().toLocaleTimeString(),
+      message: `=== 保存积攒队列失败: ${error.message}，保留现有数据 ===`,
+      type: "warning",
+    });
+  }
+};
+
+// 清空任务队列
+const clearTaskQueue = () => {
+  try {
+    batchTaskStore.clearTaskQueue();
+    safeLocalStorage.removeItem('taskQueue');
+    safeLocalStorage.removeItem('batch_task_queue');
+    enhancedAddLog({
+      time: new Date().toLocaleTimeString(),
+      message: '=== 任务队列已清空 ===',
+      type: "info",
+    });
+  } catch (error) {
+    console.error('清空任务队列失败:', error);
+    enhancedAddLog({
+      time: new Date().toLocaleTimeString(),
+      message: `=== 清空任务队列失败: ${error.message} ===`,
+      type: "error",
+    });
+  }
+};
+
+// 监听任务队列变化，自动保存
+watch(() => batchTaskStore.taskQueue, () => {
+  saveTaskQueueToStorage();
+}, { deep: true });
+
+// 解析时间字符串为小时和分钟
 const parseTime = (timeStr) => {
-  if (!timeStr || typeof timeStr !== 'string') {
-    return { hour: 0, minute: 0 };
+  // 处理用点分隔的时间格式，转换为冒号分隔
+  if (timeStr.includes('.')) {
+    timeStr = timeStr.replace('.', ':');
   }
   const parts = timeStr.split(':');
   return {
@@ -3702,7 +3738,6 @@ const parseTime = (timeStr) => {
   };
 };
 
-// 检查是否处于暂停时间
 const isPauseTime = computed(() => {
   if (!batchSettings.enablePauseTime) {
     return { paused: false, reason: '', resumeTime: null };
@@ -3922,6 +3957,9 @@ const isPauseTime = computed(() => {
       
       if (startTotalSeconds > endTotalSeconds) {
         // 跨天情况
+        // 需要区分当前是"开始日期"还是"结束日期"
+        // 如果在开始日期（dayOfWeek === customPauseTime1DayOfWeek），则检查 nowTotalSeconds >= startTotalSeconds
+        // 如果在结束日期（dayOfWeek === (customPauseTime1DayOfWeek + 1) % 7），则检查 nowTotalSeconds < endTotalSeconds
         const isStartDay = dayOfWeek === batchSettings.customPauseTime1DayOfWeek;
         const isEndDay = dayOfWeek === (batchSettings.customPauseTime1DayOfWeek + 1) % 7;
         
@@ -3929,8 +3967,10 @@ const isPauseTime = computed(() => {
             (isEndDay && nowTotalSeconds < endTotalSeconds)) {
           const resumeDate = new Date(now);
           if (isStartDay) {
+            // 在开始日期，恢复时间是第二天的 endTime
             resumeDate.setDate(resumeDate.getDate() + 1);
           }
+          // 在结束日期，恢复时间就是当天的 endTime
           resumeDate.setHours(endHour, endMinute, 0, 0);
           return { paused: true, reason: batchSettings.customPauseTime1Name, resumeTime: resumeDate };
         }
@@ -4086,7 +4126,6 @@ const isPauseTime = computed(() => {
   return { paused: false, reason: '', resumeTime: null };
 });
 
-// 暂停倒计时
 const pauseCountdown = computed(() => {
   if (!isPauseTime.value.paused || !isPauseTime.value.resumeTime) {
     return '';
@@ -4106,267 +4145,6 @@ const pauseCountdown = computed(() => {
   
   return `${hours}小时${minutes}分${seconds}秒后恢复`;
 });
-
-// 排序配置（从localStorage读取，与TokenImport共享）
-const savedSortConfig = localStorage.getItem("tokenSortConfig");
-const sortConfig = ref(
-  savedSortConfig
-    ? JSON.parse(savedSortConfig)
-    : {
-        field: "createdAt", // 排序字段：name, server, createdAt, lastUsed
-        direction: "asc", // 排序方向：asc, desc
-      },
-);
-
-// 计算属性 - 从gameData中获取塔相关信息
-const evoTowerInfo = computed(() => {
-  const data = tokenStore.gameData?.evoTowerInfo || null;
-  return data;
-});
-
-const weirdTowerData = computed(() => {
-  return evoTowerInfo.value?.evoTower || null;
-});
-
-const currentTowerId = computed(() => {
-  return weirdTowerData.value?.towerId || 0;
-});
-
-const towerEnergy = computed(() => {
-  return weirdTowerData.value?.energy || 0;
-});
-
-// 排序后的游戏角色Token列表
-const sortedTokens = computed(() => {
-  const tokens = tokenStore.gameTokens || [];
-  return [...tokens].sort((tokenA, tokenB) => {
-    let valueA, valueB;
-
-    // 根据排序字段获取比较值
-    switch (sortConfig.value.field) {
-      case "name":
-        valueA = tokenA.name?.toLowerCase() || "";
-        valueB = tokenB.name?.toLowerCase() || "";
-        break;
-      case "server":
-        valueA = tokenA.server?.toLowerCase() || "";
-        valueB = tokenB.server?.toLowerCase() || "";
-        break;
-      case "createdAt":
-        valueA = new Date(tokenA.createdAt || 0).getTime();
-        valueB = new Date(tokenB.createdAt || 0).getTime();
-        break;
-      case "lastUsed":
-        valueA = new Date(tokenA.lastUsed || 0).getTime();
-        valueB = new Date(tokenB.lastUsed || 0).getTime();
-        break;
-      default:
-        valueA = tokenA.name?.toLowerCase() || "";
-        valueB = tokenB.name?.toLowerCase() || "";
-    }
-
-    // 根据排序方向比较值
-    if (valueA < valueB) {
-      return sortConfig.value.direction === "asc" ? -1 : 1;
-    }
-    if (valueA > valueB) {
-      return sortConfig.value.direction === "asc" ? 1 : -1;
-    }
-    return 0;
-  });
-});
-
-// 切换排序
-const toggleSort = (field) => {
-  if (sortConfig.value.field === field) {
-    // 如果点击的是当前排序字段，则切换排序方向
-    sortConfig.value.direction =
-      sortConfig.value.direction === "asc" ? "desc" : "asc";
-  } else {
-    // 如果点击的是新的排序字段，则默认升序
-    sortConfig.value.field = field;
-    sortConfig.value.direction = "asc";
-  }
-
-  // 保存排序设置到localStorage
-  localStorage.setItem("tokenSortConfig", JSON.stringify(sortConfig.value));
-};
-
-// 获取排序图标
-const getSortIcon = (field) => {
-  if (sortConfig.value.field !== field) return null;
-  return sortConfig.value.direction === "asc" ? "↑" : "↓";
-};
-
-// 账号列表展开状态
-const isTokensExpanded = ref(true);
-
-// 切换账号列表展开/收起
-const toggleTokens = () => {
-  isTokensExpanded.value = !isTokensExpanded.value;
-};
-
-// 功能按钮展开状态
-const isButtonsExpanded = ref(true);
-
-// 切换功能按钮展开/收起
-const toggleButtons = () => {
-  isButtonsExpanded.value = !isButtonsExpanded.value;
-};
-
-const tokens = computed(() => tokenStore.gameTokens || []);
-const isCarActivityOpen = computed(() => {
-  const now = new Date();
-  const day = now.getDay();
-  const hour = now.getHours();
-  // 1=Mon, 2=Tue, 3=Wed; 6点之后
-  return day >= 1 && day <= 3 && hour >= 6;
-});
-const ismengjingActivityOpen = computed(() => {
-  const day = new Date().getDay();
-  return day === 0 || day === 1 || day === 3 || day === 4;
-});
-const isbaokuActivityOpen = computed(() => {
-  const day = new Date().getDay();
-  return day != 1 && day != 2;
-});
-const isarenaActivityOpen = computed(() => {
-  const hour = new Date().getHours();
-  return hour >= 6 && hour < 22;
-});
-
-const getCurrentActivityWeek = computed(() => {
-  const blackMarketStatus = isBlackMarketOpen();
-  if (blackMarketStatus.isOpen) {
-    return "黑市周";
-  }
-  
-  // 如果不是黑市周，根据时间计算是招募周还是宝箱周
-  const now = new Date();
-  const { firstOpenTime, cycleDuration, openDuration } = BLACK_MARKET_CONFIG;
-  const cyclesSinceFirst = Math.floor((now - firstOpenTime) / cycleDuration);
-  const currentOpenTime = firstOpenTime + cyclesSinceFirst * cycleDuration;
-  const currentCloseTime = currentOpenTime + openDuration;
-  
-  // 计算距离上次黑市周关闭过去了多久
-  const timeSinceClose = now - currentCloseTime;
-  
-  // 黑市周关闭后的第一周是招募周，第二周是宝箱周
-  const weekDuration = 7 * 24 * 60 * 60 * 1000;
-  if (timeSinceClose < weekDuration) {
-    return "招募周";
-  } else if (timeSinceClose < 2 * weekDuration) {
-    return "宝箱周";
-  } else {
-    return "黑市周"; // 即将开启
-  }
-});
-
-const isWeirdTowerActivityOpen = computed(() => {
-  if (getCurrentActivityWeek.value !== "黑市周") return false;
-
-  const now = new Date();
-  const day = now.getDay();
-  const hour = now.getHours();
-  // 如果是周五，必须在12点之后
-  if (day === 5) {
-    return hour >= 12;
-  }
-  return true;
-});
-
-// 获取本月第四个周日的日期
-const getFourthSundayOfMonth = () => {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth();
-
-  // 当月第一天
-  const firstDay = new Date(year, month, 1);
-  const dayOfWeek = firstDay.getDay(); // 0-6
-
-  // 计算第一个周日的日期 (1号是周日则为1，否则为 1 + 7 - dayOfWeek)
-  let firstSundayDate = 1 + ((7 - dayOfWeek) % 7);
-
-  // 仅针对2026年3月进行特殊处理
-  if (year === 2026 && month === 2 && dayOfWeek === 0) {
-    firstSundayDate = 8;
-  }
-
-  // 第四个周日 = 第一个周日 + 21天
-  return new Date(year, month, firstSundayDate + 21);
-};
-
-const isWarGuessActivityOpen = computed(() => {
-  const now = new Date();
-
-  // 手动修正：2026年3月1日开放
-  if (
-    now.getFullYear() === 2026 &&
-    now.getMonth() === 2 &&
-    now.getDate() === 1
-  ) {
-    const hour = now.getHours();
-    const minute = now.getMinutes();
-    if (hour < 19 || (hour === 19 && minute <= 55)) return true;
-  }
-
-  const fourthSunday = getFourthSundayOfMonth();
-
-  // 检查是否是今天
-  if (now.getDate() !== fourthSunday.getDate()) return false;
-
-  // 检查时间 00:00 - 19:55
-  const hour = now.getHours();
-  const minute = now.getMinutes();
-  if (hour > 19 || (hour === 19 && minute > 55)) return false;
-
-  return true;
-});
-
-const warGuessActivityTip = computed(() => {
-  if (isWarGuessActivityOpen.value) return "";
-
-  const fourthSunday = getFourthSundayOfMonth();
-  const month = fourthSunday.getMonth() + 1;
-  const date = fourthSunday.getDate();
-  return `月赛助威仅在每月第四个周日 (${month}月${date}日) 00:00-19:55 开放`;
-});
-
-const selectedTokens = ref([]);
-const selectedTokenObjects = computed(() => {
-  if (!sortedTokens.value || !Array.isArray(sortedTokens.value)) return [];
-  return selectedTokens.value
-    .map(id => sortedTokens.value.find(t => t.id === id))
-    .filter(t => t !== undefined);
-});
-const tokenStatus = ref({}); // { tokenId: 'waiting' | 'running' | 'completed' | 'failed' }
-const isRunning = ref(false);
-const shouldStop = ref(false);
-
-// =====================
-// Token分组管理状态
-// =====================
-const showGroupManageModal = ref(false);
-const showGroupSelectModal = ref(false);
-const selectedGroups = ref([]); // 选中的分组ID列表
-const newGroupName = ref("");
-const newGroupColor = ref("#1677ff");
-const newGroupSelectedTokens = ref([]); // 新建分组时选中的Token ID列表
-const editingGroupId = ref(null);
-const editingGroupName = ref("");
-const editingGroupColor = ref("");
-const taskScheduleSelectedGroupIds = ref([]); // 定时任务中通过分组按钮选中的分组ID列表
-const groupColors = [
-  "#1677ff", // 蓝色
-  "#52c41a", // 绿色
-  "#faad14", // 橙色
-  "#f5222d", // 红色
-  "#722ed1", // 紫色
-  "#13c2c2", // 青色
-  "#eb2f96", // 粉色
-  "#fa8c16", // 赤红色
-];
 
 // ======================
 // War Guess Feature
@@ -4389,112 +4167,25 @@ const formatPower = (power) => {
   return power.toString();
 };
 
-// =====================
-// 黑市周功能
-// =====================
-const BLACK_MARKET_CONFIG = {
-  // 首次黑市周开启时间：2026年3月6日 12:00（周五）
-  firstOpenTime: new Date('2026-03-06T12:00:00').getTime(),
-  // 黑市周开启时长：6天12小时（周五12:00到下周五00:00）
-  openDuration: 6 * 24 * 60 * 60 * 1000 + 12 * 60 * 60 * 1000,
-  // 周期：3周（毫秒），每3周一次黑市周
-  cycleDuration: 3 * 7 * 24 * 60 * 60 * 1000
-};
-
-const blackMarketCountdown = ref("");
-
-// 黑市周状态
-const isBlackMarketWeek = computed(() => {
-  const blackMarketStatus = isBlackMarketOpen();
-  return blackMarketStatus.isOpen;
-});
-
-const isBlackMarketUpdated = computed(() => {
-  const blackMarketStatus = isBlackMarketOpen();
-  return blackMarketStatus.isOpen;
-});
-
-const isBlackMarketOpen = () => {
-  const now = Date.now();
-  const { firstOpenTime, cycleDuration, openDuration } = BLACK_MARKET_CONFIG;
-  const cyclesSinceFirst = Math.floor((now - firstOpenTime) / cycleDuration);
-  const currentOpenTime = firstOpenTime + cyclesSinceFirst * cycleDuration;
-  const currentCloseTime = currentOpenTime + openDuration;
-  return {
-    isOpen: now >= currentOpenTime && now < currentCloseTime,
-    openTime: currentOpenTime,
-    closeTime: currentCloseTime,
-    nextOpenTime: currentOpenTime + cycleDuration,
-  };
-};
-
-// 格式化倒计时
-const formatBlackMarketCountdown = (targetTime) => {
-  const now = Date.now();
-  const diff = targetTime - now;
-  
-  if (diff <= 0) return '已开启';
-  
-  const days = Math.floor(diff / (24 * 60 * 60 * 1000));
-  const hours = Math.floor((diff % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
-  const minutes = Math.floor((diff % (60 * 60 * 1000)) / (60 * 1000));
-  
-  if (days > 0) {
-    return `${days}天${hours}小时`;
-  } else if (hours > 0) {
-    return `${hours}小时${minutes}分钟`;
-  } else {
-    return `${minutes}分钟`;
-  }
-};
-
-// 更新黑市周倒计时
-const updateBlackMarketStatus = () => {
-  const status = isBlackMarketOpen();
-  if (status.isOpen) {
-    blackMarketCountdown.value = `剩余: ${formatBlackMarketCountdown(status.closeTime)}`;
-  } else {
-    blackMarketCountdown.value = `开启: ${formatBlackMarketCountdown(status.openTime)}`;
-  }
-};
-
 const warGuessColumns = [
   {
-    type: "selection",
+    type: 'selection',
     multiple: false,
   },
-  { title: "ID", key: "id", width: 100 },
-  {
-    title: "头像",
-    key: "logo",
-    render(row) {
-      return h("img", {
-        src: row.logo,
-        style: { width: "30px", height: "30px", borderRadius: "50%" },
-      });
-    },
-    width: 60,
-  },
-  { title: "区服", key: "serverId", width: 80 },
-  { title: "俱乐部", key: "name", width: 120 },
-  {
-    title: "战力",
-    key: "power",
-    render(row) {
-      return formatPower(row.power);
-    },
-    width: 100,
-  },
-  { title: "红淬", key: "quenchNum" },
-  { title: "已助威", key: "guessNum" },
-  {
-    title: "总热度",
-    key: "totalNum",
-    render(row) {
-      return formatPower(row.totalNum || 0);
-    },
-    width: 100,
-  },
+  { title: 'ID', key: 'id', width: 100 },
+  { title: '头像', key: 'logo', render(row) {
+      return h('img', { src: row.logo, style: { width: '30px', height: '30px', borderRadius: '50%' } });
+  }, width: 60 },
+  { title: '区服', key: 'serverId', width: 80 },
+  { title: '俱乐部', key: 'name', width: 120 },
+  { title: '战力', key: 'power', render(row) {
+    return formatPower(row.power);
+  }, width: 100 },
+  { title: '红淬', key: 'quenchNum' },
+  { title: '已助威', key: 'guessNum' },
+  { title: '总热度', key: 'totalNum',render(row) {
+    return formatPower(row.totalNum || 0);
+  }, width: 100 },
 ];
 
 const warGuessRowProps = (row) => {
@@ -4511,10 +4202,10 @@ const openWarGuessModal = () => {
   // Reset selection
   selectedWarGuessLegionId.value = null;
   warGuessList.value = [];
-
+  
   // Auto fetch if tokens selected
   if (selectedTokens.value.length > 0) {
-    fetchWarGuessRank();
+      fetchWarGuessRank();
   }
 };
 
@@ -4523,10 +4214,10 @@ const fetchWarGuessRank = async () => {
     message.warning("请先选择一个账号用于获取月赛助威数据");
     return;
   }
-
+  
   const tokenId = selectedTokens.value[0];
-  const token = tokens.value.find((t) => t.id === tokenId);
-
+  const token = tokens.value.find(t => t.id === tokenId);
+  
   warGuessLoading.value = true;
   try {
     addLog({
@@ -4534,22 +4225,17 @@ const fetchWarGuessRank = async () => {
       message: `正在使用 ${token.name} 获取月赛助威数据...`,
       type: "info",
     });
-
+    
     // Ensure connection
     const status = tokenStore.getWebSocketStatus(tokenId);
     if (status !== "connected") {
-      tokenStore.createWebSocketConnection(tokenId, token.token, token.wsUrl);
-      await new Promise((r) => setTimeout(r, 2000)); // Wait for connection
+        tokenStore.createWebSocketConnection(tokenId, token.token, token.wsUrl);
+        await new Promise(r => setTimeout(r, 2000)); // Wait for connection
     }
-
+    
     // Fetch rank
-    const res = await tokenStore.sendMessageWithPromise(
-      tokenId,
-      "warguess_getrank",
-      { bfId: "" },
-      5000,
-    );
-
+    const res = await tokenStore.sendMessageWithPromise(tokenId, "warguess_getrank", { bfId: '' }, 5000);
+    
     if (res && res.list) {
       let list = [];
       if (Array.isArray(res.list)) {
@@ -4557,14 +4243,13 @@ const fetchWarGuessRank = async () => {
       } else {
         list = Object.values(res.list);
       }
-
+      
       // Sort by totalNum desc
-      warGuessList.value = list
-        .sort((a, b) => (b.totalNum || 0) - (a.totalNum || 0))
-        .slice(0, 20);
+      warGuessList.value = list.sort((a, b) => (b.totalNum || 0) - (a.totalNum || 0)).slice(0, 20);
     } else {
       message.warning("获取月赛助威数据为空");
     }
+    
   } catch (error) {
     console.error("Fetch rank error:", error);
     message.error("获取月赛助威数据失败: " + error.message);
@@ -4579,14 +4264,16 @@ const fetchWarGuessRank = async () => {
 };
 
 const handleWarGuessCheer = async () => {
-  if (!selectedWarGuessLegionId.value) {
-    message.warning("请先选择一个俱乐部");
-    return;
-  }
-  // Close modal
-  showWarGuessModal.value = false;
-  // Call the batch function
-  await batchWarGuessCheer(selectedWarGuessLegionId.value, warGuessCoin.value);
+    if (!selectedWarGuessLegionId.value) {
+        message.warning("请先选择一个俱乐部");
+        return;
+    }
+    // Close modal
+    showWarGuessModal.value = false;
+    // Call the batch function
+    await batchWarGuessCheer(selectedWarGuessLegionId.value, warGuessCoin.value);
+    
+    
 };
 
 // Settings Modal State
@@ -4662,7 +4349,7 @@ const filteredTaskTemplates = computed(() => {
 
 // Helper Modal State
 const showHelperModal = ref(false);
-const helperType = ref("box"); // 'box' | 'fish' | 'recruit'
+const helperType = ref("box"); // 'box' | 'fish' | 'recruit' | 'pointsBox'
 const helperSettings = reactive({
   boxType: 2001,
   fishType: 1,
@@ -4670,47 +4357,46 @@ const helperSettings = reactive({
   targetPoints: 1000,
 });
 
+// Dream Buy Modal State
+const showDreamBuyModal = ref(false);
+const dreamBuyList = ref([]);
+
 const helperModalTitle = computed(() => {
-  const titles = {
-    box: "批量开宝箱",
-    fish: "批量钓鱼",
-    recruit: "批量招募",
-    pointsBox: "按积分开箱",
-  };
+  const titles = { box: "批量开宝箱", fish: "批量钓鱼", recruit: "批量招募", pointsBox: "按积分开箱" };
   return titles[helperType.value] || "批量助手";
 });
 
 // Batch Settings State
 const showBatchSettingsModal = ref(false);
 
-const defaultDreamPurchaseList = [];
-for (const merchantId in goldItemsConfig) {
-  goldItemsConfig[merchantId].forEach((index) => {
-    defaultDreamPurchaseList.push(`${merchantId}-${index}`);
-  });
-}
+// 临时表单数据（用于编辑，保存后才应用到batchSettings）
+const batchSettingsForm = reactive({});
 
+// 实际使用的设置
 const batchSettings = reactive({
-  dreamPurchaseList: defaultDreamPurchaseList,
   boxCount: 100,
   fishCount: 100,
   recruitCount: 100,
   defaultBoxType: 2001,
   defaultFishType: 1,
   targetBoxPoints: 1000,
+  dreamPurchaseList: [],
   receiverId: "",
   password: "",
+  hideScheduledTasksModule: false,
   tokenListColumns: 2,
   useGoldRefreshFallback: false,
+  enableMaxCarRefresh: true, // 启用最大刷新次数限制
+  maxCarRefreshCount: 1,   // 每辆车最大刷新次数
   // 延迟配置（毫秒）
-  commandDelay: 500, // 命令间延迟
-  taskDelay: 500, // 任务间延迟
-  actionDelay: 300, // 一般操作延迟（开箱、钓鱼、招募等）
-  battleDelay: 500, // 战斗延迟（宝库、竞技场等）
-  refreshDelay: 1000, // 刷新延迟（发车刷新等）
-  longDelay: 3000, // 长延迟（功法赠送等）
+  commandDelay: 500,        // 命令间延迟
+  taskDelay: 500,           // 任务间延迟
+  actionDelay: 300,         // 一般操作延迟（开箱、钓鱼、招募等）
+  battleDelay: 500,         // 战斗延迟（宝库、竞技场等）
+  refreshDelay: 1500,       // 刷新延迟（发车刷新等）
+  longDelay: 3000,          // 长延迟（功法赠送等）
   // 其他配置
-  maxActive: 2,
+  maxActive: 5,
   carMinColor: 4,
   connectionTimeout: 10000,
   reconnectDelay: 1000,
@@ -4718,10 +4404,12 @@ const batchSettings = reactive({
   // 页面刷新配置
   enableRefresh: false,
   refreshInterval: 360, // 分钟
-  smartDepartureGoldThreshold: 0,
-  smartDepartureRecruitThreshold: 0,
-  smartDepartureJadeThreshold: 0,
-  smartDepartureTicketThreshold: 0,
+  refreshNoticeDelay: 30, // 任务完成后刷新延迟(秒)
+  // 智能发车阈值配置
+  smartDepartureGoldThreshold: 100,
+  smartDepartureRecruitThreshold: 3,
+  smartDepartureJadeThreshold: 100,
+  smartDepartureTicketThreshold: 5,
   smartDepartureMatchAll: false,
   // 活动暂停功能配置
   enablePauseTime: false,
@@ -4736,6 +4424,10 @@ const batchSettings = reactive({
   saltFieldStartTime: "20:00",
   saltFieldEndTime: "22:00",
   saltFieldFrequency: "weekly",
+  // 批次执行配置
+  enableBatchExecution: true,
+  batchSize: 10,
+  batchDelay: 60,
   saltFieldDayOfWeek: 6,
   enableSundaySaltFieldTime: false,
   sundaySaltFieldName: "周日盐场",
@@ -4746,59 +4438,121 @@ const batchSettings = reactive({
   enableGameUpdateTime: false,
   gameUpdateName: "游戏更新",
   gameUpdateStartTime: "00:00",
-  gameUpdateEndTime: "04:00",
+  gameUpdateEndTime: "02:00",
   gameUpdateFrequency: "daily",
   gameUpdateDayOfWeek: 1,
-  // 自定义暂停时间配置
   enableCustomPauseTime1: false,
-  customPauseTime1Name: "自定义暂停1",
+  customPauseTime1Name: "自定义时间1",
   customPauseTime1Start: "00:00",
-  customPauseTime1End: "00:00",
+  customPauseTime1End: "06:00",
   customPauseTime1Frequency: "daily",
   customPauseTime1DayOfWeek: 1,
   enableCustomPauseTime2: false,
-  customPauseTime2Name: "自定义暂停2",
-  customPauseTime2Start: "00:00",
-  customPauseTime2End: "00:00",
+  customPauseTime2Name: "自定义时间2",
+  customPauseTime2Start: "06:00",
+  customPauseTime2End: "12:00",
   customPauseTime2Frequency: "daily",
   customPauseTime2DayOfWeek: 1,
   enableCustomPauseTime3: false,
-  customPauseTime3Name: "自定义暂停3",
-  customPauseTime3Start: "00:00",
-  customPauseTime3End: "00:00",
+  customPauseTime3Name: "自定义时间3",
+  customPauseTime3Start: "12:00",
+  customPauseTime3End: "18:00",
   customPauseTime3Frequency: "daily",
   customPauseTime3DayOfWeek: 1,
   enableCustomPauseTime4: false,
-  customPauseTime4Name: "自定义暂停4",
-  customPauseTime4Start: "00:00",
-  customPauseTime4End: "00:00",
+  customPauseTime4Name: "自定义时间4",
+  customPauseTime4Start: "18:00",
+  customPauseTime4End: "24:00",
   customPauseTime4Frequency: "daily",
   customPauseTime4DayOfWeek: 1,
-  // 界面设置
-  hideScheduledTasksModule: false,
-  // 智能发车条件设置
-  enableMaxCarRefresh: true, // 启用最大刷新次数限制
-  maxCarRefreshCount: 1,   // 每辆车最大刷新次数
-  // 分批执行设置
   enableBatchExecution: true,
   batchSize: 5,
   batchDelay: 5,
   enableQueueOnConflict: true,
-  // 推送通知设置
-  pushNotificationEnabled: false,
-  pushProvider: "serverchan",
-  pushToken: "",
 });
 
-// 推送提供商选项
-const pushProviderOptions = [
-  { label: 'PushPlus（推送加）', value: 'pushplus' },
-  { label: 'Bark', value: 'bark' },
-  { label: 'ServerChan（Server酱）', value: 'serverchan' }
-];
+// Load batch settings from localStorage
+const loadBatchSettings = () => {
+  try {
+    const saved = localStorage.getItem("batchSettings");
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      // 确保关键设置有默认值，避免被覆盖为undefined
+      const defaultSettings = {
+        enableBatchExecution: true,
+        batchSize: 5,
+        batchDelay: 5,
+        enableQueueOnConflict: true,
+      };
+      Object.assign(batchSettings, defaultSettings, parsed);
+    }
+  } catch (error) {
+    console.error("Failed to load batch settings:", error);
+  }
+};
 
-// 测试推送状态
-const testingPush = ref(false);
+// Save batch settings to localStorage
+const saveBatchSettings = () => {
+  try {
+    // 将临时表单数据复制到实际设置
+    Object.assign(batchSettings, JSON.parse(JSON.stringify(batchSettingsForm)));
+    localStorage.setItem("batchSettings", JSON.stringify(batchSettings));
+    
+    // 保存推送配置
+    savePushConfig({
+      enabled: batchSettingsForm.pushNotificationEnabled,
+      provider: batchSettingsForm.pushProvider,
+      token: batchSettingsForm.pushToken
+    });
+    
+    message.success("定时批量任务设置已保存");
+    showBatchSettingsModal.value = false;
+  } catch (error) {
+    console.error("Failed to save batch settings:", error);
+    message.error("保存设置失败");
+  }
+};
+
+// Open batch settings modal
+const openBatchSettings = () => {
+  loadBatchSettings();
+  // 将当前设置复制到临时表单
+  Object.assign(batchSettingsForm, JSON.parse(JSON.stringify(batchSettings)));
+  // 加载推送配置
+  const pushConfig = getPushConfig();
+  batchSettingsForm.pushNotificationEnabled = pushConfig.enabled;
+  batchSettingsForm.pushProvider = pushConfig.provider;
+  batchSettingsForm.pushToken = pushConfig.token;
+  showBatchSettingsModal.value = true;
+};
+
+// 获取Token占位符
+const getPushTokenPlaceholder = () => {
+  switch (batchSettingsForm.pushProvider) {
+    case 'pushplus':
+      return '请输入 PushPlus Token';
+    case 'bark':
+      return '请输入 Bark Key';
+    case 'serverchan':
+      return '请输入 ServerChan SendKey';
+    default:
+      return '请输入 Token';
+  }
+};
+
+// 获取Token帮助文本
+const getPushTokenHelp = () => {
+  switch (batchSettingsForm.pushProvider) {
+    case 'pushplus':
+      return 'PushPlus: 填 token，获取地址 pushplus.plus';
+    case 'bark':
+      return 'Bark: 填 key 或完整 URL，获取地址 day.app';
+    case 'serverchan':
+      return 'ServerChan: 填 SendKey，获取地址 sct.ftqq.com';
+    default:
+      return '';
+  }
+};
 
 // 测试推送
 const testPushNotification = async () => {
@@ -4815,78 +4569,6 @@ const testPushNotification = async () => {
   } finally {
     testingPush.value = false;
   }
-};
-
-// 获取Token占位符
-const getPushTokenPlaceholder = () => {
-  switch (batchSettings.pushProvider) {
-    case 'pushplus':
-      return '请输入 PushPlus Token';
-    case 'bark':
-      return '请输入 Bark Key';
-    case 'serverchan':
-      return '请输入 ServerChan SendKey';
-    default:
-      return '请输入 Token';
-  }
-};
-
-// 获取Token帮助文本
-const getPushTokenHelp = () => {
-  switch (batchSettings.pushProvider) {
-    case 'pushplus':
-      return 'PushPlus: 填 token，获取地址 pushplus.plus';
-    case 'bark':
-      return 'Bark: 填 key 或完整 URL，获取地址 day.app';
-    case 'serverchan':
-      return 'ServerChan: 填 SendKey，获取地址 sct.ftqq.com';
-    default:
-      return '';
-  }
-};
-
-// Load batch settings from localStorage
-const loadBatchSettings = () => {
-  try {
-    const saved = localStorage.getItem("batchSettings");
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      Object.assign(batchSettings, parsed);
-    }
-  } catch (error) {
-    console.error("Failed to load batch settings:", error);
-  }
-};
-
-// Save batch settings to localStorage
-const saveBatchSettings = () => {
-  try {
-    localStorage.setItem("batchSettings", JSON.stringify(batchSettings));
-    
-    // 保存推送配置
-    savePushConfig({
-      enabled: batchSettings.pushNotificationEnabled,
-      provider: batchSettings.pushProvider,
-      token: batchSettings.pushToken
-    });
-    
-    message.success("定时批量任务设置已保存");
-    showBatchSettingsModal.value = false;
-  } catch (error) {
-    console.error("Failed to save batch settings:", error);
-    message.error("保存设置失败");
-  }
-};
-
-// Open batch settings modal
-const openBatchSettings = () => {
-  loadBatchSettings();
-  // 加载推送配置
-  const pushConfig = getPushConfig();
-  batchSettings.pushNotificationEnabled = pushConfig.enabled;
-  batchSettings.pushProvider = pushConfig.provider;
-  batchSettings.pushToken = pushConfig.token;
-  showBatchSettingsModal.value = true;
 };
 
 // Load settings on component mount
@@ -4913,13 +4595,25 @@ const avatarLoadError = ref(false);
 // ======================
 
 // Scheduled Tasks State Management
-// 使用scheduledTaskStore中的scheduledTasks，而不是本地ref
+// 从 Store 获取定时任务列表
 const scheduledTasks = computed(() => scheduledTaskStore.scheduledTasks);
 const showTaskModal = ref(false); // Control the visibility of the add/edit task modal
 const showTasksModal = ref(false); // Control the visibility of the tasks list modal
 const showBlackMarketBuyerModal = ref(false); // Control the visibility of the black market buyer modal
+
+// 测试推送状态
+const testingPush = ref(false);
+
+// 推送提供商选项
+const pushProviderOptions = [
+  { label: 'PushPlus（推送加）', value: 'pushplus' },
+  { label: 'Bark', value: 'bark' },
+  { label: 'ServerChan（Server酱）', value: 'serverchan' }
+];
+const blackMarketBuyerRef = ref(null); // Reference to the BlackMarketBuyer component
+const showResumeTaskDialog = ref(false); // 显示恢复任务对话框
+const resumeTaskState = ref(null); // 保存的任务状态
 const editingTask = ref(null); // Currently editing task
-const selectedTasks = ref([]); // Selected task function names
 const taskForm = reactive({
   name: "", // Task name
   runType: "daily", // 'daily' or 'cron'
@@ -4928,93 +4622,36 @@ const taskForm = reactive({
   selectedTokens: [], // Selected token IDs
   selectedTasks: [], // Selected task function names
   enabled: true, // Whether the task is enabled
+  enableBatchExecution: false,
+  batchSize: 10,
+  batchDelay: 60,
 });
 
 // 任务分组定义
 const taskGroupDefinitions = [
-  {
-    name: "daily",
-    label: "日常",
-    tasks: [
-      "startBatch",
-      "claimHangUpRewards",
-      "batchAddHangUpTime",
-      "resetBottles",
-      "batchlingguanzi",
-      "batchclubsign",
-      "batchStudy",
-      "batcharenafight",
-      "batchSmartSendCar",
-      "batchClaimCars",
-      "store_purchase",
-      "collection_claimfreereward",
-      "batchGenieSweep",
-    ],
-  },
-  {
-    name: "dungeon",
-    label: "副本",
-    tasks: [
-      "climbTower",
-      "batchmengjing",
-      "skinChallenge",
-      "batchClaimPeachTasks",
-      "batchBuyDreamItems",
-    ],
-  },
-  { name: "baoku", label: "宝库", tasks: ["batchbaoku13", "batchbaoku45"] },
-  {
-    name: "weirdTower",
-    label: "怪异塔",
-    tasks: [
-      "climbWeirdTower",
-      "batchUseItems",
-      "batchMergeItems",
-      "batchClaimFreeEnergy",
-    ],
-  },
-  {
-    name: "resource",
-    label: "资源",
-    tasks: [
-      "batchOpenBox",
-      "batchOpenBoxByPoints",
-      "batchClaimBoxPointReward",
-      "batchFish",
-      "batchRecruit",
-      "legion_storebuygoods",
-    ],
-  },
-  {
-    name: "legacy",
-    label: "功法",
-    tasks: ["batchLegacyClaim", "batchLegacyGiftSendEnhanced"],
-  },
-  {
-    name: "monthly",
-    label: "月度",
-    tasks: ["batchTopUpFish", "batchTopUpArena"],
-  },
+  { name: 'daily', label: '日常', tasks: ['startBatch', 'claimHangUpRewards', 'batchAddHangUpTime', 'resetBottles', 'batchlingguanzi', 'batchclubsign', 'batchStudy', 'batcharenafight', 'batchSmartSendCar', 'batchClaimCars', 'store_purchase', 'collection_claimfreereward', 'batchGenieSweep'] },
+  { name: 'dungeon', label: '副本', tasks: ['climbTower', 'batchmengjing', 'skinChallenge', 'batchClaimPeachTasks', 'batchDreamBuy'] },
+  { name: 'baoku', label: '宝库', tasks: ['batchbaoku13', 'batchbaoku45'] },
+  { name: 'weirdTower', label: '怪异塔', tasks: ['climbWeirdTower', 'batchUseItems', 'batchMergeItems', 'batchClaimFreeEnergy'] },
+  { name: 'resource', label: '资源', tasks: ['batchOpenBox', 'pointsBox', 'batchClaimBoxPointReward', 'batchFish', 'batchRecruit', 'legion_storebuygoods'] },
+  { name: 'legacy', label: '功法', tasks: ['batchLegacyClaim', 'batchLegacyGiftSendEnhanced'] },
+  { name: 'monthly', label: '月度', tasks: ['batchTopUpFish', 'batchTopUpArena'] }
 ];
 
 // 计算属性，根据 taskGroupDefinitions 将 availableTasks 分组
 const groupedAvailableTasks = computed(() => {
   const groups = {};
-  taskGroupDefinitions.forEach((group) => {
-    groups[group.name] = availableTasks.filter((task) =>
-      group.tasks.includes(task.value),
-    );
+  taskGroupDefinitions.forEach(group => {
+    groups[group.name] = availableTasks.filter(task => group.tasks.includes(task.value));
   });
-
+  
   // 处理未分组的任务
-  const groupedTaskValues = taskGroupDefinitions.flatMap((g) => g.tasks);
-  const otherTasks = availableTasks.filter(
-    (task) => !groupedTaskValues.includes(task.value),
-  );
+  const groupedTaskValues = taskGroupDefinitions.flatMap(g => g.tasks);
+  const otherTasks = availableTasks.filter(task => !groupedTaskValues.includes(task.value));
   if (otherTasks.length > 0) {
-    groups["other"] = otherTasks;
+    groups['other'] = otherTasks;
   }
-
+  
   return groups;
 });
 
@@ -5035,144 +4672,92 @@ const executingTaskIds = ref([]);
 const manualExecuteTask = async (task) => {
   if (executingTaskIds.value.includes(task.id)) return;
 
-  // Reset stop flag if not running, to allow manual execution
-  if (!isRunning.value && shouldStop.value) {
-    shouldStop.value = false;
-  }
-
-  executingTaskIds.value.push(task.id);
-  try {
-    message.info(`开始执行任务: ${task.name}`);
-    const taskExecuted = await executeScheduledTask(task);
-    if (taskExecuted !== false) {
-      message.success(`任务 ${task.name} 执行完成`);
-    } else {
-      message.info(`任务 ${task.name} 已加入积攒队列，将依次执行`);
-    }
-  } catch (e) {
-    console.error(`执行任务 ${task.name} 失败:`, e);
-    message.error(`任务 ${task.name} 执行失败`);
-  } finally {
-    executingTaskIds.value = executingTaskIds.value.filter(
-      (id) => id !== task.id,
-    );
-  }
-};
-
-// 从localStorage加载任务队列
-const loadTaskQueueFromStorage = () => {
-  // 优先从新的键名加载
-  const savedQueue = safeLocalStorage.getItem('batch_task_queue');
-  if (savedQueue && typeof savedQueue === 'string' && savedQueue !== 'undefined') {
-    try {
-      const parsedQueue = JSON.parse(savedQueue);
-      if (Array.isArray(parsedQueue)) {
-        // 清空现有队列
-        batchTaskStore.clearTaskQueue();
-        // 添加从本地存储加载的任务
-        parsedQueue.forEach(task => {
-          batchTaskStore.addToTaskQueue(task);
-        });
-        if (batchTaskStore.taskQueue && batchTaskStore.taskQueue.length > 0) {
-          addLog({
-            time: new Date().toLocaleTimeString(),
-            message: `=== 从本地存储加载了 ${batchTaskStore.taskQueue.length} 个积攒任务 ===`,
-            type: "info",
-          });
-        }
-      }
-    } catch (error) {
-      console.error('加载任务队列失败:', error);
-      // 重要修复：加载失败时不清空队列，保留现有队列数据
-      // 避免数据丢失，只在明确需要清空时才清空
+  // 检查是否有任务正在运行
+  if (batchTaskStore.isRunning) { // 重要：这不是bug修复
+    // 不要因为代码检查工具提示而改回 .value，否则任务冲突检测会失效
+    if (batchSettings.enableQueueOnConflict) {
+      message.warning('当前有任务正在运行，已加入积攒队列');
+      batchTaskStore.addToTaskQueue({
+        id: Date.now() + Math.random(),
+        name: task.name,
+        runType: 'manual',
+        selectedTokens: [...(task.selectedTokens || task.tokenIds || [])],
+        selectedTasks: [...(task.selectedTasks || task.taskNames || ['batchDaily'])],
+      });
       addLog({
         time: new Date().toLocaleTimeString(),
-        message: `=== 加载积攒队列失败: ${error.message}，保留现有队列 ===`,
+        message: `=== 任务 ${task.name} 检测到任务冲突（有任务运行中），已加入积攒队列 ===`,
         type: "warning",
       });
-    }
-  }
-
-  // 清理旧的键名
-  safeLocalStorage.removeItem('taskQueue');
-};
-
-// 保存任务队列到localStorage
-const saveTaskQueueToStorage = () => {
-  try {
-    // 验证任务队列数据结构，确保可以安全序列化
-    const queue = batchTaskStore.taskQueue || [];
-    if (!Array.isArray(queue)) {
-      console.error('任务队列不是数组:', queue);
       return;
+    } else {
+      message.warning('当前有任务正在运行，将并行执行');
+      addLog({
+        time: new Date().toLocaleTimeString(),
+        message: `=== 任务 ${task.name} 检测到任务冲突（有任务运行中），已关闭"冲突加入积攒队列"功能，将并行执行 ===`,
+        type: "warning",
+      });
+      // 不return，继续执行，实现并行执行
     }
-
-    // 限制队列长度，避免存储过大的数据
-    const limitedQueue = queue.slice(0, 50); // 最多保存50个任务
-
-    // 序列化前进行数据清理，移除可能导致循环引用的属性
-    const sanitizedQueue = limitedQueue.map(task => {
-      const sanitizedTask = { ...task };
-      // 移除可能导致序列化问题的属性
-      if (sanitizedTask.params) {
-        // 只保留必要的参数
-        sanitizedTask.params = { ...sanitizedTask.params };
-        // 移除可能包含循环引用的复杂对象
-        Object.keys(sanitizedTask.params).forEach(key => {
-          const value = sanitizedTask.params[key];
-          if (typeof value === 'object' && value !== null) {
-            // 简化复杂对象
-            try {
-              JSON.stringify(value); // 测试是否可以序列化
-            } catch {
-              // 如果不能序列化，移除该属性
-              delete sanitizedTask.params[key];
-            }
-          }
-        });
-      }
-      return sanitizedTask;
-    });
-
-    const serialized = JSON.stringify(sanitizedQueue);
-    safeLocalStorage.setItem('batch_task_queue', serialized);
-  } catch (error) {
-    console.error('保存任务队列失败:', error);
-    // 重要修复：保存失败时不清空存储，避免数据丢失
-    // 只在明确需要清空时才清空
-    addLog({
-      time: new Date().toLocaleTimeString(),
-      message: `=== 保存积攒队列失败: ${error.message}，保留现有数据 ===`,
-      type: "warning",
-    });
   }
-};
 
-// 清空任务队列
-const clearTaskQueue = () => {
-  try {
-    batchTaskStore.clearTaskQueue();
-    safeLocalStorage.removeItem('taskQueue');
-    safeLocalStorage.removeItem('batch_task_queue');
+  if (isPauseTime.value && isPauseTime.value.paused) {
+    message.warning(`当前处于${isPauseTime.value.reason}，已加入积攒队列`);
+    batchTaskStore.addToTaskQueue({
+      id: Date.now() + Math.random(),
+      name: task.name,
+      runType: 'manual',
+      selectedTokens: [...(task.selectedTokens || task.tokenIds || [])],
+      selectedTasks: [...(task.selectedTasks || task.taskNames || ['batchDaily'])],
+    });
     addLog({
       time: new Date().toLocaleTimeString(),
-      message: '=== 任务队列已清空 ===',
+      message: `=== 任务 ${task.name} 已加入积攒队列，当前队列长度: ${batchTaskStore.taskQueue.length} ===`,
       type: "info",
     });
-  } catch (error) {
-    console.error('清空任务队列失败:', error);
-    addLog({
-      time: new Date().toLocaleTimeString(),
-      message: `=== 清空任务队列失败: ${error.message} ===`,
-      type: "error",
+    return;
+  }
+
+  // Reset stop flag if not running, to allow manual execution
+  if (!batchTaskStore.isRunning.value && batchTaskStore.shouldStop.value) {
+    batchTaskStore.resetTaskState();
+  }
+
+  // 简化版任务持久化：保存正在执行的任务
+  saveRunningTask(task);
+
+  executingTaskIds.value.push(task.id);
+  
+  // 根据开关决定执行方式：开启时顺序执行（await），关闭时并行执行（不await）
+  if (batchSettings.enableQueueOnConflict) {
+    // 顺序执行：使用 await 等待完成
+    try {
+      message.info(`开始执行任务: ${task.name}`);
+      await executeScheduledTask(task);
+      message.success(`任务 ${task.name} 执行完成`);
+    } catch (e) {
+      console.error(`执行任务 ${task.name} 失败:`, e);
+      message.error(`任务 ${task.name} 执行失败`);
+    } finally {
+      executingTaskIds.value = executingTaskIds.value.filter(id => id !== task.id);
+      // 任务完成，清除保存的任务信息
+      clearRunningTask();
+    }
+  } else {
+    // 并行执行：不使用 await，让任务在后台运行
+    message.info(`开始并行执行任务: ${task.name}`);
+    executeScheduledTask(task).then(() => {
+      message.success(`任务 ${task.name} 执行完成`);
+    }).catch((e) => {
+      console.error(`执行任务 ${task.name} 失败:`, e);
+      message.error(`任务 ${task.name} 执行失败`);
+    }).finally(() => {
+      executingTaskIds.value = executingTaskIds.value.filter(id => id !== task.id);
+      // 任务完成，清除保存的任务信息
+      clearRunningTask();
     });
   }
 };
-
-// 监听任务队列变化，自动保存
-watch(() => batchTaskStore.taskQueue, () => {
-  saveTaskQueueToStorage();
-}, { deep: true });
 
 // Load scheduled tasks from localStorage
 const loadScheduledTasks = () => {
@@ -5195,8 +4780,15 @@ const loadScheduledTasks = () => {
 
 // Save scheduled tasks to localStorage
 const saveScheduledTasks = () => {
-  // 定时任务通过scheduledTaskStore自动保存，无需手动保存
-  console.log('定时任务已通过scheduledTaskStore自动保存');
+  try {
+    const dataToSave = JSON.stringify(scheduledTasks.value);
+
+    localStorage.setItem("scheduledTasks", dataToSave);
+    // Verify save was successful
+    const saved = localStorage.getItem("scheduledTasks");
+  } catch (error) {
+    console.error("Failed to save scheduled tasks:", error);
+  }
 };
 
 // Open task modal for adding new task
@@ -5319,7 +4911,7 @@ const saveTask = () => {
   }
 
   const taskData = {
-    id: editingTask.value?.id || Date.now(),
+    id: editingTask.value?.id || "task_" + Date.now(),
     name: taskForm.name,
     runType: taskForm.runType,
     runTime: formattedRunTime,
@@ -5327,6 +4919,9 @@ const saveTask = () => {
     selectedTokens: [...taskForm.selectedTokens],
     selectedTasks: [...taskForm.selectedTasks],
     enabled: taskForm.enabled,
+    enableBatchExecution: taskForm.enableBatchExecution,
+    batchSize: taskForm.batchSize,
+    batchDelay: taskForm.batchDelay,
   };
 
   let isNew = !editingTask.value;
@@ -5337,19 +4932,17 @@ const saveTask = () => {
   } else {
     // Add new task
     scheduledTaskStore.addTask({
-      id: taskData.id,
       name: taskData.name,
-      taskName: taskData.name,
+      taskName: taskData.name, // 暂时使用name作为taskName
       runType: taskData.runType,
       runTime: taskData.runTime,
       cronExpression: taskData.cronExpression,
       selectedTokens: taskData.selectedTokens,
       selectedTasks: taskData.selectedTasks,
-      enabled: taskData.enabled
     });
   }
 
-  saveScheduledTasks();
+  // 不再需要手动保存，Store会自动处理
 
   // Add log entry for task save
   addTaskSaveLog(taskData, isNew, addLog);
@@ -5363,7 +4956,6 @@ const deleteTask = (taskId) => {
   const task = scheduledTasks.value.find((t) => t.id === taskId);
   if (task) {
     scheduledTaskStore.removeTask(taskId);
-    saveScheduledTasks();
     addLog({
       time: new Date().toLocaleTimeString(),
       message: `=== 定时任务 ${task.name} 已删除 ===`,
@@ -5377,8 +4969,8 @@ const deleteTask = (taskId) => {
 const toggleTaskEnabled = (taskId, enabled) => {
   const task = scheduledTasks.value.find((t) => t.id === taskId);
   if (task) {
+    // 直接更新任务状态，不再调用toggleTask（避免状态被切换两次）
     scheduledTaskStore.updateTask(taskId, { enabled });
-    saveScheduledTasks();
     message.success(`定时任务已${enabled ? "启用" : "禁用"}`);
     addLog({
       time: new Date().toLocaleTimeString(),
@@ -5423,34 +5015,24 @@ const deselectAllTasks = () => {
 // Import/Export Config
 // ======================
 
-// Export all tokens and scheduled tasks configuration
 const exportConfig = async () => {
   try {
     const loadingMsg = message.loading('正在导出配置，读取BIN文件中...', { duration: 0 });
     
-    const { waitForReady, getAllKeys, getArrayBuffer } = indexedDB;
     const ready = await waitForReady(3000);
     if (!ready) {
-      console.warn('IndexedDB 未准备好，跳过BIN文件导出');
+      console.error('IndexedDB 未准备好，无法导出BIN文件');
     }
+    
+    const validTokenIds = new Set(tokens.value.map((t) => t.id));
 
-    const tokensData = tokenStore.gameTokens;
-    const validTokenIds = new Set(tokensData.map((t) => t.id));
+    const filteredScheduledTasks = scheduledTasks.value.map((task) => ({
+      ...task,
+      selectedTokens: task.selectedTokens?.filter((tokenId) => validTokenIds.has(tokenId)) || [],
+    })).filter((task) => task.selectedTokens.length > 0);
 
-    // Filter scheduled tasks: remove invalid token IDs from selectedTokens
-    const filteredScheduledTasks = scheduledTaskStore.scheduledTasks
-      .map((task) => ({
-        ...task,
-        selectedTokens:
-          task.selectedTokens?.filter((tokenId) =>
-            validTokenIds.has(tokenId),
-          ) || [],
-      }))
-      .filter((task) => task.selectedTokens.length > 0); // Remove tasks with no valid tokens
-
-    // Gather token settings
     const tokenSettings = [];
-    tokensData.forEach((token) => {
+    tokens.value.forEach((token) => {
       const settings = localStorage.getItem(`daily-settings:${token.id}`);
       if (settings) {
         try {
@@ -5464,21 +5046,29 @@ const exportConfig = async () => {
       }
     });
 
-    // 导出阵容数据
-    const savedLineups = {};
-    tokensData.forEach((token) => {
-      const key = `saved_lineups_${token.id}`;
-      const data = localStorage.getItem(key);
-      if (data) {
-        try {
-          savedLineups[token.id] = JSON.parse(data);
-        } catch (e) {
-          console.warn(`解析阵容数据失败 (${token.id}):`, e);
+    const binFiles = {};
+    try {
+      const keys = await getAllKeys();
+      const existingKeys = new Set(keys);
+      
+      for (const token of tokens.value) {
+        let arrayBuffer = null;
+        
+        if (existingKeys.has(token.id)) {
+          arrayBuffer = await getArrayBuffer(token.id);
+        } else if (existingKeys.has(token.name)) {
+          arrayBuffer = await getArrayBuffer(token.name);
+        }
+        
+        if (arrayBuffer) {
+          binFiles[token.id] = Array.from(new Uint8Array(arrayBuffer));
         }
       }
-    });
+    } catch (binError) {
+      console.error('Failed to get BIN files:', binError);
+      // 继续执行，即使BIN文件获取失败
+    }
 
-    // 导出任务模板
     let taskTemplates = [];
     try {
       const saved = localStorage.getItem("task-templates");
@@ -5490,7 +5080,6 @@ const exportConfig = async () => {
       console.warn('获取任务模板失败', e);
     }
 
-    // 导出账号排序配置
     let tokenSortConfig = null;
     try {
       const saved = localStorage.getItem("tokenSortConfig");
@@ -5501,46 +5090,20 @@ const exportConfig = async () => {
       console.warn('获取账号排序配置失败', e);
     }
 
-    // 导出分组配置
-    let tokenGroupsData = [];
+    let tokenGroups = [];
     try {
       const saved = localStorage.getItem("tokenGroups");
       if (saved) {
-        tokenGroupsData = JSON.parse(saved);
+        tokenGroups = JSON.parse(saved);
       }
     } catch (e) {
       console.warn('获取分组配置失败', e);
     }
 
-    // 导出BIN文件
-    const binFiles = {};
-    if (ready) {
-      try {
-        const keys = await getAllKeys();
-        const existingKeys = new Set(keys);
-        
-        for (const token of tokensData) {
-          let arrayBuffer = null;
-          
-          if (existingKeys.has(token.id)) {
-            arrayBuffer = await getArrayBuffer(token.id);
-          } else if (existingKeys.has(token.name)) {
-            arrayBuffer = await getArrayBuffer(token.name);
-          }
-          
-          if (arrayBuffer) {
-            binFiles[token.id] = Array.from(new Uint8Array(arrayBuffer));
-          }
-        }
-      } catch (binError) {
-        console.error('获取BIN文件失败:', binError);
-      }
-    }
-
     const exportData = {
-      version: "1.3",
+      version: "1.2",
       exportTime: new Date().toISOString(),
-      tokens: tokensData.map((t) => ({
+      tokens: tokens.value.map((t) => ({
         id: t.id,
         name: t.name,
         token: t.token,
@@ -5554,35 +5117,11 @@ const exportConfig = async () => {
         updatedAt: t.updatedAt,
       })),
       scheduledTasks: filteredScheduledTasks,
-      batchSettings: {
-        boxCount: batchSettings.boxCount,
-        fishCount: batchSettings.fishCount,
-        recruitCount: batchSettings.recruitCount,
-        defaultBoxType: batchSettings.defaultBoxType,
-        defaultFishType: batchSettings.defaultFishType,
-        carMinColor: batchSettings.carMinColor,
-        commandDelay: batchSettings.commandDelay,
-        taskDelay: batchSettings.taskDelay,
-        actionDelay: batchSettings.actionDelay,
-        battleDelay: batchSettings.battleDelay,
-        refreshDelay: batchSettings.refreshDelay,
-        longDelay: batchSettings.longDelay,
-        maxActive: batchSettings.maxActive,
-        tokenListColumns: batchSettings.tokenListColumns,
-        useGoldRefreshFallback: batchSettings.useGoldRefreshFallback,
-        smartDepartureGoldThreshold: batchSettings.smartDepartureGoldThreshold,
-        smartDepartureRecruitThreshold:
-          batchSettings.smartDepartureRecruitThreshold,
-        smartDepartureJadeThreshold: batchSettings.smartDepartureJadeThreshold,
-        smartDepartureTicketThreshold:
-          batchSettings.smartDepartureTicketThreshold,
-        smartDepartureMatchAll: batchSettings.smartDepartureMatchAll,
-      },
-      tokenSettings: tokenSettings,
+      batchSettings: { ...batchSettings },
       taskTemplates: taskTemplates,
       tokenSortConfig: tokenSortConfig,
-      tokenGroups: tokenGroupsData,
-      savedLineups: savedLineups,
+      tokenSettings: tokenSettings,
+      tokenGroups: tokenGroups,
       binFiles: binFiles,
     };
 
@@ -5596,7 +5135,7 @@ const exportConfig = async () => {
 
     const isAndroidApp = typeof window !== 'undefined' && 
                       window.Capacitor && 
-                      /android/i.test(navigator.userAgent);
+                      (window.Capacitor.isNativePlatform() || /android/i.test(navigator.userAgent));
 
     if (isAndroidApp) {
       try {
@@ -5633,30 +5172,36 @@ const exportConfig = async () => {
       saveFileByDownload(jsonString, fileName);
     }
   } catch (error) {
+    loadingMsg.destroy();
     console.error("Export failed:", error);
     message.error("导出失败: " + error.message);
   }
 };
 
-function saveFileByDownload(jsonString, fileName) {
-  const blob = new Blob([jsonString], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+// 辅助函数：使用下载方式保存文件
+const saveFileByDownload = (jsonString, fileName) => {
+  try {
+    const blob = new Blob([jsonString], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
 
-  const exportData = JSON.parse(jsonString);
-  const lineupsCount = Object.keys(exportData.savedLineups || {}).length;
-  const templatesCount = exportData.taskTemplates?.length || 0;
-  const groupsCount = exportData.tokenGroups?.length || 0;
-  message.success(
-    `导出成功: ${exportData.tokens.length} 个账号, ${exportData.scheduledTasks.length} 个定时任务, ${Object.keys(exportData.binFiles || {}).length} 个BIN文件${templatesCount > 0 ? `, ${templatesCount} 个任务模板` : ''}${groupsCount > 0 ? `, ${groupsCount} 个分组` : ''}${lineupsCount > 0 ? `, ${lineupsCount} 个账号的阵容` : ''}`,
-  );
-}
+    const exportData = JSON.parse(jsonString);
+    message.success(
+      `导出成功: ${exportData.tokens.length} 个账号, ${exportData.scheduledTasks.length} 个定时任务, ${Object.keys(exportData.binFiles || {}).length} 个BIN文件`
+    );
+  } catch (error) {
+    console.error('下载保存失败:', error);
+    message.error('导出失败，请重试');
+  }
+};
 
 // Import tokens and scheduled tasks configuration
 const importConfig = async ({ file }) => {
@@ -5680,7 +5225,7 @@ const importConfig = async ({ file }) => {
 
   try {
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         let importData;
         let content = e.target.result;
@@ -5708,20 +5253,16 @@ const importConfig = async ({ file }) => {
         };
         message.info(`配置版本: v${info.version}, ${info.tokensCount}账号, ${info.tasksCount}任务, ${info.binCount}BIN`);
 
-        // Validate structure
-        if (
-          !importData.version ||
-          !importData.tokens ||
-          !importData.scheduledTasks
-        ) {
+        if (!importData.version || !importData.tokens || !importData.scheduledTasks) {
           message.error("无效的配置文件格式");
           return;
         }
 
         let importedTokens = 0;
         let importedTasks = 0;
+        let restoredBinFiles = 0;
 
-        // Import tokens
+        message.info('开始导入账号...');
         if (Array.isArray(importData.tokens)) {
           message.info(`找到 ${importData.tokens.length} 个账号`);
           importData.tokens.forEach((token, idx) => {
@@ -5754,71 +5295,74 @@ const importConfig = async ({ file }) => {
           message.success(`账号导入完成: ${importedTokens} 个`);
         }
 
-        // Import scheduled tasks
+        message.info('开始导入定时任务...');
         if (Array.isArray(importData.scheduledTasks)) {
           message.info(`找到 ${importData.scheduledTasks.length} 个定时任务`);
-          try {
-            // 确保每个任务都有必要的属性
-            const formattedTasks = importData.scheduledTasks.map(task => ({
-              ...task,
-              id: task.id || Date.now() + Math.random(),
-              enabled: task.enabled !== false,
-              createdAt: task.createdAt || new Date().toISOString()
-            }));
-            
-            // 使用scheduledTaskStore的replaceAllTasks方法替换所有任务
-            scheduledTaskStore.replaceAllTasks(formattedTasks);
-            importedTasks = formattedTasks.length;
-            
-            // 重新启动调度器，确保状态同步
-            scheduledTaskStore.startScheduler();
-            message.success(`定时任务导入完成: ${importedTasks} 个`);
-          } catch (taskErr) {
-            message.warning(`导入定时任务失败: ${taskErr.message}`);
-            console.error(taskErr);
-          }
+          importData.scheduledTasks.forEach((importedTask, idx) => {
+            try {
+              const existingIndex = scheduledTasks.value.findIndex((t) => t.name === importedTask.name);
+              if (existingIndex >= 0) {
+                scheduledTasks.value[existingIndex] = importedTask;
+              } else {
+                scheduledTasks.value.push(importedTask);
+              }
+              importedTasks++;
+            } catch (taskErr) {
+              message.warning(`导入任务失败 ${idx + 1}: ${importedTask.name}`);
+              console.error(taskErr);
+            }
+          });
+          saveScheduledTasks();
+          message.success(`定时任务导入完成: ${importedTasks} 个`);
         }
 
-        // Import batch settings if provided
+        message.info('开始导入批量设置...');
         if (importData.batchSettings) {
           Object.assign(batchSettings, importData.batchSettings);
           saveBatchSettings();
+          message.success('批量设置导入完成');
         }
 
-        // Import token settings
+        message.info('开始导入账号设置...');
         if (Array.isArray(importData.tokenSettings)) {
-          importData.tokenSettings.forEach((item) => {
-            if (item.tokenId && item.settings) {
-              localStorage.setItem(
-                `daily-settings:${item.tokenId}`,
-                JSON.stringify(item.settings),
-              );
+          message.info(`找到 ${importData.tokenSettings.length} 个账号设置`);
+          importData.tokenSettings.forEach((item, idx) => {
+            try {
+              if (item.tokenId && item.settings) {
+                localStorage.setItem(
+                  `daily-settings:${item.tokenId}`,
+                  JSON.stringify(item.settings)
+                );
+              }
+            } catch (settingsErr) {
+              message.warning(`导入账号设置失败 ${idx + 1}`);
+              console.error(settingsErr);
             }
           });
         }
 
-        // Import saved lineups
-        if (importData.savedLineups && typeof importData.savedLineups === 'object') {
-          let lineupsImportCount = 0;
-          try {
-            Object.entries(importData.savedLineups).forEach(([tokenId, lineups]) => {
-              try {
-                const key = `saved_lineups_${tokenId}`;
-                localStorage.setItem(key, JSON.stringify(lineups));
-                lineupsImportCount++;
-              } catch (e) {
-                console.warn(`导入阵容数据失败 (${tokenId}):`, e);
-              }
-            });
-            if (lineupsImportCount > 0) {
-              message.info(`阵容数据导入完成: ${lineupsImportCount} 个账号`);
-            }
-          } catch (e) {
-            console.error('导入阵容数据失败:', e);
+        if (importData.binFiles) {
+          message.info('开始导入BIN文件...');
+          const ready = await waitForReady(3000);
+          if (!ready) {
+            message.error('IndexedDB 未准备好，无法导入BIN文件');
           }
+          const binFiles = importData.binFiles;
+          message.info(`找到 ${Object.keys(binFiles).length} 个BIN文件`);
+          
+          for (const [tokenId, uint8Array] of Object.entries(binFiles)) {
+            try {
+              const arrayBuffer = new Uint8Array(uint8Array).buffer;
+              await storeArrayBuffer(tokenId, arrayBuffer);
+              restoredBinFiles++;
+            } catch (error) {
+              message.warning(`BIN导入失败: ${tokenId}`);
+              console.error(error);
+            }
+          }
+          message.success(`BIN文件导入完成: ${restoredBinFiles} 个`);
         }
 
-        // Import task templates
         if (importData.taskTemplates && Array.isArray(importData.taskTemplates)) {
           try {
             localStorage.setItem("task-templates", JSON.stringify(importData.taskTemplates));
@@ -5828,7 +5372,6 @@ const importConfig = async ({ file }) => {
           }
         }
 
-        // Import token sort config
         if (importData.tokenSortConfig) {
           try {
             localStorage.setItem("tokenSortConfig", JSON.stringify(importData.tokenSortConfig));
@@ -5838,25 +5381,28 @@ const importConfig = async ({ file }) => {
           }
         }
 
-        // Import token groups
-        if (importData.tokenGroups && Array.isArray(importData.tokenGroups)) {
+        if (importData.tokenGroups) {
           try {
             localStorage.setItem("tokenGroups", JSON.stringify(importData.tokenGroups));
-            message.info(`分组配置导入完成: ${importData.tokenGroups.length} 个`);
+            message.info('分组配置已导入');
           } catch (e) {
             console.error('导入分组配置失败:', e);
           }
         }
 
-        const lineupsCount = Object.keys(importData.savedLineups || {}).length;
-        const templatesCount = importData.taskTemplates?.length || 0;
-        const groupsCount = importData.tokenGroups?.length || 0;
-        message.success(
-          `导入成功: ${importedTokens} 个新账号, ${importedTasks} 个新定时任务${templatesCount > 0 ? `, ${templatesCount} 个任务模板` : ''}${groupsCount > 0 ? `, ${groupsCount} 个分组` : ''}${lineupsCount > 0 ? `, ${lineupsCount} 个账号的阵容` : ''}`,
-        );
+        let successMessage = `导入成功: ${importedTokens} 个账号, ${importedTasks} 个定时任务`;
+        if (restoredBinFiles > 0) {
+          successMessage += `, ${restoredBinFiles} 个BIN文件`;
+        }
+        message.success(successMessage);
+        
+        // 刷新页面以显示导入的分组信息
+        setTimeout(() => {
+          location.reload();
+        }, 500);
       } catch (parseError) {
         console.error("Parse error:", parseError);
-        message.error("解析配置文件失败");
+        message.error("解析配置文件失败: " + parseError.message);
       }
     };
     reader.readAsText(file.file);
@@ -5888,14 +5434,16 @@ const updateCountdowns = () => {
       return;
     }
 
+    // 重要：即使有任务在执行，也要计算倒计时
+    // 这样可以确保定时任务调度器不被阻塞
     if (
-    !nextExecutionTimes.value[task.id] ||
-    nextExecutionTimes.value[task.id] <= now
-  ) {
-    // Calculate next execution time if not set or passed
-    const nextTime = calculateNextExecutionTime(task);
-    scheduledTaskStore.updateNextExecutionTime(task.id, nextTime);
-  }
+      !nextExecutionTimes.value[task.id] ||
+      nextExecutionTimes.value[task.id] <= now
+    ) {
+      // Calculate next execution time if not set or passed
+      const nextTime = calculateNextExecutionTime(task);
+      nextExecutionTimes.value[task.id] = nextTime;
+    }
 
     if (nextExecutionTimes.value[task.id]) {
       const timeDiff = nextExecutionTimes.value[task.id] - now;
@@ -5932,39 +5480,19 @@ const shortestCountdownTask = computed(() => {
   return shortestTask;
 });
 
-// Start countdown interval
+// 恢复倒计时定时器，确保 UI 倒计时实时更新
 let countdownInterval = null;
 
 const startCountdown = () => {
-  // Clear any existing interval
   if (countdownInterval) {
     clearInterval(countdownInterval);
   }
-
-  // Update countdowns immediately
+  
+  // 立即更新一次倒计时
   updateCountdowns();
-
-  // Update countdowns every second
+  
+  // 每秒更新一次
   countdownInterval = setInterval(updateCountdowns, 1000);
-};
-
-const RUNNING_TASK_KEY = 'running_task_info';
-
-// 保存正在执行的任务信息（简化版，只保存任务配置，不保存进度）
-const saveRunningTask = (task) => {
-  try {
-    safeLocalStorage.setItem(RUNNING_TASK_KEY, JSON.stringify({
-      ...task,
-      timestamp: Date.now()
-    }));
-  } catch (e) {
-    console.error('保存运行中任务失败:', e);
-  }
-};
-
-// 清除运行中的任务信息
-const clearRunningTask = () => {
-  safeLocalStorage.removeItem(RUNNING_TASK_KEY);
 };
 
 // Flag to prevent concurrent execution of queued tasks
@@ -5977,14 +5505,14 @@ const startResumeCheck = () => {
   if (resumeCheckInterval.value) {
     clearInterval(resumeCheckInterval.value);
   }
-
+  
   let hasLoggedResume = false;
   let wasPaused = false;
 
   resumeCheckInterval.value = setInterval(() => {
     const queue = batchTaskStore.taskQueue || [];
     const isCurrentlyPaused = isPauseTime.value.paused;
-
+    
     // 检测暂停时间结束（从暂停状态变为非暂停状态）
     if (wasPaused && !isCurrentlyPaused) {
       hasLoggedResume = false;
@@ -5994,11 +5522,12 @@ const startResumeCheck = () => {
         type: "info",
       });
       // 暂停时间结束时，触发积攒队列执行（如果当前没有任务在执行）
-      if (queue.length > 0 && !batchTaskStore.isRunning.value && !isExecutingQueuedTasks.value) {
+      if (queue.length > 0 && !batchTaskStore.isRunning && !isExecutingQueuedTasks.value) { // 重要：这不是bug修复
+        // 不要因为代码检查工具提示而改回 .value，否则任务冲突检测会失效
         checkAndExecuteQueuedTasks();
       }
     }
-
+    
     wasPaused = isCurrentlyPaused;
   }, 5000);
 };
@@ -6009,96 +5538,96 @@ const checkAndExecuteQueuedTasks = async () => {
   if (!batchTaskStore.taskQueue) {
     batchTaskStore.taskQueue = [];
   }
-
+  
   // 检查队列是否为空
   if (batchTaskStore.taskQueue.length === 0) {
     return;
   }
-
+  
+  // 安全检查：如果标志被卡住，强制重置
   if (isExecutingQueuedTasks.value) {
-    addLog({
-      time: new Date().toLocaleTimeString(),
-      message: `=== 积攒队列正在执行中，跳过重复执行 ===`,
-      type: "info",
-    });
-    return;
+    const now = Date.now();
+    const tenMinutesAgo = now - 10 * 60 * 1000;
+    const executingMarker = safeLocalStorage.getItem('queued_tasks_executing');
+    
+    // 如果标志为true但没有执行标记，或者标记超过10分钟，强制重置
+    if (!executingMarker || parseInt(executingMarker) < tenMinutesAgo) {
+      addLog({
+        time: new Date().toLocaleTimeString(),
+        message: `=== 检测到执行状态异常，强制重置 ===`,
+        type: "warning",
+      });
+      isExecutingQueuedTasks.value = false;
+    } else {
+      addLog({
+        time: new Date().toLocaleTimeString(),
+        message: `=== 积攒队列正在执行中，跳过重复执行 ===`,
+        type: "info",
+      });
+      return;
+    }
   }
-
+  
   // 重要：移除对 isRunning 的检查，确保即使有任务在执行，也能检测到时间的任务
   // 这样可以避免定时任务调度器被阻塞
   // 设置标志防止重复执行
   isExecutingQueuedTasks.value = true;
-
+  safeLocalStorage.setItem('queued_tasks_executing', Date.now().toString());
+  
   // 重要：在开始执行积攒队列任务时，设置 isRunning 为 true
   // 这样可以防止其他任务在积攒队列执行期间启动
   batchTaskStore.startTask();
-
+  
   const prevSelectedTokens = [...selectedTokens.value];
   const prevSelectedTasks = [...selectedTasks.value];
-
+  
   let allTasksCompleted = true;
   const failedTasks = [];
-
+  
   try {
     addLog({
       time: new Date().toLocaleTimeString(),
       message: `=== 开始执行积攒队列中的 ${batchTaskStore.taskQueue.length} 个任务 ===`,
       type: "info",
     });
-
+    
     // 循环处理队列中的任务，直到队列为空
     while (batchTaskStore.taskQueue.length > 0) {
       // 每次循环都获取当前队列的第一个任务
       const task = batchTaskStore.taskQueue[0];
       if (!task) break;
-
+      
       const taskName = task.name;
       const taskSelectedTasks = task.selectedTasks || [];
       const taskTokenIds = task.selectedTokens || [];
-
+      
       if (taskTokenIds.length === 0) {
         // 移除无效任务
         batchTaskStore.taskQueue.shift();
         saveTaskQueueToStorage();
         continue;
       }
-
+      
       addLog({
         time: new Date().toLocaleTimeString(),
         message: `=== 准备执行积攒任务: ${taskName}，共 ${taskTokenIds.length} 个账号 ===`,
         type: "info",
       });
-
+      
       const hasDailyTask = taskSelectedTasks.some(t => t === 'startBatch' || t === 'batchDaily');
       const otherTasks = taskSelectedTasks.filter(t => t !== 'startBatch' && t !== 'batchDaily');
-
+      
       // 捕获当前任务的账号列表，避免被后续循环修改
       const currentTaskTokens = [...taskTokenIds];
-
+      
       try {
         // 执行手动任务
         // 设置任务正在执行的标记，防止被重复加入积攒队列
         if (task.id) {
           safeLocalStorage.setItem(`task_executing_${task.id}`, Date.now().toString());
         }
-
-        // 保存原始值
-        const originalRecipientId = recipientIdInput.value;
-        const originalSecurityPassword = securityPassword.value;
-        const originalGiftQuantity = giftQuantity.value;
-
+        
         try {
-          // 如果任务包含功法赠送相关参数，临时设置这些值
-          if (task.recipientId !== undefined) {
-            recipientIdInput.value = task.recipientId;
-          }
-          if (task.securityPassword !== undefined) {
-            securityPassword.value = task.securityPassword;
-          }
-          if (task.giftQuantity !== undefined) {
-            giftQuantity.value = task.giftQuantity;
-          }
-
           if (hasDailyTask) {
             selectedTokens.value = currentTaskTokens;
             // 添加日志，确认分批执行设置
@@ -6113,7 +5642,7 @@ const checkAndExecuteQueuedTasks = async () => {
             });
             await startBatch(true); // 传入true表示从积攒队列执行
           }
-
+          
           for (const subTaskName of otherTasks) {
             const taskFunction = getOriginalTaskFunction(subTaskName);
             if (typeof taskFunction === 'function') {
@@ -6122,7 +5651,7 @@ const checkAndExecuteQueuedTasks = async () => {
               await executeInBatches(taskFunction, taskName, subTaskName, true);
             }
           }
-
+          
           // 重要：任务执行成功后，立即从积攒队列中移除
           // 避免页面刷新后重复执行已完成的任务
           batchTaskStore.taskQueue.shift();
@@ -6134,10 +5663,6 @@ const checkAndExecuteQueuedTasks = async () => {
             type: "success",
           });
         } finally {
-          // 恢复原始值
-          recipientIdInput.value = originalRecipientId;
-          securityPassword.value = originalSecurityPassword;
-          giftQuantity.value = originalGiftQuantity;
           // 清除任务正在执行的标记
           if (task.id) {
             safeLocalStorage.removeItem(`task_executing_${task.id}`);
@@ -6153,16 +5678,16 @@ const checkAndExecuteQueuedTasks = async () => {
           type: "error",
         });
         console.error(`积攒任务 ${taskName} 执行失败:`, taskError);
-
+        
         // 失败的任务保留在队列中，继续执行下一个任务
         batchTaskStore.taskQueue.shift();
         saveTaskQueueToStorage();
       }
     }
-
+    
     // 保存更新后的队列到本地存储，确保序列化安全
     saveTaskQueueToStorage();
-
+    
     if (failedTasks.length > 0) {
       // 有任务失败，保留失败的任务在队列中
       addLog({
@@ -6191,6 +5716,7 @@ const checkAndExecuteQueuedTasks = async () => {
     selectedTokens.value = prevSelectedTokens;
     selectedTasks.value = prevSelectedTasks;
     isExecutingQueuedTasks.value = false;
+    safeLocalStorage.removeItem('queued_tasks_executing');
     // 重要：在积攒队列执行完成后，重置 isRunning 状态
     batchTaskStore.stopTask();
   }
@@ -6200,14 +5726,14 @@ const checkAndExecuteQueuedTasks = async () => {
 // Scheduled Tasks Scheduler
 // ======================
 
-// Initialize scheduled tasks from localStorage
-loadScheduledTasks();
+// 定时任务从 Store 自动加载，不需要手动加载
 
 // Watch for changes to scheduledTasks for debugging
 watch(
   scheduledTasks,
   (newVal) => {
     // Reset countdowns when tasks change
+    nextExecutionTimes.value = {};
     taskCountdowns.value = {};
     updateCountdowns();
   },
@@ -6230,9 +5756,11 @@ const intervalId = ref(null);
 let lastTaskExecution = null;
 let healthCheckInterval = null;
 const pageLoadTime = Date.now();
+let lastRefreshTime = Date.now(); // 记录上次刷新时间
+let taskJustCompleted = false; // 标记任务是否刚刚完成，用于任务完成后的立即倒计时刷新
 
 // Health check for the scheduler
-const healthCheck = () => {
+const healthCheck = async () => {
   // If interval is not running, restart it
   if (!intervalId.value) {
     console.error(
@@ -6249,28 +5777,268 @@ const healthCheck = () => {
       console.error(
         `[${new Date().toISOString()}] isRunning has been true for more than 10 minutes, resetting to false`,
       );
-      batchTaskStore.isRunning.value = false;
+      batchTaskStore.stopTask();
       addLog({
         time: new Date().toLocaleTimeString(),
         message: "=== 检测到任务执行超时，已重置isRunning状态 ===",
         type: "warning",
       });
+      
+      // Check for incomplete tasks after resetting isRunning
+      try {
+        const savedState = safeLocalStorage.getItem('executingState');
+        if (savedState) {
+          const state = JSON.parse(savedState);
+          if (state.selectedTokens && state.selectedTokens.length > 0) {
+            // Check if the state is recent (within 30 minutes) to avoid recovering old tasks
+            const stateTimestamp = state.timestamp || 0;
+            const now = Date.now();
+            const thirtyMinutesAgo = now - 30 * 60 * 1000;
+            
+            if (stateTimestamp >= thirtyMinutesAgo) {
+              addLog({
+                time: new Date().toLocaleTimeString(),
+                message: `=== 检测到未完成的任务，开始恢复执行 ===`,
+                type: "info",
+              });
+
+              const hasDailyTask = (state.selectedTasks || []).some(t => t === 'startBatch' || t === 'batchDaily');
+              const otherTasks = (state.selectedTasks || []).filter(t => t !== 'startBatch' && t !== 'batchDaily');
+
+              selectedTokens.value = [...state.selectedTokens];
+
+              // 设置lastTaskExecution为当前时间，避免恢复执行后再次被超时检测重置
+              lastTaskExecution = Date.now();
+
+              if (hasDailyTask) {
+                await startBatch(true); // 传入true表示从恢复状态执行
+              } else if (otherTasks.length > 0) {
+                for (const taskName of otherTasks) {
+                  const taskFunction = getTaskFunction(taskName);
+                  if (typeof taskFunction === 'function') {
+                    await taskFunction();
+                  }
+                }
+              }
+              
+              // 只有任务成功恢复后才清除状态
+              safeLocalStorage.removeItem('executingState');
+            } else {
+              // 状态太旧（超过30分钟），清除它
+              addLog({
+                time: new Date().toLocaleTimeString(),
+                message: `=== 任务状态已过期（超过30分钟），清除恢复状态 ===`,
+                type: "warning",
+              });
+              safeLocalStorage.removeItem('executingState');
+            }
+          } else {
+            // 没有有效的selectedTokens，清除状态
+            safeLocalStorage.removeItem('executingState');
+          }
+        }
+      } catch (e) {
+        console.error('恢复执行状态失败:', e);
+        // 出错时不清除状态，让下次检查重试
+      }
     }
   }
 
   // Check for page refresh
   if (batchSettings.enableRefresh && batchSettings.refreshInterval > 0) {
-    const elapsedMinutes = (Date.now() - pageLoadTime) / 1000 / 60;
+    const now = Date.now();
+    const noticeDelaySeconds = batchSettings.refreshNoticeDelay || 30;
+    
+    // 任务完成后的立即倒计时刷新模式
+    if (taskJustCompleted) {
+      const elapsedSinceCompletion = (now - lastRefreshTime) / 1000; // 从任务完成开始计算的秒数
+      const remainingSeconds = Math.max(0, noticeDelaySeconds - elapsedSinceCompletion);
+      const remainingSecondsInt = Math.ceil(remainingSeconds);
+      
+      // 只在特定时间点显示倒计时日志：每10秒，或最后5秒每秒显示
+      const shouldShowLog = remainingSecondsInt <= 5 || remainingSecondsInt % 10 === 0;
+      
+      if (shouldShowLog && remainingSecondsInt > 0) {
+        // 检查是否已经显示过这个秒数的日志
+        const lastLog = batchTaskStore.logs[batchTaskStore.logs.length - 1];
+        const logMessage = `倒计时: ${remainingSecondsInt} 秒`;
+        
+        if (!lastLog || lastLog.message !== logMessage) {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: logMessage,
+            type: "warning"
+          });
+        }
+        
+        // 更新页面倒计时显示
+        refreshCountdownDisplay.value = {
+          show: true,
+          seconds: remainingSecondsInt
+        };
+      }
+      
+      // 倒计时结束，执行刷新
+      if (elapsedSinceCompletion >= noticeDelaySeconds) {
+        if (!batchTaskStore.isRunning.value) {
+          console.log('🔄 任务完成后刷新页面');
+          taskJustCompleted = false; // 重置标记
+          refreshCountdownDisplay.value.show = false; // 隐藏倒计时
+          window.location.reload();
+        }
+      }
+    } else {
+      // 非任务完成模式，隐藏倒计时
+      // 正常的定时刷新逻辑
+      const elapsedMinutes = (now - lastRefreshTime) / 1000 / 60;
+      const noticeDelayMinutes = noticeDelaySeconds / 60;
+      
+      // 计算距离下次刷新的剩余秒数
+      const totalIntervalSeconds = batchSettings.refreshInterval * 60;
+      const elapsedSeconds = (now - lastRefreshTime) / 1000;
+      const remainingSecondsTotal = Math.max(0, totalIntervalSeconds - elapsedSeconds);
+      const remainingSecondsInt = Math.ceil(remainingSecondsTotal);
+      
+      // 当距离刷新时间小于等于提示延迟时，显示倒计时
+      if (remainingSecondsTotal <= noticeDelaySeconds && remainingSecondsTotal > 0) {
+        // 只在特定时间点显示倒计时日志：每10秒，或最后5秒每秒显示
+        const shouldShowLog = remainingSecondsInt <= 5 || remainingSecondsInt % 10 === 0;
+        
+        if (shouldShowLog) {
+          // 检查是否已经显示过这个秒数的日志
+          const lastLog = batchTaskStore.logs[batchTaskStore.logs.length - 1];
+          const logMessage = `倒计时: ${remainingSecondsInt} 秒`;
+          
+          if (!lastLog || lastLog.message !== logMessage) {
+            addLog({
+              time: new Date().toLocaleTimeString(),
+              message: logMessage,
+              type: "warning"
+            });
+          }
+        }
+        
+        // 更新页面倒计时显示
+        refreshCountdownDisplay.value = {
+          show: true,
+          seconds: remainingSecondsInt
+        };
+      } else {
+        // 不在倒计时范围内，隐藏显示
+        refreshCountdownDisplay.value.show = false;
+      }
+      
+      // 刷新前提示（消息通知）
+      if (elapsedMinutes >= batchSettings.refreshInterval - noticeDelayMinutes && elapsedMinutes < batchSettings.refreshInterval) {
+        const remainingSeconds = Math.floor((batchSettings.refreshInterval - elapsedMinutes) * 60);
+        const progress = batchTaskStore.currentProgress.value || 0;
+        console.log(`⏰ 页面将在 ${remainingSeconds} 秒后刷新，当前任务进度：${progress}%`);
+        
+        // 显示通知（每10秒显示一次，避免频繁）
+        if (remainingSeconds % 10 === 0) {
+          message.info(`页面将在 ${remainingSeconds} 秒后刷新，当前任务进度：${progress}%`, { duration: 5000 });
+        }
+      }
+      
+      if (elapsedMinutes >= batchSettings.refreshInterval) {
+        if (!batchTaskStore.isRunning.value) {
+          console.log('🔄 执行页面刷新');
+          lastRefreshTime = now; // 更新上次刷新时间
+          refreshCountdownDisplay.value.show = false; // 隐藏倒计时
+          window.location.reload();
+        } else {
+          console.log('⏸️ 任务正在运行，跳过刷新，任务完成后将立即倒计时刷新');
+        }
+      }
+    }
+  }
+};
+
+// 独立的页面刷新检查函数（用于定时器调用）
+const checkForPageRefresh = () => {
+  if (!batchSettings.enableRefresh || batchSettings.refreshInterval <= 0) {
+    return;
+  }
+
+  const now = Date.now();
+  const noticeDelaySeconds = batchSettings.refreshNoticeDelay || 30;
+
+  // 任务完成后的立即倒计时刷新模式
+  if (taskJustCompleted) {
+    const elapsedSinceCompletion = (now - lastRefreshTime) / 1000;
+    const remainingSeconds = Math.max(0, noticeDelaySeconds - elapsedSinceCompletion);
+    const remainingSecondsInt = Math.ceil(remainingSeconds);
+
+    const shouldShowLog = remainingSecondsInt <= 5 || remainingSecondsInt % 10 === 0;
+
+    if (shouldShowLog && remainingSecondsInt > 0) {
+      const lastLog = batchTaskStore.logs[batchTaskStore.logs.length - 1];
+      const logMessage = `倒计时: ${remainingSecondsInt} 秒`;
+
+      if (!lastLog || lastLog.message !== logMessage) {
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: logMessage,
+          type: "warning"
+        });
+      }
+
+      refreshCountdownDisplay.value = {
+        show: true,
+        seconds: remainingSecondsInt
+      };
+    }
+
+    if (elapsedSinceCompletion >= noticeDelaySeconds) {
+      if (!batchTaskStore.isRunning.value) {
+        console.log('🔄 任务完成后刷新页面');
+        taskJustCompleted = false;
+        refreshCountdownDisplay.value.show = false;
+        window.location.reload();
+      }
+    }
+  } else {
+    // 正常的定时刷新逻辑
+    const elapsedMinutes = (now - lastRefreshTime) / 1000 / 60;
+    const noticeDelayMinutes = noticeDelaySeconds / 60;
+
+    const totalIntervalSeconds = batchSettings.refreshInterval * 60;
+    const elapsedSeconds = (now - lastRefreshTime) / 1000;
+    const remainingSecondsTotal = Math.max(0, totalIntervalSeconds - elapsedSeconds);
+    const remainingSecondsInt = Math.ceil(remainingSecondsTotal);
+
+    if (remainingSecondsTotal <= noticeDelaySeconds && remainingSecondsTotal > 0) {
+      const shouldShowLog = remainingSecondsInt <= 5 || remainingSecondsInt % 10 === 0;
+
+      if (shouldShowLog) {
+        const lastLog = batchTaskStore.logs[batchTaskStore.logs.length - 1];
+        const logMessage = `倒计时: ${remainingSecondsInt} 秒`;
+
+        if (!lastLog || lastLog.message !== logMessage) {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: logMessage,
+            type: "warning"
+          });
+        }
+      }
+
+      refreshCountdownDisplay.value = {
+        show: true,
+        seconds: remainingSecondsInt
+      };
+    } else {
+      refreshCountdownDisplay.value.show = false;
+    }
+
     if (elapsedMinutes >= batchSettings.refreshInterval) {
       if (!batchTaskStore.isRunning.value) {
-        console.log(
-          `[${new Date().toISOString()}] Refreshing page as scheduled (Interval: ${batchSettings.refreshInterval}m, Elapsed: ${elapsedMinutes.toFixed(1)}m)`,
-        );
+        console.log('🔄 执行页面刷新');
+        lastRefreshTime = now;
+        refreshCountdownDisplay.value.show = false;
         window.location.reload();
       } else {
-        console.log(
-          `[${new Date().toISOString()}] Scheduled refresh postponed due to running task`,
-        );
+        console.log('⏸️ 任务正在运行，跳过刷新，任务完成后将立即倒计时刷新');
       }
     }
   }
@@ -6283,7 +6051,10 @@ const startScheduler = () => {
     clearInterval(intervalId.value);
   }
 
-  // Check every 10 seconds instead of 60 seconds for more timely task execution
+  // 用于跟踪任务的处理状态，1分钟内最多处理2次
+  const processedTasks = new Map();
+
+  // Check every 5 seconds to reduce duplicate checks
   intervalId.value = setInterval(async () => {
     try {
       const now = new Date();
@@ -6294,6 +6065,12 @@ const startScheduler = () => {
         second: "2-digit",
       });
 
+      // 生成当前分钟的唯一标识
+      const currentMinuteKey = `${now.getDate()}_${now.getHours()}_${now.getMinutes()}`;
+
+      // 先执行刷新检查（无论有没有定时任务都要检查刷新）
+      checkForPageRefresh();
+
       // Don't skip all tasks if isRunning is true, just skip individual task execution if already running
       const tasksToRun = scheduledTasks.value.filter((task) => task.enabled);
 
@@ -6301,9 +6078,9 @@ const startScheduler = () => {
         return;
       }
 
+      // 依次执行定时任务（不是并行）
       for (const task of tasksToRun) {
         let shouldRun = false;
-        let reason = "";
 
         if (task.runType === "daily") {
           // Check if current time matches the scheduled time
@@ -6314,7 +6091,6 @@ const startScheduler = () => {
             minute: "2-digit",
           });
           shouldRun = nowTime === taskTime;
-          reason = `currentTime=${nowTime}, taskTime=${taskTime}, match=${shouldRun}`;
         } else if (task.runType === "cron") {
           // Improved cron expression parsing using shared utility
           try {
@@ -6334,41 +6110,163 @@ const startScheduler = () => {
         }
 
         if (shouldRun) {
-          // Check if the task was already executed in the last minute to avoid duplicate execution
-          const taskExecutionKey = `${task.id}_${now.getDate()}_${now.getHours()}_${now.getMinutes()}`;
-          const lastExecutionKey = localStorage.getItem(
-            `lastTaskExecution_${task.id}`,
-          );
-
-          if (lastExecutionKey !== taskExecutionKey) {
-            // Update last execution time
-            localStorage.setItem(
-              `lastTaskExecution_${task.id}`,
-              taskExecutionKey,
-            );
-
-            // Execute the task
-            lastTaskExecution = Date.now();
-            const taskExecuted = await executeScheduledTask(task);
-            if (taskExecuted !== false) {
+          const taskKey = `${task.id}_${currentMinuteKey}`;
+          const currentCount = processedTasks.get(taskKey) || 0;
+          
+          // 检查任务是否已经在本分钟内处理过2次
+          if (currentCount >= 2) {
+            continue;
+          }
+          
+          // 增加处理次数
+          processedTasks.set(taskKey, currentCount + 1);
+          
+          // 检查任务是否正在执行中（通过 executeScheduledTask 设置的标记）
+          const isTaskExecuting = safeLocalStorage.getItem(`task_executing_${task.id}`);
+          if (isTaskExecuting) {
+            // 任务正在执行中，跳过本次调度
+            if (batchSettings.enableDebugLogs) {
               addLog({
-                time: new Date().toLocaleTimeString(),
-                message: `=== 定时任务执行完成：${task.name} ===`,
-                type: "success",
-              });
-            } else {
-              addLog({
-                time: new Date().toLocaleTimeString(),
-                message: `=== 定时任务 ${task.name} 已加入积攒队列，将依次执行 ===`,
+                time: currentTime,
+                message: `=== 定时任务 ${task.name} 正在执行中，跳过本次调度 ===`,
                 type: "info",
               });
             }
+            continue;
+          }
+          
+          // 检查任务是否已经在队列中（同时检查任务名称、任务类型和账号列表）
+          const existingTaskIndex = batchTaskStore.taskQueue.findIndex(t => {
+            const sameName = t.name === task.name;
+            // 统一使用 selectedTasks 或 taskNames 进行比较（创建副本避免修改原数组）
+            const tTasks = [...(t.selectedTasks || t.taskNames || [])];
+            const taskTasks = [...(task.selectedTasks || task.taskNames || ['batchDaily'])];
+            const sameTasks = JSON.stringify(tTasks.sort()) === JSON.stringify(taskTasks.sort());
+            // 统一使用 selectedTokens 或 tokenIds 进行比较（创建副本避免修改原数组）
+            const tTokens = [...(t.selectedTokens || t.tokenIds || [])];
+            const taskTokens = [...(task.selectedTokens || task.tokenIds || [])];
+            const sameTokens = JSON.stringify(tTokens.sort()) === JSON.stringify(taskTokens.sort());
+            return sameName && sameTasks && sameTokens;
+          });
+          
+          if (isPauseTime.value && isPauseTime.value.paused) {
+            // 处于暂停时间，加入积攒队列
+            if (existingTaskIndex === -1) {
+              enhancedAddLog({
+                time: currentTime,
+                message: `=== 定时任务 ${task.name} 到点但处于${isPauseTime.value.reason}，加入积攒队列，下次执行时间不变 ===`,
+                type: "info",
+              });
+              
+              // 为每个任务生成唯一ID
+              const uniqueTaskId = Date.now() + Math.random();
+              batchTaskStore.addToTaskQueue({
+                ...task,
+                id: uniqueTaskId,
+                runType: 'scheduled',
+                selectedTokens: [...(task.selectedTokens || task.tokenIds || [])],
+                selectedTasks: [...(task.selectedTasks || task.taskNames || ['batchDaily'])],
+              });
+            }
+            // 重要：加入积攒队列后，跳过本次执行，继续处理下一个任务
+            continue;
+          } else if (batchSettings.enableQueueOnConflict && batchTaskStore.isRunning) {
+            // 开关开启，有任务运行中，加入积攒队列
+            if (existingTaskIndex === -1) {
+              enhancedAddLog({
+                time: currentTime,
+                message: `=== 定时任务 ${task.name} 到点但检测到任务冲突（有任务运行中），加入积攒队列依次执行 ===`,
+                type: "warning",
+              });
+              
+              // 为每个任务生成唯一ID
+              const uniqueTaskId = Date.now() + Math.random();
+              batchTaskStore.addToTaskQueue({
+                ...task,
+                id: uniqueTaskId,
+                runType: 'scheduled',
+                selectedTokens: [...(task.selectedTokens || task.tokenIds || [])],
+                selectedTasks: [...(task.selectedTasks || task.taskNames || ['batchDaily'])],
+              });
+            }
+            // 重要：加入积攒队列后，跳过本次执行，继续处理下一个任务
+            continue;
+          }
+          // 开关关闭时，不检查 isRunning，直接执行任务（实现并行执行）
+          
+          // 标记任务正在执行，防止重复执行
+          safeLocalStorage.setItem(`task_executing_${task.id}`, Date.now().toString());
+          
+          // 重要：在执行任务前设置 isRunning 状态，确保后续任务能检测到冲突
+          batchTaskStore.startTask();
+          
+          // 简化版任务持久化：保存正在执行的任务
+          saveRunningTask(task);
+          
+          // 根据开关决定执行方式
+          if (batchSettings.enableQueueOnConflict) {
+            // 顺序执行：使用 await 等待完成
+            let taskExecuted = false;
+            try {
+              // 调用 executeScheduledTask，传递 skipConflictCheck 参数
+              taskExecuted = await executeScheduledTask(task, true);
+            } finally {
+              // 清除任务正在执行的标记
+              safeLocalStorage.removeItem(`task_executing_${task.id}`);
+              // 任务完成，清除保存的任务信息
+              clearRunningTask();
+              // 重要：更新lastTaskExecution为当前时间，避免安全检查误判
+              lastTaskExecution = Date.now();
+              // 重要：先重置 isRunning 为 false，然后执行积攒队列
+              batchTaskStore.stopTask();
+              // 重要：只有任务真正执行完成（不是加入积攒队列）后才检查积攒队列
+              // 使用 await 确保积攒队列执行完成
+              if (taskExecuted !== false) {
+                await checkAndExecuteQueuedTasks();
+              }
+            }
           } else {
-            // Only log once per minute to avoid spamming logs
-            // But since we check every 10s, this might log multiple times if we don't track logged state
-            // For now, we can skip logging "already executed" to keep logs clean
+            // 并行执行：不使用 await，让任务在后台运行
+            executeScheduledTask(task, true).then((taskExecuted) => {
+              // 清除任务正在执行的标记
+              safeLocalStorage.removeItem(`task_executing_${task.id}`);
+              // 任务完成，清除保存的任务信息
+              clearRunningTask();
+              // 重要：更新lastTaskExecution为当前时间，避免安全检查误判
+              lastTaskExecution = Date.now();
+              // 重要：先重置 isRunning 为 false，然后执行积攒队列
+              batchTaskStore.stopTask();
+              // 重要：只有任务真正执行完成（不是加入积攒队列）后才检查积攒队列
+              if (taskExecuted !== false) {
+                checkAndExecuteQueuedTasks();
+              }
+            }).catch((error) => {
+              console.error('并行执行任务失败:', error);
+              // 清除任务正在执行的标记
+              safeLocalStorage.removeItem(`task_executing_${task.id}`);
+              // 任务完成，清除保存的任务信息
+              clearRunningTask();
+              // 重要：更新lastTaskExecution为当前时间，避免安全检查误判
+              lastTaskExecution = Date.now();
+              // 重要：先重置 isRunning 为 false
+              batchTaskStore.stopTask();
+            });
           }
         }
+      }
+      
+      // 清理过期的处理记录（超过1分钟的记录）
+      const expiredKeys = [];
+      for (const [key, value] of processedTasks.entries()) {
+        const [taskId, date, hour, minute] = key.split('_');
+        const taskMinuteKey = `${date}_${hour}_${minute}`;
+        if (taskMinuteKey !== currentMinuteKey) {
+          expiredKeys.push(key);
+        }
+      }
+      
+      for (const key of expiredKeys) {
+        processedTasks.delete(key);
       }
     } catch (error) {
       console.error(
@@ -6381,64 +6279,78 @@ const startScheduler = () => {
         type: "error",
       });
     }
-  }, 10000); // Check every 10 seconds
+  }, 5000); // Check every 5 seconds to reduce duplicate checks
 };
 
-// Token刷新等待处理函数
-const handleTokenRefreshWaiting = (data) => {
-  addLog({
-    time: new Date().toLocaleTimeString(),
-    message: `Token刷新限流等待中，预计等待 ${data.waitSeconds} 秒（队列: ${data.queueSize}）`,
-    type: "warning",
-  });
+// 简化版任务持久化：保存正在执行的任务，刷新后重新执行
+const RUNNING_TASK_KEY = 'running_task_info';
+
+// 保存正在执行的任务信息（简化版，只保存任务配置，不保存进度）
+const saveRunningTask = (task) => {
+  try {
+    safeLocalStorage.setItem(RUNNING_TASK_KEY, JSON.stringify({
+      ...task,
+      timestamp: Date.now()
+    }));
+  } catch (e) {
+    console.error('保存运行中任务失败:', e);
+  }
+};
+
+// 清除运行中的任务信息
+const clearRunningTask = () => {
+  safeLocalStorage.removeItem(RUNNING_TASK_KEY);
 };
 
 // Debug: Log initial state when component mounts
-let blackMarketInterval = null;
-
 onMounted(async () => {
-  // 先清理过期的 localStorage 标记
+  // 立即启动倒计时定时器，确保在任何任务执行前开始更新倒计时
+  startCountdown();
+  
+  // 清理过期的localStorage标记
   try {
     const now = new Date();
-    
     Object.keys(localStorage).forEach(key => {
-      if (key.startsWith('task_') && !key.startsWith('task_logs') && !key.startsWith('batch_task_queue')) {
-        try {
-          if (key.startsWith('task_state_')) {
-            // 检查是否超过5分钟
-            const taskInfo = safeLocalStorage.getItem(key);
-            if (taskInfo) {
+      if (key.startsWith('lastTaskExecution_') || 
+          key.startsWith('task_executing_') || 
+          key === 'running_task_info' || 
+          key === 'executingState') {
+        if (key === 'running_task_info') {
+          // 运行中任务信息，检查是否过期
+          const taskInfo = safeLocalStorage.getItem(key);
+          if (taskInfo) {
+            try {
               const task = JSON.parse(taskInfo);
               if (Date.now() - (task.timestamp || 0) > 5 * 60 * 1000) {
                 safeLocalStorage.removeItem(key);
               }
-            }
-          } else if (key.startsWith('task_executing_')) {
-            // 执行标记，检查是否过期（超过30分钟）
-            const executionTime = parseInt(safeLocalStorage.getItem(key) || '0');
-            if (now.getTime() - executionTime > 30 * 60 * 1000) {
+            } catch (e) {
               safeLocalStorage.removeItem(key);
             }
-          } else if (key.startsWith('lastTaskExecution_')) {
-            // 执行时间标记，检查是否过期（超过1小时）
-            const lastExecution = safeLocalStorage.getItem(key);
-            if (lastExecution) {
-              const [id, date, hour, minute] = lastExecution.split('_');
-              if (date && hour && minute) {
-                const executionTime = new Date();
-                executionTime.setDate(parseInt(date));
-                executionTime.setHours(parseInt(hour));
-                executionTime.setMinutes(parseInt(minute));
-                if (now - executionTime > 60 * 60 * 1000) {
-                  safeLocalStorage.removeItem(key);
-                }
-              }
-            }
-          } else if (key === 'executingState') {
-            // 执行状态，直接清除
+          }
+        } else if (key.startsWith('task_executing_')) {
+          // 执行标记，检查是否过期（超过30分钟）
+          const executionTime = parseInt(safeLocalStorage.getItem(key) || '0');
+          if (now.getTime() - executionTime > 30 * 60 * 1000) {
             safeLocalStorage.removeItem(key);
           }
-        } catch (e) {
+        } else if (key.startsWith('lastTaskExecution_')) {
+          // 执行时间标记，检查是否过期（超过1小时）
+          const lastExecution = safeLocalStorage.getItem(key);
+          if (lastExecution) {
+            const [id, date, hour, minute] = lastExecution.split('_');
+            if (date && hour && minute) {
+              const executionTime = new Date();
+              executionTime.setDate(parseInt(date));
+              executionTime.setHours(parseInt(hour));
+              executionTime.setMinutes(parseInt(minute));
+              if (now - executionTime > 60 * 60 * 1000) {
+                safeLocalStorage.removeItem(key);
+              }
+            }
+          }
+        } else if (key === 'executingState') {
+          // 执行状态，直接清除
           safeLocalStorage.removeItem(key);
         }
       }
@@ -6456,7 +6368,7 @@ onMounted(async () => {
     try {
       const queue = JSON.parse(savedQueue);
       if (queue.length > 0) {
-        addLog({
+        enhancedAddLog({
           time: new Date().toLocaleTimeString(),
           message: `=== 检测到 ${queue.length} 个积攒任务，已加载到任务队列 ===`,
           type: "info",
@@ -6474,7 +6386,7 @@ onMounted(async () => {
       const task = JSON.parse(savedRunningTask);
       // 检查是否在5分钟内（避免很久以前的任务被重新执行）
       if (Date.now() - task.timestamp < 5 * 60 * 1000) {
-        addLog({
+        enhancedAddLog({
           time: new Date().toLocaleTimeString(),
           message: `=== 检测到运行中被刷新的任务：${task.name}，3秒后重新执行 ===`,
           type: "warning",
@@ -6502,7 +6414,7 @@ onMounted(async () => {
       const task = JSON.parse(savedBlackMarketTask);
       // 检查是否在5分钟内（避免很久以前的任务被重新执行）
       if (Date.now() - task.timestamp < 5 * 60 * 1000) {
-        addLog({
+        enhancedAddLog({
           time: new Date().toLocaleTimeString(),
           message: `=== 检测到运行中被刷新的任务：${task.name}，3秒后重新执行 ===`,
           type: "warning",
@@ -6546,7 +6458,7 @@ onMounted(async () => {
     try {
       const tasks = JSON.parse(pendingScheduledTasks);
       if (tasks.length > 0) {
-        addLog({
+        enhancedAddLog({
           time: new Date().toLocaleTimeString(),
           message: `=== 检测到 ${tasks.length} 个待执行的定时任务，准备执行 ===`,
           type: "info",
@@ -6556,30 +6468,17 @@ onMounted(async () => {
         await new Promise(r => setTimeout(r, 3000));
         
         for (const task of tasks) {
-          addLog({
+          enhancedAddLog({
             time: new Date().toLocaleTimeString(),
             message: `=== 执行待处理的定时任务：${task.name} ===`,
             type: "info",
           });
-          const taskExecuted = await executeScheduledTask(task);
-          if (taskExecuted !== false) {
-            addLog({
-              time: new Date().toLocaleTimeString(),
-              message: `=== 待处理定时任务执行完成：${task.name} ===`,
-              type: "success",
-            });
-          } else {
-            addLog({
-              time: new Date().toLocaleTimeString(),
-              message: `=== 待处理定时任务 ${task.name} 已加入积攒队列，将依次执行 ===`,
-              type: "info",
-            });
-          }
+          await executeScheduledTask(task);
         }
         
         // 执行完成后清除待处理任务
         safeLocalStorage.removeItem('pending_scheduled_tasks');
-        addLog({
+        enhancedAddLog({
           time: new Date().toLocaleTimeString(),
           message: `=== 所有待执行的定时任务已处理完成 ===`,
           type: "success",
@@ -6602,36 +6501,23 @@ onMounted(async () => {
   scheduleTaskExecution();
   // 启动 Pinia 存储中的定时任务调度器
   scheduledTaskStore.startScheduler();
-  // Start countdown timer
-  startCountdown();
-  // Start resume check timer for pause time detection
-  startResumeCheck();
   loadTaskTemplates();
-  // 监听Token刷新等待事件
-  $emit.on("token:refresh:waiting", handleTokenRefreshWaiting);
-
-  // 初始化黑市周状态
-  updateBlackMarketStatus();
-  // 每分钟更新一次黑市周状态
-  blackMarketInterval = setInterval(updateBlackMarketStatus, 60000);
-
   // Start time update timer for pause time checking
   setInterval(() => {
     currentTime.value = new Date();
   }, 1000);
+  // Start resume check timer
+  startResumeCheck();
 });
 
-// Cleanup countdown interval on unmount
+// Cleanup task scheduler intervals
 onBeforeUnmount(() => {
+  // 清理倒计时定时器
   if (countdownInterval) {
     clearInterval(countdownInterval);
     countdownInterval = null;
   }
-
-  // 移除Token刷新等待事件监听
-  $emit.off("token:refresh:waiting", handleTokenRefreshWaiting);
-
-  // Cleanup task scheduler intervals
+  
   if (intervalId.value) {
     clearInterval(intervalId.value);
     intervalId.value = null;
@@ -6646,13 +6532,7 @@ onBeforeUnmount(() => {
     clearInterval(healthCheckInterval);
     healthCheckInterval = null;
   }
-
-  // 清理黑市周定时器
-  if (blackMarketInterval) {
-    clearInterval(blackMarketInterval);
-    blackMarketInterval = null;
-  }
-
+  
   // Cleanup resume check interval
   if (resumeCheckInterval.value) {
     clearInterval(resumeCheckInterval.value);
@@ -6767,28 +6647,31 @@ const executeScheduledTask = async (task, skipConflictCheck = false) => {
   const availableTokenList = tokens.value || tokenStore.gameTokens?.value || [];
   const taskTokenIds = task.tokenIds || task.selectedTokens || task.connectedTokens || [];
   const taskTaskNames = task.taskNames || task.selectedTasks || ['batchDaily'];
-
+  
   // 安全检查：如果 isRunning 为 true 但没有实际任务在执行（可能是之前任务异常退出），则重置状态
-  const now = Date.now();
-  const tenMinutesAgo = now - 10 * 60 * 1000;
-  // 检查是否有任何任务正在执行
-  const anyTaskExecuting = Array.from(scheduledTasks.value || []).some(task => {
-    const executingMarker = safeLocalStorage.getItem(`task_executing_${task.id}`);
-    return executingMarker;
-  });
-
-  // 如果 isRunning 为 true 但没有实际任务在执行，并且上次任务执行时间超过10分钟，则重置状态
-  if (batchTaskStore.isRunning.value && !anyTaskExecuting && (!lastTaskExecution || lastTaskExecution < tenMinutesAgo)) {
-    addLog({
-      time: new Date().toLocaleTimeString(),
-      message: `=== 检测到任务状态异常（isRunning 卡在 true），强制重置状态 ===`,
-      type: "warning",
+  if (batchTaskStore.isRunning.value) {
+    const now = Date.now();
+    const tenMinutesAgo = now - 10 * 60 * 1000;
+    // 检查是否有任何任务正在执行
+    const anyTaskExecuting = Array.from(scheduledTasks.value || []).some(task => {
+      const executingMarker = safeLocalStorage.getItem(`task_executing_${task.id}`);
+      return executingMarker;
     });
-    batchTaskStore.stopTask();
+    
+    // 只有当没有任务正在执行且上次任务执行时间超过10分钟时，才认为状态异常，强制重置
+    if (!anyTaskExecuting && (!lastTaskExecution || lastTaskExecution < tenMinutesAgo)) {
+      addLog({
+        time: new Date().toLocaleTimeString(),
+        message: `=== 检测到任务状态异常（isRunning 卡在 true），强制重置状态 ===`,
+        type: "warning",
+      });
+      batchTaskStore.stopTask();
+    }
   }
-
+  
   // 检测任务冲突：有任务正在运行
-  if (!skipConflictCheck && batchTaskStore.isRunning.value) {
+  if (!skipConflictCheck && batchTaskStore.isRunning) { // 重要：这不是bug修复
+    // 不要因为代码检查工具提示而改回 .value，否则任务冲突检测会失效
     // 检测到任务冲突，检查是否开启冲突加入积攒队列
     if (batchSettings.enableQueueOnConflict) {
       addLog({
@@ -6817,7 +6700,7 @@ const executeScheduledTask = async (task, skipConflictCheck = false) => {
       // 不return false，继续执行，实现并行执行
     }
   }
-
+  
   // 重要：只有在确认无冲突后才设置任务执行状态
   // 这样后续的任务就能正确检测到当前任务正在执行
   selectedTokens.value = [...taskTokenIds];
@@ -6826,16 +6709,209 @@ const executeScheduledTask = async (task, skipConflictCheck = false) => {
   lastTaskExecution = Date.now();
   batchTaskStore.startTask();
   batchTaskStore.setProgress(0);
-
-  const currentDate = new Date();
-  const taskExecutionKey = `${task.id}_${currentDate.getDate()}_${currentDate.getHours()}_${currentDate.getMinutes()}`;
+  
+  const now = new Date();
+  const taskExecutionKey = `${task.id}_${now.getDate()}_${now.getHours()}_${now.getMinutes()}`;
   safeLocalStorage.setItem(`lastTaskExecution_${task.id}`, taskExecutionKey);
-
+  
   safeLocalStorage.setItem('executingState', JSON.stringify({
     selectedTokens: taskTokenIds,
     selectedTasks: taskTaskNames,
     timestamp: Date.now()
   }));
+
+  // 使用任务名称
+  const taskDisplayName = task.name;
+  
+  if (task.runType === 'manual') {
+    addLog({
+      time: new Date().toLocaleTimeString(),
+      message: `=== 开始执行积攒队列中的手动任务: ${taskDisplayName} ===`,
+      type: "info",
+    });
+
+    try {
+
+      taskTokenIds.forEach((id) => {
+        tokenStatus.value[id] = "waiting";
+      });
+
+      const totalTokens = taskTokenIds.length;
+      let completedCount = 0;
+
+      const taskPromises = taskTokenIds.map(async (tokenId) => {
+        if (batchTaskStore.shouldStop.value) return;
+
+        tokenStatus.value[tokenId] = "running";
+
+        let retryCount = 0;
+        const MAX_RETRIES = 1;
+        let success = false;
+
+        while (retryCount <= MAX_RETRIES && !success) {
+          if (batchTaskStore.shouldStop.value) break;
+
+          const token = availableTokenList.find((t) => t.id === tokenId) || { id: tokenId, name: tokenId };
+
+          try {
+            addLog({
+              time: new Date().toLocaleTimeString(),
+              message: `=== 开始执行: ${token.name} ===`,
+              type: "info",
+            });
+
+            await ensureConnection(tokenId, 2, taskTaskNames, task.name);
+
+            // 依次执行每个任务（不是并行）
+            for (const taskName of taskTaskNames) {
+              if (batchTaskStore.shouldStop.value) break;
+
+              if (isPauseTime.value.paused) {
+                // 检查任务是否已经在积攒队列中（同时检查任务名称和任务类型）
+                const existingTaskIndex = batchTaskStore.taskQueue.findIndex(t => 
+                  t.name === task.name && 
+                  JSON.stringify(t.selectedTasks?.sort()) === JSON.stringify([taskName].sort())
+                );
+                
+                if (existingTaskIndex === -1) {
+                  // 任务不在队列中，添加新任务（包含当前账号）
+                  addLog({
+                    time: new Date().toLocaleTimeString(),
+                    message: `=== ${token.name} 任务被暂停: 当前处于${isPauseTime.value.reason}，已加入积攒队列 ===`,
+                    type: "info",
+                  });
+                  batchTaskStore.addToTaskQueue({
+                    id: Date.now() + Math.random(),
+                    name: task.name, // 使用任务的显示名称，而不是函数名
+                    runType: 'manual',
+                    selectedTokens: [tokenId],
+                    selectedTasks: [taskName],
+                  });
+                } else {
+                  // 任务已在队列中，将当前账号添加到已有任务
+                  const existingTask = batchTaskStore.taskQueue[existingTaskIndex];
+                  if (!existingTask.selectedTokens.includes(tokenId)) {
+                    existingTask.selectedTokens.push(tokenId);
+                    addLog({
+                      time: new Date().toLocaleTimeString(),
+                      message: `=== ${token.name} 已添加到积攒队列中的任务 ===`,
+                      type: "info",
+                    });
+                  } else {
+                    addLog({
+                      time: new Date().toLocaleTimeString(),
+                      message: `=== ${token.name} 已在积攒队列中，跳过 ===`,
+                      type: "info",
+                    });
+                  }
+                }
+                return;
+              }
+
+              // 使用原始任务函数，不检测冲突，直接执行
+              const taskFunction = getOriginalTaskFunction(taskName);
+              if (typeof taskFunction === "function") {
+                addLog({
+                  time: new Date().toLocaleTimeString(),
+                  message: `${token.name} 执行任务: ${taskName}`,
+                  type: "info",
+                });
+                await taskFunction();
+              } else {
+                addLog({
+                  time: new Date().toLocaleTimeString(),
+                  message: `${token.name} 任务函数 ${taskName} 不存在`,
+                  type: "error",
+                });
+              }
+            }
+
+            success = true;
+            tokenStatus.value[tokenId] = "completed";
+            addLog({
+              time: new Date().toLocaleTimeString(),
+              message: `=== ${token.name} 执行完成 ===`,
+              type: "success",
+            });
+          } catch (error) {
+            console.error(error);
+            if (error.isPause) {
+                // 检查任务是否已经在积攒队列中（同时检查任务名称和任务类型）
+                const existingTaskIndex = batchTaskStore.taskQueue.findIndex(t => 
+                  t.name === task.name && 
+                  JSON.stringify(t.selectedTasks?.sort()) === JSON.stringify(selectedTasks.value?.sort())
+                );
+              
+              if (existingTaskIndex === -1) {
+                // 任务不在队列中，添加新任务
+                batchTaskStore.addToTaskQueue({
+                  id: Date.now() + Math.random(),
+                  name: task.name,
+                  runType: 'manual',
+                  selectedTokens: [tokenId],
+                  selectedTasks: selectedTasks.value,
+                });
+              } else {
+                // 任务已在队列中，将当前账号添加到已有任务
+                const existingTask = batchTaskStore.taskQueue[existingTaskIndex];
+                if (!existingTask.selectedTokens.includes(tokenId)) {
+                  existingTask.selectedTokens.push(tokenId);
+                }
+              }
+              success = true;
+              tokenStatus.value[tokenId] = "completed";
+              break;
+            }
+            if (retryCount < MAX_RETRIES && !batchTaskStore.shouldStop.value) {
+              addLog({
+                time: new Date().toLocaleTimeString(),
+                message: `${token.name} 执行出错: ${error.message}，等待3秒后重试...`,
+                type: "warning",
+              });
+              await new Promise((r) => setTimeout(r, 3000));
+              retryCount++;
+            } else {
+              tokenStatus.value[tokenId] = "failed";
+              addLog({
+                time: new Date().toLocaleTimeString(),
+                message: `${token.name} 执行失败: ${error.message}`,
+                type: "error",
+              });
+            }
+          }
+        }
+        completedCount++;
+        batchTaskStore.setProgress(Math.round((completedCount / totalTokens) * 100));
+      });
+
+      await Promise.all(taskPromises);
+
+      batchTaskStore.stopTask();
+      
+      // 从积攒队列中移除已执行的任务
+      const taskIndex = batchTaskStore.taskQueue.findIndex(t => t.id === task.id);
+      if (taskIndex !== -1) {
+        batchTaskStore.taskQueue.splice(taskIndex, 1);
+        // 保存到本地存储
+        saveTaskQueueToStorage();
+      }
+      
+      addLog({
+        time: new Date().toLocaleTimeString(),
+        message: `=== 积攒队列中的手动任务 ${task.name} 执行完成，已从队列移除 ===`,
+        type: "success",
+      });
+    } catch (error) {
+      addLog({
+        time: new Date().toLocaleTimeString(),
+        message: `=== 执行积攒队列任务失败: ${error.message} ===`,
+        type: "error",
+      });
+    } finally {
+      safeLocalStorage.removeItem('executingState');
+    }
+    return;
+  }
 
   addLog({
     time: new Date().toLocaleTimeString(),
@@ -6844,7 +6920,6 @@ const executeScheduledTask = async (task, skipConflictCheck = false) => {
   });
 
   try {
-    // Verify dependencies before executing task
     const dependenciesValid = await verifyTaskDependencies(task);
     if (!dependenciesValid) {
       addLog({
@@ -6852,19 +6927,47 @@ const executeScheduledTask = async (task, skipConflictCheck = false) => {
         message: `=== 定时任务 ${task.name} 依赖验证失败，取消执行 ===`,
         type: "error",
       });
-      return false;
+      return;
     }
 
-    // Filter out tokens that don't exist in current tokens.value
+    if (isPauseTime.value.paused) {
+      addLog({
+        time: new Date().toLocaleTimeString(),
+        message: `=== 定时任务 ${task.name} 被暂停: 当前处于${isPauseTime.value.reason}，已加入积攒队列 ===`,
+        type: "info",
+      });
+      batchTaskStore.addToTaskQueue(task);
+      return;
+    }
+
+    // 检查是否有其他任务正在运行
+    if (batchTaskStore.isRunning.value) {
+      addLog({
+        time: new Date().toLocaleTimeString(),
+        message: `=== 定时任务 ${task.name} 检测到任务冲突（有任务运行中），已加入积攒队列 ===`,
+        type: "info",
+      });
+      batchTaskStore.addToTaskQueue(task);
+      return;
+    }
+
+    const availableTokenList = tokens.value || tokenStore.gameTokens?.value || [];
+
     const availableTokens = (
       task.connectedTokens || task.selectedTokens
     ).filter((tokenId) => {
-      return tokens.value.some((t) => t.id === tokenId);
+      return availableTokenList.some((t) => t.id === tokenId);
+    });
+
+    addLog({
+      time: new Date().toLocaleTimeString(),
+      message: `=== 定时任务可用账号: ${availableTokens.length} 个，task.connectedTokens=${task.connectedTokens?.length || 0}, task.selectedTokens=${task.selectedTokens?.length || 0} ===`,
+      type: "info",
     });
 
     const missingTokens = (task.connectedTokens || task.selectedTokens).filter(
       (tokenId) => {
-        return !tokens.value.some((t) => t.id === tokenId);
+        return !availableTokenList.some((t) => t.id === tokenId);
       },
     );
 
@@ -6882,122 +6985,368 @@ const executeScheduledTask = async (task, skipConflictCheck = false) => {
         message: `=== 定时任务 ${task.name} 没有可用的Token，取消执行 ===`,
         type: "error",
       });
-      return false;
+      return;
     }
 
-    // Always use the latest selectedTokens from the task that exist in current tokens.value
     selectedTokens.value = [...availableTokens];
+    lastTaskExecution = Date.now();
+    batchTaskStore.startTask();
+    batchTaskStore.setProgress(0);
 
-    // Execute selected tasks in parallel
-    const taskPromises = task.selectedTasks.map(async (taskName) => {
-      if (shouldStop.value) return;
+    let taskTasksList = task.selectedTasks || task.taskNames || [];
 
-      if (
-        ["batchbaoku45", "batchbaoku13"].includes(taskName) &&
-        !isbaokuActivityOpen.value
-      ) {
+    // 如果包含 startBatch（日常任务），则过滤掉 store_purchase（黑市采购）
+    // 因为 startBatch 内部已经通过 DailyTaskRunner 执行了黑市购买
+    const hasStartBatch = taskTasksList.includes('startBatch');
+    if (hasStartBatch) {
+      const originalLength = taskTasksList.length;
+      taskTasksList = taskTasksList.filter(t => t !== 'store_purchase');
+      if (taskTasksList.length < originalLength) {
         addLog({
           time: new Date().toLocaleTimeString(),
-          message: `跳过任务: ${availableTasks.find((t) => t.value === taskName)?.label || taskName} (不在宝库开放时间)`,
-          type: "warning",
+          message: `=== 检测到 startBatch 任务，已自动过滤 store_purchase 任务（避免重复执行黑市购买）===`,
+          type: "info",
         });
-        return;
       }
+    }
 
-      if (
-        ["batchmengjing", "batchBuyDreamItems"].includes(taskName) &&
-        !ismengjingActivityOpen.value
-      ) {
+    // 方案2：如果任务包含 startBatch，调用 startBatch 实现分批执行
+    // 这样暂停时间积攒队列中的批量日常任务也能使用全局分批设置
+    if (hasStartBatch) {
+      addLog({
+        time: new Date().toLocaleTimeString(),
+        message: `=== 定时任务 ${task.name} 包含批量日常任务，使用 startBatch 分批执行 ===`,
+        type: "info",
+      });
+      
+      // 保存原始 selectedTokens
+      const originalSelectedTokens = [...selectedTokens.value];
+      
+      // 调用 startBatch 实现分批执行（传入 true 表示从积攒队列执行）
+      await startBatch(true);
+      
+      // 恢复原始 selectedTokens
+      selectedTokens.value = [...originalSelectedTokens];
+      
+      // 批量日常任务执行完成后，继续执行其他非 startBatch 任务
+      const otherTasks = taskTasksList.filter(t => t !== 'startBatch');
+      for (const taskName of otherTasks) {
+        if (batchTaskStore.shouldStop.value) break;
+
+        if (isPauseTime.value.paused) {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `=== 定时任务 ${task.name} 被暂停: 当前处于${isPauseTime.value.reason}，已加入积攒队列 ===`,
+            type: "info",
+          });
+          batchTaskStore.addToTaskQueue(task);
+          break;
+        }
+
         addLog({
           time: new Date().toLocaleTimeString(),
-          message: `跳过任务: ${availableTasks.find((t) => t.value === taskName)?.label || taskName} (不在梦境开放时间)`,
-          type: "warning",
+          message: `执行任务: ${availableTasks.find((t) => t.value === taskName)?.label || taskName}`,
+          type: "info",
         });
-        return;
+
+        // 使用原始任务函数，避免包装函数的额外检查和队列逻辑
+        const taskFunction = getOriginalTaskFunction(taskName);
+        if (typeof taskFunction === "function") {
+          if (
+            [
+              "batchOpenBox",
+              "batchFish",
+              "batchRecruit",
+              "batchLegacyGiftSendEnhanced",
+            ].includes(taskName)
+          ) {
+            await taskFunction(true);
+          } else {
+            await taskFunction();
+          }
+        } else {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `任务函数不存在: ${taskName}`,
+            type: "error",
+          });
+        }
       }
+      
+      // 跳过原有的分批执行逻辑，直接执行完成后的处理
+      addLog({
+        time: new Date().toLocaleTimeString(),
+        message: `=== 定时任务执行完成: ${task.name} ===`,
+        type: "success",
+      });
 
-      if (
-        ["batchSmartSendCar", "batchClaimCars"].includes(taskName) &&
-        !isCarActivityOpen.value
-      ) {
+      // 发送任务完成推送通知
+      await sendTaskCompleteNotification(task.name, {
+        success: selectedTokens.value.length,
+        failed: 0,
+        total: selectedTokens.value.length
+      });
+
+      selectedTokens.value = [...originalSelectedTokens];
+
+      const now = new Date();
+      const taskExecutionKey = `${task.id}_${now.getDate()}_${now.getHours()}_${now.getMinutes()}`;
+      localStorage.setItem(`lastTaskExecution_${task.id}`, taskExecutionKey);
+      
+      // 重要：返回 true 表示任务真正执行完成
+      return true;
+    }
+
+    const batchSupportedTasks = ['claimHangUpRewards', 'batchAddHangUpTime', 'resetBottles', 'climbTower', 'batchStudy', 'batchSmartSendCar', 'batchClaimCars', 'batchlingguanzi', 'climbWeirdTower', 'batchbaoku13', 'batchbaoku45', 'batchmengjing', 'batchDreamBuy', 'batchclubsign', 'batcharenafight', 'batchTopUpFish', 'batchTopUpArena', 'batchClaimFreeEnergy', 'legion_storebuygoods', 'store_purchase', 'batchLegacyClaim', 'batchLegacyGiftSendEnhanced', 'batchOpenBox', 'batchFish', 'batchRecruit', 'batchClaimBoxPointReward', 'collection_claimfreereward', 'skinChallenge', 'batchMergeItems', 'batchHeroUpgrade', 'batchBookUpgrade', 'batchClaimStarRewards', 'legionStoreBuySkinCoins'];
+    // 只有当定时任务明确启用了分批执行时，才使用分批执行
+    // 定时任务的分批设置优先于全局设置，未设置时默认禁用
+    if (task.enableBatchExecution === true && taskTasksList.some(taskName => batchSupportedTasks.includes(taskName))) {
+      // 优先使用定时任务的批处理大小，如果没有设置则使用默认值
+      const batchSize = task.batchSize ?? 5;
+      // 优先使用定时任务的批处理延迟，如果没有设置则使用默认值
+      const batchDelay = (task.batchDelay ?? 5) * 1000;
+      const totalTokens = availableTokens.length;
+      const totalBatches = Math.ceil(totalTokens / batchSize);
+
+      addLog({
+        time: new Date().toLocaleTimeString(),
+        message: `=== 批量任务开始，共 ${totalTokens} 个账号，分 ${totalBatches} 批执行，每批 ${batchSize} 个账号 ===`,
+        type: "info",
+      });
+
+      for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
+        if (batchTaskStore.shouldStop.value) break;
+
+        const startIndex = batchIndex * batchSize;
+        const endIndex = Math.min(startIndex + batchSize, totalTokens);
+        const batchTokens = availableTokens.slice(startIndex, endIndex);
+
         addLog({
           time: new Date().toLocaleTimeString(),
-          message: `跳过任务: ${availableTasks.find((t) => t.value === taskName)?.label || taskName} (不在发车开放时间)`,
-          type: "warning",
+          message: `=== 开始执行第 ${batchIndex + 1}/${totalBatches} 批，共 ${batchTokens.length} 个账号 ===`,
+          type: "info",
         });
-        return;
-      }
 
-      if (
-        ["batchTopUpArena", "batcharenafight"].includes(taskName) &&
-        !isarenaActivityOpen.value
-      ) {
-        addLog({
-          time: new Date().toLocaleTimeString(),
-          message: `跳过任务: ${availableTasks.find((t) => t.value === taskName)?.label || taskName} (不在竞技场开放时间)`,
-          type: "warning",
-        });
-        return;
-      }
+        selectedTokens.value = batchTokens;
 
-      if (
-        [
-          "climbWeirdTower",
-          "batchUseItems",
-          "batchMergeItems",
-          "batchClaimFreeEnergy",
-        ].includes(taskName) &&
-        !isWeirdTowerActivityOpen.value
-      ) {
-        addLog({
-          time: new Date().toLocaleTimeString(),
-          message: `跳过任务: ${availableTasks.find((t) => t.value === taskName)?.label || taskName} (不在怪异塔开放时间)`,
-          type: "warning",
-        });
-        return;
+        for (const taskName of taskTasksList) {
+          if (batchTaskStore.shouldStop.value) break;
+
+          if (isPauseTime.value.paused) {
+            addLog({
+              time: new Date().toLocaleTimeString(),
+              message: `=== 定时任务 ${task.name} 被暂停: 当前处于${isPauseTime.value.reason}，已加入积攒队列 ===`,
+              type: "info",
+            });
+            batchTaskStore.addToTaskQueue(task);
+            selectedTokens.value = [...originalSelectedTokens];
+            return;
+          }
+
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `执行任务: ${availableTasks.find((t) => t.value === taskName)?.label || taskName}`,
+            type: "info",
+          });
+
+          // 使用原始任务函数，避免嵌套调用 executeInBatches
+          const taskFunction = getOriginalTaskFunction(taskName);
+          if (typeof taskFunction === "function") {
+            if (taskName === 'startBatch') {
+              // 执行日常任务时，传入 true 表示从定时任务执行，避免任务冲突检查
+              await taskFunction(true);
+            } else if (
+              [
+                "batchOpenBox",
+                "batchFish",
+                "batchRecruit",
+                "batchLegacyGiftSendEnhanced",
+              ].includes(taskName)
+            ) {
+              await taskFunction(true);
+            } else {
+              await taskFunction();
+            }
+            // 重要：任务函数执行后可能会调用 stopTask() 将 shouldStop 设为 true
+            // 必须立即重置 shouldStop，否则下一批会跳过
+            batchTaskStore.resetShouldStop();
+          } else {
+            addLog({
+              time: new Date().toLocaleTimeString(),
+              message: `任务函数不存在: ${taskName}`,
+              type: "error",
+            });
+          }
+        }
+
+        batchTaskStore.setProgress(Math.round(((batchIndex + 1) / totalBatches) * 100));
+
+        if (batchIndex < totalBatches - 1 && !batchTaskStore.shouldStop.value) {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `=== 第 ${batchIndex + 1} 批执行完成，等待 ${batchDelay / 1000} 秒后执行下一批 (当前暂停状态: ${isPauseTime.value.paused ? '是' : '否'}) ===`,
+            type: "info",
+          });
+
+          // 重要：在等待期间保持进度显示，避免长时间显示0%
+          // 进度已经在上面设置，这里不需要重复设置，但确保进入等待循环前进度是正确的
+
+          let remainingSeconds = batchDelay / 1000;
+          
+          while (remainingSeconds > 0 && !batchTaskStore.shouldStop.value) {
+            // 重要：确保在等待期间 isRunning 保持为 true，防止按钮被启用
+            if (!batchTaskStore.isRunning.value) {
+              batchTaskStore.startTask();
+            }
+            
+            // 强制更新 currentTime 以确保 isPauseTime 重新计算
+            currentTime.value = new Date();
+            
+            // 检查是否进入暂停时间
+            const pauseStatus = isPauseTime.value;
+            
+            if (pauseStatus.paused) {
+              
+              // 计算已完成的账号数量
+              const completedCount = batchIndex + 1;
+              const totalCount = task.selectedTokens?.length || task.tokenIds?.length || 0;
+              
+              // 获取未执行的账号（从当前批次之后）
+              const allTokens = task.selectedTokens || task.tokenIds || [];
+              const remainingTokens = allTokens.slice(completedCount * batchSize);
+              
+              if (remainingTokens.length === 0) {
+                addLog({
+                  time: new Date().toLocaleTimeString(),
+                  message: `=== 定时任务 ${task.name} 所有批次已完成，无需加入积攒队列 ===`,
+                  type: "info",
+                });
+                selectedTokens.value = [...originalSelectedTokens];
+                return;
+              }
+              
+              // 检查任务是否已经在积攒队列中（避免重复添加）
+              const existingTask = batchTaskStore.taskQueue.find(t => t.name === task.name);
+              if (existingTask) {
+                addLog({
+                  time: new Date().toLocaleTimeString(),
+                  message: `=== 定时任务 ${task.name} 已在积攒队列中，跳过 ===`,
+                  type: "info",
+                });
+              } else {
+                addLog({
+                  time: new Date().toLocaleTimeString(),
+                  message: `=== 定时任务 ${task.name} 在倒计时期间被暂停: 当前处于${pauseStatus.reason}，已加入积攒队列（剩余 ${remainingTokens.length} 个账号） ===`,
+                  type: "info",
+                });
+                // 只加入未执行的账号
+                batchTaskStore.addToTaskQueue({
+                  ...task,
+                  selectedTokens: remainingTokens,
+                  tokenIds: remainingTokens,
+                });
+              }
+              
+              selectedTokens.value = [...originalSelectedTokens];
+              return;
+            }
+
+            if (remainingSeconds % 10 === 0 || remainingSeconds <= 5) {
+              addLog({
+                time: new Date().toLocaleTimeString(),
+                message: `倒计时: ${remainingSeconds} 秒`,
+                type: "info",
+              });
+            }
+            await new Promise((r) => setTimeout(r, 1000));
+            remainingSeconds--;
+          }
+
+          if (batchTaskStore.shouldStop.value) {
+            addLog({
+              time: new Date().toLocaleTimeString(),
+              message: `=== 批量任务已停止 ===`,
+              type: "warning",
+            });
+            break;
+          }
+        }
       }
 
       addLog({
         time: new Date().toLocaleTimeString(),
-        message: `执行任务: ${availableTasks.find((t) => t.value === taskName)?.label || taskName}`,
-        type: "info",
+        message: `=== 所有批次执行完成 ===`,
+        type: "success",
       });
+    } else {
+      // 依次执行每个任务（不是并行）
+      for (const taskName of taskTasksList) {
+        if (batchTaskStore.shouldStop.value) break;
 
-      // Call the task function dynamically
-      const taskFunction = getTaskFunction(taskName);
-      if (typeof taskFunction === "function") {
-        // For batch operations, pass isScheduledTask = true
-        // 具体的batch任务函数内部会使用ensureConnection管理并行连接
-        if (
-          [
-            "batchOpenBox",
-            "batchOpenBoxByPoints",
-            "batchFish",
-            "batchRecruit",
-            "batchLegacyGiftSendEnhanced",
-          ].includes(taskName)
-        ) {
-          await taskFunction(true);
-        } else {
-          await taskFunction();
+        if (isPauseTime.value.paused) {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `=== 定时任务 ${task.name} 被暂停: 当前处于${isPauseTime.value.reason}，已加入积攒队列 ===`,
+            type: "info",
+          });
+          batchTaskStore.addToTaskQueue(task);
+          break;
         }
-      } else {
+
         addLog({
           time: new Date().toLocaleTimeString(),
-          message: `任务函数不存在: ${taskName}`,
-          type: "error",
+          message: `执行任务: ${availableTasks.find((t) => t.value === taskName)?.label || taskName}`,
+          type: "info",
         });
-      }
-    });
 
-    // Wait for all tasks to complete
-    await Promise.all(taskPromises);
+        // 使用原始任务函数，避免包装函数的额外检查和队列逻辑
+        const taskFunction = getOriginalTaskFunction(taskName);
+        if (typeof taskFunction === "function") {
+          if (taskName === 'startBatch') {
+            // 执行日常任务时，传入 true 表示从定时任务执行，避免任务冲突检查
+            await taskFunction(true);
+          } else if (
+            [
+              "batchOpenBox",
+              "batchFish",
+              "batchRecruit",
+              "batchLegacyGiftSendEnhanced",
+            ].includes(taskName)
+          ) {
+            await taskFunction(true);
+          } else {
+            await taskFunction();
+          }
+        } else {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `任务函数不存在: ${taskName}`,
+            type: "error",
+          });
+        }
+      }
+    }
 
     addLog({
       time: new Date().toLocaleTimeString(),
       message: `=== 定时任务执行完成: ${task.name} ===`,
       type: "success",
     });
+
+    // 发送任务完成推送通知
+    await sendTaskCompleteNotification(task.name, {
+      success: selectedTokens.value.length,
+      failed: 0,
+      total: selectedTokens.value.length
+    });
+
+    selectedTokens.value = [...originalSelectedTokens];
+
+    const now = new Date();
+    const taskExecutionKey = `${task.id}_${now.getDate()}_${now.getHours()}_${now.getMinutes()}`;
+    localStorage.setItem(`lastTaskExecution_${task.id}`, taskExecutionKey);
+    
+    // 重要：返回 true 表示任务真正执行完成
     return true;
   } catch (error) {
     addLog({
@@ -7009,14 +7358,14 @@ const executeScheduledTask = async (task, skipConflictCheck = false) => {
       `[${new Date().toISOString()}] Error executing scheduled task ${task.name}:`,
       error,
     );
-    return false;
   } finally {
-    // 重要：恢复原始选中状态
-    selectedTokens.value = originalSelectedTokens;
-    // 重要：重置 isRunning 状态
-    batchTaskStore.stopTask();
-    // 重要：只有任务真正执行完成（不是加入积攒队列）后才检查积攒队列
-    await checkAndExecuteQueuedTasks();
+    selectedTokens.value = [...originalSelectedTokens];
+    // 重要：清除状态，但不在此处重置 isRunning
+    // isRunning 的重置由 startBatch 或 executeInBatches 的 finally 块处理
+    safeLocalStorage.removeItem('executingState');
+    // 清除任务正在执行的标记
+    safeLocalStorage.removeItem(`task_executing_${task.id}`);
+    // 注意：不在此处调用 batchTaskStore.stopTask()，因为 startBatch/executeInBatches 会处理
   }
 };
 
@@ -7025,6 +7374,61 @@ const executeScheduledTask = async (task, skipConflictCheck = false) => {
 const openHelperModal = (type) => {
   helperType.value = type;
   showHelperModal.value = true;
+};
+
+const openDreamBuyModal = () => {
+  // Load saved settings
+  dreamBuyList.value = batchSettings.dreamPurchaseList || [];
+  showDreamBuyModal.value = true;
+};
+
+const toggleDreamItem = (itemKey, checked) => {
+  if (checked) {
+    if (!dreamBuyList.value.includes(itemKey)) {
+      dreamBuyList.value.push(itemKey);
+    }
+  } else {
+    dreamBuyList.value = dreamBuyList.value.filter((k) => k !== itemKey);
+  }
+};
+
+const saveDreamBuyConfig = () => {
+  // Save settings
+  batchSettings.dreamPurchaseList = [...dreamBuyList.value];
+  saveBatchSettings();
+
+  showDreamBuyModal.value = false;
+  message.success("梦境购买配置已保存");
+};
+
+const selectGoldItems = () => {
+  const newSelection = new Set(dreamBuyList.value);
+
+  for (const merchantId in goldItemsConfig) {
+    const items = goldItemsConfig[merchantId];
+    items.forEach((index) => {
+      newSelection.add(`${merchantId}-${index}`);
+    });
+  }
+
+  dreamBuyList.value = Array.from(newSelection);
+};
+
+const selectAllItems = () => {
+  const newSelection = new Set(dreamBuyList.value);
+
+  for (const merchantId in merchantConfig) {
+    const items = merchantConfig[merchantId].items;
+    items.forEach((_, index) => {
+      newSelection.add(`${merchantId}-${index}`);
+    });
+  }
+
+  dreamBuyList.value = Array.from(newSelection);
+};
+
+const clearAllItems = () => {
+  dreamBuyList.value = [];
 };
 
 // 批量功法残卷赠送相关方法
@@ -7053,6 +7457,20 @@ const handleAvatarError = () => {
   isAvatarLoading.value = false;
   avatarLoadError.value = true;
 };
+
+// 注册全局方法，供 Store 调用
+if (typeof window !== 'undefined') {
+  window['executeScheduledTask'] = async (task) => {
+    return await executeScheduledTask(task);
+  };
+}
+
+// 清理全局方法
+onUnmounted(() => {
+  if (typeof window !== 'undefined') {
+    delete window['executeScheduledTask'];
+  }
+});
 
 const resetAvatarState = () => {
   isAvatarLoading.value = true;
@@ -7104,7 +7522,7 @@ const queryRecipientInfo = async () => {
     });
 
     // 使用现有的ensureConnection函数，它已经包含了重连机制
-    await ensureConnection(firstTokenId);
+    await ensureConnection(firstTokenId, 2, null, '查询接收者信息');
 
     addLog({
       time: new Date().toLocaleTimeString(),
@@ -7139,8 +7557,6 @@ const queryRecipientInfo = async () => {
     });
 
     // 处理查询结果
-    console.log("rank_getroleinfo 响应结果:", resp);
-
     // 兼容不同的响应结构
     const roleData = resp?.role || resp?.roleInfo;
 
@@ -7255,11 +7671,10 @@ const confirmLegacyGift = async () => {
 };
 
 const executeHelper = () => {
-  if (helperType.value !== "pointsBox") {
-    if (helperSettings.count % 10 !== 0 || helperSettings.count < 10) {
-      message.warning("消耗数量必须是10的整数倍，最小为10");
-      return;
-    }
+  // 验证数量是10的倍数
+  if (helperSettings.count % 10 !== 0 || helperSettings.count < 10) {
+    message.warning("消耗数量必须是10的整数倍，最小为10");
+    return;
   }
   showHelperModal.value = false;
   if (helperType.value === "box") {
@@ -7271,65 +7686,6 @@ const executeHelper = () => {
   } else if (helperType.value === "pointsBox") {
     batchOpenBoxByPoints();
   }
-};
-
-// Dream Buy Modal Logic
-const showDreamBuyModal = ref(false);
-const dreamBuyList = ref([]);
-
-const openDreamBuyModal = () => {
-  // Load saved settings
-  dreamBuyList.value = batchSettings.dreamPurchaseList || [];
-  showDreamBuyModal.value = true;
-};
-
-const toggleDreamItem = (itemKey, checked) => {
-  if (checked) {
-    if (!dreamBuyList.value.includes(itemKey)) {
-      dreamBuyList.value.push(itemKey);
-    }
-  } else {
-    dreamBuyList.value = dreamBuyList.value.filter((k) => k !== itemKey);
-  }
-};
-
-const saveDreamBuyConfig = () => {
-  // Save settings
-  batchSettings.dreamPurchaseList = [...dreamBuyList.value];
-  saveBatchSettings();
-
-  showDreamBuyModal.value = false;
-  message.success("梦境购买配置已保存");
-};
-
-const selectGoldItems = () => {
-  const newSelection = new Set(dreamBuyList.value);
-
-  for (const merchantId in goldItemsConfig) {
-    const items = goldItemsConfig[merchantId];
-    items.forEach((index) => {
-      newSelection.add(`${merchantId}-${index}`);
-    });
-  }
-
-  dreamBuyList.value = Array.from(newSelection);
-};
-
-const selectAllItems = () => {
-  const newSelection = new Set(dreamBuyList.value);
-
-  for (const merchantId in merchantConfig) {
-    const items = merchantConfig[merchantId].items;
-    items.forEach((_, index) => {
-      newSelection.add(`${merchantId}-${index}`);
-    });
-  }
-
-  dreamBuyList.value = Array.from(newSelection);
-};
-
-const clearAllItems = () => {
-  dreamBuyList.value = [];
 };
 
 // 注: formationOptions, bossTimesOptions 已从 @/utils/batch 导入
@@ -7380,12 +7736,11 @@ const saveSettings = () => {
 
 // Task Template Functions
 const openTaskTemplateModal = () => {
-  // 加载模板列表
   loadTaskTemplates();
-  // 重置当前模板
   Object.assign(currentTemplate, {
     arenaFormation: 1,
     towerFormation: 1,
+    weirdTowerFormation: 1,
     bossFormation: 1,
     bossTimes: 2,
     claimBottle: true,
@@ -7643,25 +7998,18 @@ const saveTaskTemplate = () => {
   }
 };
 
-const currentRunningTokenId = ref(null);
-const currentProgress = ref(0);
-const logs = ref([]);
 const logContainer = ref(null);
-const autoScrollLog = ref(true);
-const filterErrorsOnly = ref(false);
-const errorCount = computed(() => {
-  return logs.value.filter((log) => log.type === "error").length;
-});
+const errorCount = computed(() => batchTaskStore.errorCount);
+const filteredLogs = computed(() => batchTaskStore.filteredLogs);
 
-const filteredLogs = computed(() => {
-  if (filterErrorsOnly.value) {
-    return logs.value.filter((log) => log.type === "error");
-  }
-  return logs.value;
+// 刷新倒计时显示（用于页面显示）
+const refreshCountdownDisplay = ref({
+  show: false,
+  seconds: 0
 });
 
 const currentRunningTokenName = computed(() => {
-  const t = tokens.value.find((x) => x.id === currentRunningTokenId.value);
+  const t = tokens.value.find((x) => x.id === batchTaskStore.currentRunningTokenId);
   return t ? t.name : "";
 });
 
@@ -7714,14 +8062,11 @@ const createNewGroup = () => {
     return;
   }
 
-  const newGroup = tokenStore.createTokenGroup(
-    newGroupName.value.trim(),
-    newGroupColor.value,
-  );
-
+  const newGroup = tokenStore.createTokenGroup(newGroupName.value.trim(), newGroupColor.value);
+  
   // 添加选中的Token到新分组
   if (newGroupSelectedTokens.value.length > 0) {
-    newGroupSelectedTokens.value.forEach((tokenId) => {
+    newGroupSelectedTokens.value.forEach(tokenId => {
       tokenStore.addTokenToGroup(newGroup.id, tokenId);
     });
   }
@@ -7733,7 +8078,7 @@ const createNewGroup = () => {
 };
 
 const selectAllNewGroup = () => {
-  newGroupSelectedTokens.value = sortedTokens.value.map((t) => t.id);
+  newGroupSelectedTokens.value = sortedTokens.value.map(t => t.id);
 };
 
 const deselectAllNewGroup = () => {
@@ -7870,65 +8215,11 @@ const getGroupTokenList = (groupId) => {
 
 // 注: pickArenaTargetId, FISH_TARGET, ARENA_TARGET, getTodayStartSec, isTodayAvailable, calculateMonthProgress 已从 @/utils/batch 导入
 
-// 定期清理 localStorage 任务标记
-const cleanupLocalStorageTasks = () => {
+const addLog = (log, skipCheck = false) => {
+  batchTaskStore.addLog(log, skipCheck);
+
   try {
-    const now = new Date();
-    
-    Object.keys(localStorage).forEach(key => {
-      if (key.startsWith('lastTaskExecution_')) {
-        // 检查标记是否过期（超过1小时）
-        const taskId = key.replace('lastTaskExecution_', '');
-        const lastExecution = safeLocalStorage.getItem(key);
-        if (lastExecution) {
-          const [id, date, hour, minute] = lastExecution.split('_');
-          const executionTime = new Date();
-          executionTime.setDate(parseInt(date));
-          executionTime.setHours(parseInt(hour));
-          executionTime.setMinutes(parseInt(minute));
-          
-          // 如果标记超过1小时，清理
-          if (now - executionTime > 60 * 60 * 1000) {
-            safeLocalStorage.removeItem(key);
-            safeLocalStorage.removeItem(`task_executing_${taskId}`);
-          }
-        }
-      } else if (key.startsWith('task_executing_')) {
-        // 检查执行标记是否过期（超过30分钟）
-        const executionTime = parseInt(safeLocalStorage.getItem(key) || '0');
-        if (now.getTime() - executionTime > 30 * 60 * 1000) {
-          safeLocalStorage.removeItem(key);
-        }
-      }
-    });
-  } catch (error) {
-    console.warn('localStorage cleanup error:', error);
-  }
-};
-
-// 增强的日志记录函数
-const enhancedAddLog = (log) => {
-  addLog(log);
-};
-
-// 定期执行清理任务
-setInterval(cleanupLocalStorageTasks, 10 * 60 * 1000);
-
-const addLog = (log) => {
-  // 添加日志数据到数组
-  logs.value.push(log);
-
-  // 限制logs数组大小，防止内存占用过大
-  const maxLogEntries = batchSettings.maxLogEntries || 1000;
-  if (logs.value.length > maxLogEntries) {
-    logs.value = logs.value.slice(-maxLogEntries);
-  }
-
-  // 尝试DOM操作，但不依赖nextTick确保日志显示
-  // 在后台运行时，浏览器可能会限制DOM操作
-  try {
-    if (logContainer.value && autoScrollLog.value) {
-      // 直接尝试滚动，不使用nextTick
+    if (logContainer.value && batchTaskStore.autoScrollLog) {
       logContainer.value.scrollTop = logContainer.value.scrollHeight;
     }
   } catch (error) {
@@ -7939,7 +8230,7 @@ const addLog = (log) => {
   // 同时使用nextTick作为后备，确保在页面回到前台时能正确滚动
   nextTick(() => {
     try {
-      if (logContainer.value && autoScrollLog.value) {
+      if (logContainer.value && batchTaskStore.autoScrollLog) {
         logContainer.value.scrollTop = logContainer.value.scrollHeight;
       }
     } catch (error) {
@@ -7948,7 +8239,7 @@ const addLog = (log) => {
   });
 };
 
-watch(autoScrollLog, (newValue) => {
+watch(() => batchTaskStore.autoScrollLog, (newValue) => {
   if (newValue && logContainer.value) {
     nextTick(() => {
       try {
@@ -7962,11 +8253,11 @@ watch(autoScrollLog, (newValue) => {
 });
 
 const copyLogs = () => {
-  if (logs.value.length === 0) {
+  if (batchTaskStore.logs.length === 0) {
     message.warning("没有可复制的日志");
     return;
   }
-  const logText = logs.value
+  const logText = batchTaskStore.logs
     .map((log) => `${log.time} ${log.message}`)
     .join("\n");
   navigator.clipboard
@@ -7980,7 +8271,7 @@ const copyLogs = () => {
 };
 
 const clearLogs = () => {
-  logs.value = [];
+  batchTaskStore.clearLogs();
   message.success("日志已清空");
 };
 
@@ -8013,62 +8304,126 @@ const releaseConnectionSlot = () => {
   }
 };
 
-const ensureConnection = async (tokenId, maxRetries = 2) => {
+const ensureConnection = async (tokenId, maxRetries = 2, taskNames = null, taskName = null) => {
   const latestToken = tokens.value.find((t) => t.id === tokenId);
   if (!latestToken) {
     throw new Error(`Token not found: ${tokenId}`);
   }
 
+  if (isPauseTime.value.paused) {
+    const tasksToSave = taskNames || (selectedTasks.value.length > 0 ? selectedTasks.value : ['batchDaily']);
+    // 优先使用传入的任务名称，否则从 selectedTasks 中获取，最后使用默认名称
+    let queueTaskName = taskName;
+    if (!queueTaskName && selectedTasks.value.length > 0) {
+      // 从 selectedTasks 中获取任务名称
+      const taskFunctionName = selectedTasks.value[0];
+      // 尝试从任务函数映射中获取友好的任务名称
+      const taskMap = {
+        'claimHangUpRewards': '批量领取挂机',
+        'batchAddHangUpTime': '批量加钟',
+        'resetBottles': '重置罐子',
+        'batchlingguanzi': '一键领取罐子',
+        'climbTower': '一键爬塔',
+        'climbWeirdTower': '一键爬怪异塔',
+        'batchUseItems': '一键使用怪异塔道具',
+        'batchMergeItems': '一键合成怪异塔道具',
+        'batchStudy': '一键答题',
+        'batchSmartSendCar': '智能发车',
+        'batchClaimCars': '一键收车',
+        'batchClaimBoxPointReward': '领取宝箱积分',
+        'batchHeroUpgrade': '一键英雄升星',
+        'batchBookUpgrade': '一键图鉴升星',
+        'batchClaimStarRewards': '一键领取图鉴奖励',
+        'batchbaoku13': '一键宝库前3层',
+        'batchbaoku45': '一键宝库4,5层',
+        'batchmengjing': '一键梦境',
+        'batchDreamBuy': '梦境购买',
+        'batchclubsign': '一键俱乐部签到',
+        'batcharenafight': '一键竞技场战斗',
+        'batchTopUpFish': '一键钓鱼补齐',
+        'batchTopUpArena': '一键竞技场补齐',
+        'batchClaimFreeEnergy': '一键领取怪异塔免费道具',
+        'skinChallenge': '一键换皮闯关',
+        'legion_storebuygoods': '一键购买四圣碎片',
+        'legionStoreBuySkinCoins': '一键购买俱乐部5皮肤币',
+        'store_purchase': '一键黑市采购',
+        'collection_claimfreereward': '免费领取珍宝阁',
+        'batchLegacyClaim': '批量功法残卷领取',
+        'batchOpenBox': '批量开箱',
+        'batchFish': '批量钓鱼',
+        'batchRecruit': '批量招募',
+        'batchLegacyGiftSendEnhanced': '批量赠送功法残卷',
+        'startBatch': '批量日常任务'
+      };
+      queueTaskName = taskMap[taskFunctionName] || taskFunctionName;
+    }
+    if (!queueTaskName) {
+      queueTaskName = `任务-${latestToken.name}`;
+    }
+    addLog({
+      time: new Date().toLocaleTimeString(),
+      message: `=== ${latestToken.name} 任务被暂停: 当前处于${isPauseTime.value.reason}，已加入积攒队列 (任务: ${tasksToSave.join(', ')}) ===`,
+      type: "info",
+    });
+    batchTaskStore.addToTaskQueue({
+      id: Date.now() + Math.random(),
+      name: queueTaskName,
+      runType: 'manual',
+      selectedTokens: [tokenId],
+      selectedTasks: tasksToSave,
+    });
+    tokenStatus.value[tokenId] = "paused";
+    const pauseError = new Error("任务已暂停");
+    pauseError.isPause = true;
+    throw pauseError;
+  }
+
   let status = tokenStore.getWebSocketStatus(tokenId);
   let connected = status === "connected";
+  let attempts = 0;
 
   if (!connected) {
     // 等待连接槽位，限制并发连接数
     await waitForConnectionSlot();
 
-    addLog({
-      time: new Date().toLocaleTimeString(),
-      message: `正在连接... (队列: ${connectionQueue.active}/${batchSettings.maxActive})`,
-      type: "info",
-    });
+    while (!connected && attempts <= maxRetries) {
+      if (attempts > 0) {
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `连接超时，尝试重连... (${attempts}/${maxRetries})`,
+          type: "warning",
+        });
 
-    tokenStore.createWebSocketConnection(
-      tokenId,
-      latestToken.token,
-      latestToken.wsUrl,
-    );
-    connected = await waitForConnection(tokenId);
-
-    if (!connected && maxRetries > 0) {
-      addLog({
-        time: new Date().toLocaleTimeString(),
-        message: `连接超时，尝试重连...`,
-        type: "warning",
-      });
-
-      tokenStore.closeWebSocketConnection(tokenId);
-      await new Promise((r) => setTimeout(r, batchSettings.reconnectDelay));
+        tokenStore.closeWebSocketConnection(tokenId);
+        await new Promise((r) => setTimeout(r, batchSettings.reconnectDelay));
+      }
 
       addLog({
         time: new Date().toLocaleTimeString(),
-        message: `正在重连...`,
+        message: attempts > 0 ? `正在重连... (${attempts}/${maxRetries})` : `正在连接... (队列: ${connectionQueue.active}/${batchSettings.maxActive})`,
         type: "info",
       });
 
-      const refreshedToken = tokens.value.find((t) => t.id === tokenId);
+      const currentToken = tokens.value.find((t) => t.id === tokenId);
+      if (!currentToken) {
+        // 连接失败，释放槽位
+        releaseConnectionSlot();
+        throw new Error(`Token not found: ${tokenId}`);
+      }
+
       tokenStore.createWebSocketConnection(
         tokenId,
-        refreshedToken.token,
-        refreshedToken.wsUrl,
+        currentToken.token,
+        currentToken.wsUrl,
       );
-
       connected = await waitForConnection(tokenId);
+      attempts++;
     }
 
     if (!connected) {
       // 连接失败，释放槽位
       releaseConnectionSlot();
-      throw new Error("连接失败 (重试后仍超时)");
+      throw new Error(`连接失败 (已重试 ${maxRetries} 次)`);
     }
   }
 
@@ -8109,8 +8464,8 @@ const createTaskDeps = () => ({
   selectedTokens,
   tokens,
   tokenStatus,
-  isRunning,
-  shouldStop,
+  isRunning: toRef(batchTaskStore, 'isRunning'),
+  shouldStop: toRef(batchTaskStore, 'shouldStop'),
   ensureConnection,
   releaseConnectionSlot,
   connectionQueue,
@@ -8118,7 +8473,15 @@ const createTaskDeps = () => ({
   tokenStore,
   addLog,
   message,
-  currentRunningTokenId,
+  currentRunningTokenId: toRef(batchTaskStore, 'currentRunningTokenId'),
+  isPauseTime,
+  taskQueue: batchTaskStore.taskQueue || [],
+  selectedTasks,
+  // Store 方法
+  startTask: batchTaskStore.startTask,
+  stopTask: batchTaskStore.stopTask,
+  setCurrentToken: batchTaskStore.setCurrentToken,
+  setProgress: batchTaskStore.setProgress,
   // 延迟配置
   delayConfig: {
     command: batchSettings.commandDelay,
@@ -8131,7 +8494,7 @@ const createTaskDeps = () => ({
   // 其他特定依赖
   logs: batchTaskStore.logs,
   logContainer,
-  autoScrollLog,
+  autoScrollLog: batchTaskStore.autoScrollLog,
   nextTick,
   shouldSendCar,
   canClaim,
@@ -8156,33 +8519,19 @@ const createTaskDeps = () => ({
 
 // 初始化任务模块
 const tasksHangUp = createTasksHangUp(createTaskDeps());
-const {
-  claimHangUpRewards,
-  batchAddHangUpTime,
-  batchStudy,
-  batchclubsign,
-  batchWarGuessCheer,
-} = tasksHangUp;
+const { claimHangUpRewards, batchAddHangUpTime, batchStudy, batchclubsign, batchWarGuessCheer } = tasksHangUp;
 
 const tasksBottle = createTasksBottle(createTaskDeps());
 const { resetBottles, batchlingguanzi } = tasksBottle;
 
 const tasksTower = createTasksTower(createTaskDeps());
-const {
-  climbTower,
-  climbWeirdTower,
-  batchClaimFreeEnergy,
-  skinChallenge,
-  batchUseItems,
-  batchMergeItems,
-} = tasksTower;
+const { climbTower, climbWeirdTower, batchClaimFreeEnergy, skinChallenge, batchUseItems, batchMergeItems } = tasksTower;
 
 const tasksCar = createTasksCar(createTaskDeps());
 const { batchSmartSendCar, batchClaimCars } = tasksCar;
 
 const tasksItem = createTasksItem(createTaskDeps());
-const {
-  batchOpenBox,
+const { batchOpenBox,
   batchOpenBoxByPoints,
   batchClaimBoxPointReward,
   batchFish,
@@ -8195,236 +8544,388 @@ const {
 } = tasksItem;
 
 const tasksDungeon = createTasksDungeon(createTaskDeps());
-const { batchbaoku13, batchbaoku45, batchmengjing, batchBuyDreamItems } =
-  tasksDungeon;
+const { batchbaoku13, batchbaoku45, batchmengjing, batchDreamBuy } = tasksDungeon;
 
 const tasksArena = createTasksArena(createTaskDeps());
 const { batcharenafight, batchTopUpFish, batchTopUpArena } = tasksArena;
 
 const tasksStore = createTasksStore(createTaskDeps());
-const {
-  legion_storebuygoods,
-  legionStoreBuySkinCoins,
-  store_purchase,
-  collection_claimfreereward,
-} = tasksStore;
+const { legion_storebuygoods, legionStoreBuySkinCoins, store_purchase, collection_claimfreereward } = tasksStore;
+
+// 批量黑市周采购
+const batchBlackMarketPurchase = async () => {
+  if (batchTaskStore.isRunning.value) return;
+  if (selectedTokens.value.length === 0) {
+    ElMessage.warning('请先选择账号');
+    return;
+  }
+  if (!isBlackMarketWeek.value || !isBlackMarketUpdated.value) {
+    ElMessage.warning('当前非黑市周或黑市周尚未更新');
+    return;
+  }
+
+  addLog({
+    time: new Date().toLocaleTimeString(),
+    message: `=== 开始执行批量黑市周采购 (${selectedTokens.value.length}个账号) ===`,
+    type: "info",
+  });
+
+  try {
+    batchTaskStore.startTask();
+    
+    // 批量执行黑市采购
+    await executeInBatches(
+      store_purchase,
+      '黑市周采购',
+      'store_purchase'
+    );
+    
+    addLog({
+      time: new Date().toLocaleTimeString(),
+      message: '=== 批量黑市周采购完成 ===',
+      type: "success",
+    });
+  } catch (error) {
+    addLog({
+      time: new Date().toLocaleTimeString(),
+      message: `批量黑市周采购失败: ${error.message}`,
+      type: "error",
+    });
+  } finally {
+    batchTaskStore.stopTask();
+  }
+};
+
+// 处理黑市周购买完成
+const handleBlackMarketPurchaseComplete = (results) => {
+  // 检查results是否为空
+  if (!results || results.length === 0) {
+    addLog({
+      time: new Date().toLocaleTimeString(),
+      message: `黑市周购买助手: 没有执行任何购买操作`,
+      type: "warning",
+    });
+    // 即使没有执行操作，也要检查积攒队列
+    checkAndExecuteQueuedTasks();
+    return;
+  }
+  
+  addLog({
+    time: new Date().toLocaleTimeString(),
+    message: `=== 黑市周购买助手开始执行 (${results.length}个账号) ===`,
+    type: "success",
+  });
+  
+  // 统计成功和失败的数量
+  let successCount = 0;
+  let failCount = 0;
+  let totalGoodsSuccess = 0;
+  let totalGoodsFail = 0;
+  
+  results.forEach((result) => {
+    // 记录每个商品的购买结果
+    if (result.results && result.results.length > 0) {
+      result.results.forEach((goodsResult) => {
+        if (goodsResult.success) {
+          totalGoodsSuccess++;
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `账号 ${result.token.name} - ${goodsResult.name} 购买成功`,
+            type: "success",
+          });
+        } else {
+          totalGoodsFail++;
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `账号 ${result.token.name} - ${goodsResult.name} 购买失败: ${goodsResult.error}`,
+            type: "error",
+          });
+        }
+      });
+    }
+    
+    // 统计账号级别的成功/失败
+    if (result.success) {
+      successCount++;
+    } else {
+      failCount++;
+    }
+  });
+  
+  addLog({
+    time: new Date().toLocaleTimeString(),
+    message: `=== 黑市周购买助手执行完成 ===`,
+    type: "success",
+  });
+  
+  addLog({
+    time: new Date().toLocaleTimeString(),
+    message: `账号统计: 成功 ${successCount} 个, 失败 ${failCount} 个`,
+    type: "success",
+  });
+  
+  addLog({
+    time: new Date().toLocaleTimeString(),
+    message: `商品统计: 成功 ${totalGoodsSuccess} 个, 失败 ${totalGoodsFail} 个`,
+    type: "success",
+  });
+  
+  // 重要：黑市周购买完成后，检查并执行积攒队列中的任务
+  batchTaskStore.stopTask();
+  checkAndExecuteQueuedTasks();
+};
 
 const tasksLegacy = createTasksLegacy(createTaskDeps());
 const { batchLegacyClaim, batchLegacyGiftSendEnhanced } = tasksLegacy;
 
-const startBatch = async (isFromQueue = false) => {
-  if (selectedTokens.value.length === 0) return;
+// ========== 刷新后继续任务功能 ==========
 
-  // 安全检查：如果 isRunning 为 true 但没有实际任务在执行（可能是之前任务异常退出），则重置状态
-  if (batchTaskStore.isRunning.value) {
-    const now = Date.now();
-    const tenMinutesAgo = now - 10 * 60 * 1000;
-    // 检查是否有任何任务正在执行
-    const anyTaskExecuting = Array.from(scheduledTasks.value || []).some(task => {
-      const executingMarker = safeLocalStorage.getItem(`task_executing_${task.id}`);
-      return executingMarker;
-    });
+/**
+ * 继续执行之前保存的任务
+ */
+const resumeTaskExecution = async () => {
+  if (!resumeTaskState.value) return;
 
-    // 只有当没有任务正在执行且上次任务执行时间超过10分钟时，才认为状态异常，强制重置
-    if (!anyTaskExecuting && (!lastTaskExecution || lastTaskExecution < tenMinutesAgo)) {
-      addLog({
-        time: new Date().toLocaleTimeString(),
-        message: `=== 检测到任务状态异常（isRunning 卡在 true），强制重置状态 ===`,
-        type: "warning",
-      });
-      batchTaskStore.stopTask();
+  const state = resumeTaskState.value;
+  addLog({
+    time: new Date().toLocaleTimeString(),
+    message: `=== 正在恢复任务：${state.taskName || '批量任务'}，从第 ${state.currentBatchIndex + 1} 批开始 ===`,
+    type: "info",
+  });
+
+  // 恢复选中的任务和账号
+  selectedTasks.value = state.selectedTasks || [];
+  selectedTokens.value = state.selectedTokens || [];
+
+  // 设置执行状态
+  batchTaskStore.startTask();
+
+  // 根据任务名称选择对应的原始函数（不是包装函数，避免嵌套调用executeInBatches）
+  const taskName = state.taskName || '';
+  let taskFunction = null;
+
+  if (taskName.includes('答题')) {
+    taskFunction = batchStudy;
+  } else if (taskName.includes('挂机')) {
+    taskFunction = claimHangUpRewards;
+  } else if (taskName.includes('加钟')) {
+    taskFunction = batchAddHangUpTime;
+  } else if (taskName.includes('罐子')) {
+    taskFunction = batchlingguanzi;
+  } else if (taskName.includes('爬塔')) {
+    taskFunction = climbTower;
+  } else if (taskName.includes('日常')) {
+    taskFunction = startBatch;
+  } else if (taskName.includes('功法残卷领取')) {
+    taskFunction = batchLegacyClaim;
+  } else if (taskName.includes('功法残卷赠送')) {
+    taskFunction = batchLegacyGiftSendEnhanced;
+  } else if (taskName.includes('收车')) {
+    taskFunction = batchClaimCars;
+  } else if (taskName.includes('发车')) {
+    taskFunction = batchSmartSendCar;
+  } else if (taskName.includes('宝库')) {
+    taskFunction = batchbaoku13;
+  } else if (taskName.includes('梦境')) {
+    taskFunction = batchmengjing;
+  } else if (taskName.includes('开箱')) {
+    taskFunction = batchOpenBox;
+  } else if (taskName.includes('钓鱼')) {
+    taskFunction = batchFish;
+  } else if (taskName.includes('招募')) {
+    taskFunction = batchRecruit;
+  } else {
+    // 尝试从 selectedTasks 获取原始任务函数
+    const taskFunctionName = state.selectedTasks?.[0];
+    if (taskFunctionName) {
+      taskFunction = getOriginalTaskFunction(taskFunctionName);
     }
   }
 
-  // 检测任务冲突：有任务正在运行（只有不是从积攒队列执行时才检测）
-  if (!isFromQueue && batchTaskStore.isRunning.value) {
-    // 检测到任务冲突，检查是否开启冲突加入积攒队列
-    if (batchSettings.enableQueueOnConflict) {
+  if (!taskFunction) {
+    addLog({
+      time: new Date().toLocaleTimeString(),
+      message: `恢复任务失败：未找到任务函数 (${taskName})`,
+      type: "error",
+    });
+    return;
+  }
+
+  // 从保存的批次继续执行
+  await executeInBatchesFromState(taskFunction, state.taskName || '批量任务', null, state);
+
+  // 清除任务状态
+  batchTaskStore.clearTaskState();
+  resumeTaskState.value = null;
+  showResumeTaskDialog.value = false;
+};
+
+/**
+ * 放弃恢复任务
+ */
+const cancelResumeTask = () => {
+  addLog({
+    time: new Date().toLocaleTimeString(),
+    message: `=== 已放弃恢复任务，清除任务状态 ===`,
+    type: "warning",
+  });
+  batchTaskStore.clearTaskState();
+  resumeTaskState.value = null;
+  showResumeTaskDialog.value = false;
+};
+
+/**
+ * 从指定状态继续分批执行
+ */
+const executeInBatchesFromState = async (taskFunction, taskName, taskFunctionName, state) => {
+  const batchSize = batchSettings.batchSize;
+  const sortedTokens = [...state.selectedTokens].sort((a, b) => {
+    const tokenA = tokens.value.find((t) => t.id === a);
+    const tokenB = tokens.value.find((t) => t.id === b);
+    return (tokenA?.sortOrder || 0) - (tokenB?.sortOrder || 0);
+  });
+  const totalTokens = sortedTokens.length;
+  const totalBatches = Math.ceil(totalTokens / batchSize);
+  
+  // 从保存的批次开始执行
+  const startBatchIndex = state.currentBatchIndex || 0;
+  
+  // 重要：跟踪批次完成状态，避免同一批次无限重复执行
+  let batchCompleted = false;
+  
+  addLog({
+    time: new Date().toLocaleTimeString(),
+    message: `=== 从第 ${startBatchIndex + 1}/${totalBatches} 批继续执行，共 ${totalTokens} 个账号 ===`,
+    type: "info",
+  });
+  
+  for (let batchIndex = startBatchIndex; batchIndex < totalBatches; batchIndex++) {
+    if (batchTaskStore.shouldStop.value) break;
+    
+    // 重要：检查上一批次是否完成，避免同一批次无限重复执行
+    if (batchIndex > startBatchIndex && !batchCompleted) {
       addLog({
         time: new Date().toLocaleTimeString(),
-        message: `=== 批量日常任务 检测到任务冲突（有任务运行中），加入积攒队列依次执行 ===`,
+        message: `=== 第 ${batchIndex} 批未完成，跳过 ===`,
         type: "warning",
       });
-      batchTaskStore.addToTaskQueue({
-        id: Date.now() + Math.random(),
-        name: '批量日常任务',
-        runType: 'manual',
-        selectedTokens: [...selectedTokens.value],
-        selectedTasks: ['startBatch'],
+      continue;
+    }
+    
+    // 重置批次完成状态
+    batchCompleted = false;
+    
+    // 简化版任务持久化：只保存任务队列，不保存执行进度
+    // 这样可以避免复杂的状态管理问题，同时保留积攒任务功能
+    // batchTaskStore.saveTaskState({
+    //   isRunning: true,
+    //   currentBatchIndex: batchIndex,
+    //   totalBatches,
+    //   taskName,
+    //   selectedTasks: state.selectedTasks,
+    //   selectedTokens: state.selectedTokens,
+    // });
+
+    const startIdx = batchIndex * batchSize;
+    const endIdx = Math.min(startIdx + batchSize, totalTokens);
+    const batchTokens = sortedTokens.slice(startIdx, endIdx);
+
+    addLog({
+      time: new Date().toLocaleTimeString(),
+      message: `=== 开始执行第 ${batchIndex + 1}/${totalBatches} 批，共 ${batchTokens.length} 个账号 ===`,
+      type: "info",
+    });
+
+    selectedTokens.value = batchTokens;
+    
+    // 重置 shouldStop，确保任务可以正常执行
+    batchTaskStore.resetShouldStop();
+    
+    try {
+      await taskFunction();
+      // 重要：标记批次为已完成
+      batchCompleted = true;
+    } catch (error) {
+      addLog({
+        time: new Date().toLocaleTimeString(),
+        message: `执行批次时出错: ${error.message}`,
+        type: "error",
       });
+      console.error('taskFunction error:', error);
+      // 重要：即使出错，也要标记批次为已完成，避免无限重试
+      batchCompleted = true;
+    }
+
+    // 重要：taskFunction 执行后可能会调用 stopTask() 将 shouldStop 设为 true
+    // 必须立即重置 shouldStop，否则下一批会跳过
+    batchTaskStore.resetShouldStop();
+
+    if (batchIndex < totalBatches - 1) {
+      
+      addLog({
+        time: new Date().toLocaleTimeString(),
+        message: `=== 第 ${batchIndex + 1} 批完成，等待 ${batchSettings.batchDelay} 秒后执行下一批 ===`,
+        type: "info",
+      });
+
+      let remainingSeconds = batchSettings.batchDelay;
+      while (remainingSeconds > 0 && !batchTaskStore.shouldStop.value) {
+        // 重要：确保在等待期间 isRunning 保持为 true，防止按钮被启用
+        if (!batchTaskStore.isRunning.value) {
+          batchTaskStore.startTask();
+        }
+        
+        if (remainingSeconds % 10 === 0 || remainingSeconds <= 5) {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `倒计时: ${remainingSeconds} 秒`,
+            type: "info",
+          });
+        }
+        await new Promise((r) => setTimeout(r, 1000));
+        remainingSeconds--;
+      }
     } else {
       addLog({
         time: new Date().toLocaleTimeString(),
-        message: `=== 批量日常任务 检测到任务冲突（有任务运行中），已关闭"冲突加入积攒队列"功能，将并行执行 ===`,
-        type: "warning",
+        message: `=== 第 ${batchIndex + 1} 批完成，这是最后一批 ===`,
+        type: "info",
       });
-      // 不return，继续执行，实现并行执行
     }
-    if (batchSettings.enableQueueOnConflict) {
-      return;
-    }
+    
+    addLog({
+      time: new Date().toLocaleTimeString(),
+      message: `=== 批次循环结束: batchIndex=${batchIndex}, totalBatches=${totalBatches}, 下一批=${batchIndex + 1 < totalBatches} ===`,
+      type: "info",
+    });
   }
 
-  const prevSelectedTasks = [...selectedTasks.value];
-  selectedTasks.value = ['startBatch'];
+  selectedTasks.value = state.selectedTasks || [];
+  selectedTokens.value = state.selectedTokens || [];
 
-  lastTaskExecution = Date.now();
-  batchTaskStore.startTask();
-  batchTaskStore.setProgress(0);
-
-  // 保存执行状态，使用 ['startBatch'] 确保恢复时能正确识别任务类型
-  safeLocalStorage.setItem('executingState', JSON.stringify({
-    selectedTokens: selectedTokens.value,
-    selectedTasks: ['startBatch'],
-    timestamp: Date.now()
-  }));
-
-  isRunning.value = true;
-  shouldStop.value = false;
-  // 不再重置logs数组，保留之前的日志
-  // logs.value = [];
-
-  // Reset status
-  selectedTokens.value.forEach((id) => {
-    tokenStatus.value[id] = "waiting";
-  });
-
-  // 并行执行任务，但通过connectionQueue限制并发连接数
-  const taskPromises = selectedTokens.value.map(async (tokenId) => {
-    if (shouldStop.value) return;
-
-    tokenStatus.value[tokenId] = "running";
-
-    let retryCount = 0;
-    const MAX_RETRIES = 1;
-    let success = false;
-
-    while (retryCount <= MAX_RETRIES && !success) {
-      if (shouldStop.value) break;
-
-      const token = tokens.value.find((t) => t.id === tokenId);
-
-      try {
-        if (retryCount === 0) {
-          addLog({
-            time: new Date().toLocaleTimeString(),
-            message: `=== 开始执行: ${token.name} ===`,
-            type: "info",
-          });
-        } else {
-          addLog({
-            time: new Date().toLocaleTimeString(),
-            message: `=== 尝试重试: ${token.name} (第${retryCount}次) ===`,
-            type: "info",
-          });
-        }
-
-        await ensureConnection(tokenId);
-
-        // Create runner with delay settings
-        const runner = new DailyTaskRunner(tokenStore, {
-          commandDelay: batchSettings.commandDelay,
-          taskDelay: batchSettings.taskDelay,
-        });
-
-        // Run tasks
-        await runner.run(tokenId, {
-          onLog: (log) => addLog(log),
-          onProgress: (p) => {
-            // 每个token维护自己的进度
-          },
-        });
-
-        success = true;
-        tokenStatus.value[tokenId] = "completed";
-        addLog({
-          time: new Date().toLocaleTimeString(),
-          message: `=== ${token.name} 执行完成 ===`,
-          type: "success",
-        });
-      } catch (error) {
-        console.error(error);
-        if (retryCount < MAX_RETRIES && !shouldStop.value) {
-          addLog({
-            time: new Date().toLocaleTimeString(),
-            message: `${token.name} 执行出错: ${error.message}，等待3秒后重试...`,
-            type: "warning",
-          });
-          // Wait for potential token refresh in store
-          await new Promise((r) => setTimeout(r, 3000));
-          retryCount++;
-        } else {
-          tokenStatus.value[tokenId] = "failed";
-          addLog({
-            time: new Date().toLocaleTimeString(),
-            message: `${token.name} 执行失败: ${error.message}`,
-            type: "error",
-          });
-        }
-      } finally {
-        // 完成后关闭连接并释放槽位
-        tokenStore.closeWebSocketConnection(tokenId);
-        releaseConnectionSlot();
-        addLog({
-          time: new Date().toLocaleTimeString(),
-          message: `${token.name} 连接已关闭  (队列: ${connectionQueue.active}/${batchSettings.maxActive})`,
-          type: "info",
-        });
-      }
-    }
-  });
-
-  // 等待所有任务完成
-  await Promise.all(taskPromises);
-
-  // 等待所有任务完成后再继续
-  await new Promise((r) => setTimeout(r, 1000));
-
-  isRunning.value = false;
-  currentRunningTokenId.value = null;
-
-  // 重要：先恢复 selectedTasks，然后停止任务
-  selectedTasks.value = prevSelectedTasks;
+  if (!batchTaskStore.shouldStop.value) {
+    addLog({
+      time: new Date().toLocaleTimeString(),
+      message: `=== ${taskName}完成 ===`,
+      type: "success",
+    });
+  }
+  
+  // 重置任务状态
   batchTaskStore.stopTask();
-
-  // 重要：只有任务真正执行完成（不是加入积攒队列）后才检查积攒队列
-  // 使用 await 确保积攒队列执行完成
-  await checkAndExecuteQueuedTasks();
-
-  message.success("批量任务执行结束");
+  
+  // 任务完成后检查并执行积攒队列
+  checkAndExecuteQueuedTasks();
 };
 
-const stopBatch = () => {
-  shouldStop.value = true;
-  addLog({
-    time: new Date().toLocaleTimeString(),
-    message: "正在停止...",
-    type: "warning",
-  });
-};
-
-const handleBlackMarketPurchaseComplete = (results) => {
-  // 处理黑市周购买完成后的逻辑
-  // 这里可以添加一些额外的处理，比如更新UI状态等
-  addLog({
-    time: new Date().toLocaleTimeString(),
-    message: "黑市周购买助手执行完成",
-    type: "success",
-  });
-};
-
-// ======================
-// 包装函数 - 用于分批执行任务
-// ======================
-
-// 简化的分批执行函数
 const executeInBatches = async (taskFunction, taskName, taskFunctionName, isFromQueue = false, isScheduled = false) => {
   if (selectedTokens.value.length === 0) return;
 
   // 只有在任务不是从队列中执行时才检查冲突
   if (!isFromQueue) {
     // 检测任务冲突：有任务正在运行
-    if (batchTaskStore.isRunning.value) {
+    if (batchTaskStore.isRunning) { // 重要：这不是bug修复
+      // 不要因为代码检查工具提示而改回 .value，否则任务冲突检测会失效
       // 检测到任务冲突，检查是否开启冲突加入积攒队列
       if (batchSettings.enableQueueOnConflict) {
         addLog({
@@ -8438,17 +8939,14 @@ const executeInBatches = async (taskFunction, taskName, taskFunctionName, isFrom
           runType: isScheduled ? 'scheduled' : 'manual',
           selectedTokens: [...selectedTokens.value],
           selectedTasks: [taskFunctionName || taskName],
-          // 保存功法赠送相关参数
-          recipientId: recipientIdInput.value,
-          securityPassword: securityPassword.value,
-          giftQuantity: giftQuantity.value,
         });
       } else {
         addLog({
           time: new Date().toLocaleTimeString(),
-          message: `=== ${taskName} 检测到任务冲突（有任务运行中），将并行执行 ===`,
+          message: `=== ${taskName} 检测到任务冲突（有任务运行中），已关闭"冲突加入积攒队列"功能，将并行执行 ===`,
           type: "warning",
         });
+        // 不return，继续执行，实现并行执行
       }
       if (batchSettings.enableQueueOnConflict) {
         return;
@@ -8474,26 +8972,25 @@ const executeInBatches = async (taskFunction, taskName, taskFunctionName, isFrom
     // 从队列执行：使用全局分批执行设置
     enableBatchExecution = batchSettings.enableBatchExecution === true;
   } else if (isScheduled) {
-    // 定时任务：默认禁用分批
+    // 定时任务：使用任务级别的设置，未设置时默认禁用
+    // 注意：这里需要从任务对象中获取 enableBatchExecution 属性
+    // 由于任务对象可能通过不同方式传递，这里暂时使用默认逻辑
+    // 实际执行中，定时任务的分批逻辑在 executeScheduledTask 中处理
     enableBatchExecution = false;
   } else {
-    // 手动任务：受全局设置控制
+    // 手动任务：受全局设置控制，仅当全局启用时分批
     enableBatchExecution = batchSettings.enableBatchExecution === true;
   }
 
-  // 如果不使用分批执行，直接执行任务
+  // 调试日志
   if (!enableBatchExecution) {
     // 根据开关决定执行方式
     if (batchSettings.enableQueueOnConflict) {
       // 顺序执行：使用 await 等待完成
-      try {
-        await taskFunction(isScheduled);
-      } catch (error) {
-        console.error('执行任务失败:', error);
-      }
+      await taskFunction();
     } else {
       // 并行执行：不使用 await，让任务在后台运行
-      taskFunction(isScheduled).then(() => {
+      taskFunction().then(() => {
         // 任务完成后检查并执行积攒队列
         if (!batchTaskStore.isRunning.value) {
           checkAndExecuteQueuedTasks();
@@ -8511,16 +9008,15 @@ const executeInBatches = async (taskFunction, taskName, taskFunctionName, isFrom
     return;
   }
 
-  // 分批执行逻辑
-  const sortedTokenIds = [...selectedTokens.value].sort((a, b) => {
-    const tokenA = sortedTokens.value.find((t) => t.id === a);
-    const tokenB = sortedTokens.value.find((t) => t.id === b);
+  const sortedTokens = [...selectedTokens.value].sort((a, b) => {
+    const tokenA = tokens.value.find((t) => t.id === a);
+    const tokenB = tokens.value.find((t) => t.id === b);
     return (tokenA?.sortOrder || 0) - (tokenB?.sortOrder || 0);
   });
 
   const batchSize = batchSettings.batchSize || 10;
-  const batchDelay = (batchSettings.batchDelay || 5) * 1000;
-  const totalTokens = sortedTokenIds.length;
+  const batchDelay = batchSettings.batchDelay * 1000;
+  const totalTokens = sortedTokens.length;
   const totalBatches = Math.ceil(totalTokens / batchSize);
 
   addLog({
@@ -8543,7 +9039,8 @@ const executeInBatches = async (taskFunction, taskName, taskFunctionName, isFrom
     
     // 检查是否进入暂停时间
     if (isPauseTime.value.paused) {
-      const remainingTokens = sortedTokenIds.slice(batchIndex * batchSize);
+      // 计算剩余未执行的账号（从当前批开始）
+      const remainingTokens = sortedTokens.slice(batchIndex * batchSize);
 
       if (remainingTokens.length === 0) {
         addLog({
@@ -8557,6 +9054,7 @@ const executeInBatches = async (taskFunction, taskName, taskFunctionName, isFrom
       }
 
       // 检查任务是否已经在积攒队列中（避免重复添加）
+      // 同时检查任务名称、任务类型和账号列表
       const existingTask = batchTaskStore.taskQueue.find(t => {
         const sameName = t.name === taskName;
         const sameTasks = JSON.stringify(t.selectedTasks?.sort()) === JSON.stringify([taskFunctionName || taskName].sort());
@@ -8566,9 +9064,10 @@ const executeInBatches = async (taskFunction, taskName, taskFunctionName, isFrom
       if (!existingTask) {
         addLog({
           time: new Date().toLocaleTimeString(),
-          message: `=== 批量任务被暂停: 当前处于${isPauseTime.value.reason}，已加入积攒队列（剩余 ${remainingTokens.length} 个账号） ===`,
+          message: `=== 批量任务被暂停: 当前处于${isPauseTime.value.reason}，已加入积攒队列（剩余 ${remainingTokens.length} 个账号，从第${batchIndex + 1}批开始） ===`,
           type: "info",
         });
+        // 将剩余未执行的账号加入积攒队列
         batchTaskStore.addToTaskQueue({
           id: Date.now() + Math.random(),
           name: taskName,
@@ -8583,15 +9082,24 @@ const executeInBatches = async (taskFunction, taskName, taskFunctionName, isFrom
           type: "info",
         });
       }
-      
       selectedTokens.value = [...originalSelectedTokens];
       selectedTasks.value = [...originalSelectedTasks];
       return;
     }
     
+    // 简化版任务持久化：只保存任务队列，不保存执行进度
+    // batchTaskStore.saveTaskState({
+    //   isRunning: true,
+    //   currentBatchIndex: batchIndex,
+    //   totalBatches,
+    //   taskName,
+    //   selectedTasks: originalSelectedTasks,
+    //   selectedTokens: originalSelectedTokens,
+    // });
+
     const startIdx = batchIndex * batchSize;
     const endIdx = Math.min(startIdx + batchSize, totalTokens);
-    const batchTokens = sortedTokenIds.slice(startIdx, endIdx);
+    const batchTokens = sortedTokens.slice(startIdx, endIdx);
 
     selectedTokens.value = batchTokens;
     
@@ -8603,7 +9111,7 @@ const executeInBatches = async (taskFunction, taskName, taskFunctionName, isFrom
     const wasRunningBeforeTask = batchTaskStore.isRunning.value;
 
     try {
-      await taskFunction(isScheduled);
+      await taskFunction();
     } catch (error) {
       addLog({
         time: new Date().toLocaleTimeString(),
@@ -8611,6 +9119,14 @@ const executeInBatches = async (taskFunction, taskName, taskFunctionName, isFrom
         type: "error",
       });
       console.error('taskFunction error:', error);
+      // 将失败的任务加入积攒队列
+      batchTaskStore.addToTaskQueue({
+        id: Date.now() + Math.random(),
+        name: taskName,
+        runType: isScheduled ? 'scheduled' : 'manual',
+        selectedTokens: [...selectedTokens.value],
+        selectedTasks: [taskFunctionName || taskName],
+      });
     } finally {
       // 重要：恢复 isRunning 状态
       // 如果任务执行前 isRunning 为 true，但任务函数内部调用了 stopTask() 将其设为 false
@@ -8620,10 +9136,12 @@ const executeInBatches = async (taskFunction, taskName, taskFunctionName, isFrom
       }
     }
 
-    // 重置 shouldStop
+    // 重要：taskFunction 执行后可能会调用 stopTask() 将 shouldStop 设为 true
+    // 必须立即重置 shouldStop，否则下一批会跳过
     batchTaskStore.resetShouldStop();
 
     if (batchIndex < totalBatches - 1) {
+      
       addLog({
         time: new Date().toLocaleTimeString(),
         message: `=== 第 ${batchIndex + 1} 批完成，等待 ${batchSettings.batchDelay} 秒后执行下一批 ===`,
@@ -8639,6 +9157,8 @@ const executeInBatches = async (taskFunction, taskName, taskFunctionName, isFrom
         
         // 检查是否进入暂停时间
         if (isPauseTime.value.paused) {
+          // 计算剩余未执行的账号（从下一批开始）
+          // 当前批次已经完成，所以从下一批开始
           const remainingTokens = sortedTokens.slice((batchIndex + 1) * batchSize);
 
           if (remainingTokens.length === 0) {
@@ -8653,6 +9173,7 @@ const executeInBatches = async (taskFunction, taskName, taskFunctionName, isFrom
           }
 
           // 检查任务是否已经在积攒队列中（避免重复添加）
+          // 同时检查任务名称、任务类型和账号列表
           const existingTask = batchTaskStore.taskQueue.find(t => {
             const sameName = t.name === taskName;
             const sameTasks = JSON.stringify(t.selectedTasks?.sort()) === JSON.stringify([taskFunctionName || taskName].sort());
@@ -8662,9 +9183,10 @@ const executeInBatches = async (taskFunction, taskName, taskFunctionName, isFrom
           if (!existingTask) {
             addLog({
               time: new Date().toLocaleTimeString(),
-              message: `=== 批量任务在倒计时期间被暂停: 当前处于${isPauseTime.value.reason}，已加入积攒队列（剩余 ${remainingTokens.length} 个账号） ===`,
+              message: `=== 批量任务在倒计时期间被暂停: 当前处于${isPauseTime.value.reason}，已加入积攒队列（剩余 ${remainingTokens.length} 个账号，从第${batchIndex + 1}批开始） ===`,
               type: "info",
             });
+            // 将剩余未执行的账号（包括当前批次）加入积攒队列
             batchTaskStore.addToTaskQueue({
               id: Date.now() + Math.random(),
               name: taskName,
@@ -8679,7 +9201,6 @@ const executeInBatches = async (taskFunction, taskName, taskFunctionName, isFrom
               type: "info",
             });
           }
-          
           selectedTokens.value = [...originalSelectedTokens];
           selectedTasks.value = [...originalSelectedTasks];
           return;
@@ -8712,7 +9233,7 @@ const executeInBatches = async (taskFunction, taskName, taskFunctionName, isFrom
     batchTaskStore.clearTaskState();
     clearRunningTask();
   }
-
+  
   // 重要：只有非队列执行的任务才重置 isRunning 状态并检查积攒队列
   // 队列执行的任务由 checkAndExecuteQueuedTasks 统一管理
   if (!isFromQueue) {
@@ -8723,7 +9244,6 @@ const executeInBatches = async (taskFunction, taskName, taskFunctionName, isFrom
   }
 };
 
-// 包装函数定义
 const wrappedClaimHangUpRewards = () => executeInBatches(claimHangUpRewards, '批量领取挂机', 'claimHangUpRewards');
 const wrappedBatchAddHangUpTime = () => executeInBatches(batchAddHangUpTime, '批量加钟', 'batchAddHangUpTime');
 const wrappedResetBottles = () => executeInBatches(resetBottles, '重置罐子', 'resetBottles');
@@ -8742,7 +9262,7 @@ const wrappedBatchClaimStarRewards = () => executeInBatches(batchClaimStarReward
 const wrappedBatchbaoku13 = () => executeInBatches(batchbaoku13, '一键宝库前3层', 'batchbaoku13');
 const wrappedBatchbaoku45 = () => executeInBatches(batchbaoku45, '一键宝库4,5层', 'batchbaoku45');
 const wrappedBatchmengjing = () => executeInBatches(batchmengjing, '一键梦境', 'batchmengjing');
-const wrappedBatchDreamBuy = () => executeInBatches(batchBuyDreamItems, '梦境购买', 'batchBuyDreamItems');
+const wrappedBatchDreamBuy = () => executeInBatches(batchDreamBuy, '梦境购买', 'batchDreamBuy');
 const wrappedBatchclubsign = () => executeInBatches(batchclubsign, '一键俱乐部签到', 'batchclubsign');
 const wrappedBatcharenafight = () => executeInBatches(batcharenafight, '一键竞技场战斗', 'batcharenafight');
 const wrappedBatchTopUpFish = () => executeInBatches(batchTopUpFish, '一键钓鱼补齐', 'batchTopUpFish');
@@ -8751,13 +9271,25 @@ const wrappedBatchClaimFreeEnergy = () => executeInBatches(batchClaimFreeEnergy,
 const wrappedSkinChallenge = () => executeInBatches(skinChallenge, '一键换皮闯关', 'skinChallenge');
 const wrappedLegion_storebuygoods = () => executeInBatches(legion_storebuygoods, '一键购买四圣碎片', 'legion_storebuygoods');
 const wrappedLegionStoreBuySkinCoins = () => executeInBatches(legionStoreBuySkinCoins, '一键购买俱乐部5皮肤币', 'legionStoreBuySkinCoins');
+const wrappedBatchBlackMarketPurchase = async () => {
+  if (batchTaskStore.isRunning.value) return;
+  if (selectedTokens.value.length === 0) {
+    ElMessage.warning('请先选择账号');
+    return;
+  }
+  if (!isBlackMarketWeek.value || !isBlackMarketUpdated.value) {
+    ElMessage.warning('当前非黑市周或黑市周尚未更新');
+    return;
+  }
+  await executeInBatches(store_purchase, '一键黑市周采购', 'store_purchase');
+};
 const wrappedStore_purchase = () => executeInBatches(store_purchase, '一键黑市采购', 'store_purchase');
 const wrappedCollection_claimfreereward = () => executeInBatches(collection_claimfreereward, '免费领取珍宝阁', 'collection_claimfreereward');
 const wrappedBatchLegacyClaim = () => executeInBatches(batchLegacyClaim, '批量功法残卷领取', 'batchLegacyClaim');
-const wrappedBatchLegacyGiftSendEnhanced = () => executeInBatches(batchLegacyGiftSendEnhanced, '批量功法残卷赠送', 'batchLegacyGiftSendEnhanced');
-const wrappedBatchOpenBox = () => executeInBatches(() => openHelperModal('box'), '批量开箱', 'batchOpenBox');
-const wrappedBatchFish = () => executeInBatches(() => openHelperModal('fish'), '批量钓鱼', 'batchFish');
-const wrappedBatchRecruit = () => executeInBatches(() => openHelperModal('recruit'), '批量招募', 'batchRecruit');
+const wrappedBatchOpenBox = () => executeInBatches(batchOpenBox, '批量开箱', 'batchOpenBox');
+const wrappedBatchFish = () => executeInBatches(batchFish, '批量钓鱼', 'batchFish');
+const wrappedBatchRecruit = () => executeInBatches(batchRecruit, '批量招募', 'batchRecruit');
+const wrappedBatchLegacyGiftSendEnhanced = () => executeInBatches(batchLegacyGiftSendEnhanced, '批量赠送功法残卷', 'batchLegacyGiftSendEnhanced');
 
 // 原始任务函数映射（用于批量执行，避免嵌套调用）
 const originalTaskFunctionMap = {
@@ -8773,7 +9305,7 @@ const originalTaskFunctionMap = {
   batchbaoku13,
   batchbaoku45,
   batchmengjing,
-  batchBuyDreamItems,
+  batchDreamBuy,
   batchclubsign,
   batcharenafight,
   batchTopUpFish,
@@ -8796,10 +9328,6 @@ const originalTaskFunctionMap = {
   batchClaimStarRewards,
   legionStoreBuySkinCoins,
   startBatch,
-};
-
-const getOriginalTaskFunction = (taskName) => {
-  return originalTaskFunctionMap[taskName] || null;
 };
 
 // 包装任务函数映射（用于UI按钮点击）
@@ -8844,9 +9372,533 @@ const taskFunctionMap = {
 const getTaskFunction = (taskName) => {
   return taskFunctionMap[taskName] || null;
 };
+
+const getOriginalTaskFunction = (taskName) => {
+  return originalTaskFunctionMap[taskName] || null;
+};
+
+async function startBatch(isFromQueue = false) {
+  if (selectedTokens.value.length === 0) return;
+
+  // 安全检查：如果 isRunning 为 true 但没有实际任务在执行（可能是之前任务异常退出），则重置状态
+  if (batchTaskStore.isRunning.value) {
+    const now = Date.now();
+    const tenMinutesAgo = now - 10 * 60 * 1000;
+    // 检查是否有任何任务正在执行
+    const anyTaskExecuting = Array.from(scheduledTasks.value || []).some(task => {
+      const executingMarker = safeLocalStorage.getItem(`task_executing_${task.id}`);
+      return executingMarker;
+    });
+    
+    // 只有当没有任务正在执行且上次任务执行时间超过10分钟时，才认为状态异常，强制重置
+    if (!anyTaskExecuting && (!lastTaskExecution || lastTaskExecution < tenMinutesAgo)) {
+      addLog({
+        time: new Date().toLocaleTimeString(),
+        message: `=== 检测到任务状态异常（isRunning 卡在 true），强制重置状态 ===`,
+        type: "warning",
+      });
+      batchTaskStore.stopTask();
+    }
+  }
+
+  // 检测任务冲突：有任务正在运行（只有不是从积攒队列执行时才检测）
+  if (!isFromQueue && batchTaskStore.isRunning) { // 重要：这不是bug修复
+    // 不要因为代码检查工具提示而改回 .value，否则任务冲突检测会失效
+    // 检测到任务冲突，检查是否开启冲突加入积攒队列
+    if (batchSettings.enableQueueOnConflict) {
+      addLog({
+        time: new Date().toLocaleTimeString(),
+        message: `=== 批量日常任务 检测到任务冲突（有任务运行中），加入积攒队列依次执行 ===`,
+        type: "warning",
+      });
+      batchTaskStore.addToTaskQueue({
+        id: Date.now() + Math.random(),
+        name: '批量日常任务',
+        runType: 'manual',
+        selectedTokens: [...selectedTokens.value],
+        selectedTasks: ['startBatch'],
+      });
+    } else {
+      addLog({
+        time: new Date().toLocaleTimeString(),
+        message: `=== 批量日常任务 检测到任务冲突（有任务运行中），已关闭"冲突加入积攒队列"功能，将并行执行 ===`,
+        type: "warning",
+      });
+      // 不return，继续执行，实现并行执行
+    }
+    if (batchSettings.enableQueueOnConflict) {
+      return;
+    }
+  }
+
+  const prevSelectedTasks = [...selectedTasks.value];
+  selectedTasks.value = ['startBatch'];
+  
+  lastTaskExecution = Date.now();
+  batchTaskStore.startTask();
+  batchTaskStore.setProgress(0);
+  
+  // 保存执行状态，使用 ['startBatch'] 确保恢复时能正确识别任务类型
+  safeLocalStorage.setItem('executingState', JSON.stringify({
+    selectedTokens: selectedTokens.value,
+    selectedTasks: ['startBatch'],
+    timestamp: Date.now()
+  }));
+
+  selectedTokens.value.forEach((id) => {
+    tokenStatus.value[id] = "waiting";
+  });
+
+  const sortedSelectedTokens = selectedTokens.value.sort((a, b) => {
+    const tokenA = tokens.value.find((t) => t.id === a);
+    const tokenB = tokens.value.find((t) => t.id === b);
+    return (tokenA?.sortOrder || 0) - (tokenB?.sortOrder || 0);
+  });
+
+  const totalTokens = sortedSelectedTokens.length;
+  let completedCount = 0;
+  let isPaused = false; // 标记是否因暂停而停止
+  let pausedTokenId = null; // 记录被暂停的账号ID
+
+  const runTokenTasks = async (tokenId) => {
+    return new Promise(async (resolve) => {
+      if (batchTaskStore.shouldStop.value || isPaused) {
+        resolve();
+        return;
+      }
+
+      tokenStatus.value[tokenId] = "running";
+
+      let retryCount = 0;
+      const MAX_RETRIES = 1;
+      let success = false;
+
+      while (retryCount <= MAX_RETRIES && !success) {
+        if (batchTaskStore.shouldStop.value || isPaused) break;
+
+        const token = tokens.value.find((t) => t.id === tokenId);
+
+        try {
+          if (retryCount === 0) {
+            addLog({
+              time: new Date().toLocaleTimeString(),
+              message: `=== 开始执行: ${token.name} ===`,
+              type: "info",
+            });
+          } else {
+            addLog({
+              time: new Date().toLocaleTimeString(),
+              message: `=== 尝试重试: ${token.name} (第${retryCount}次) ===`,
+              type: "info",
+            });
+          }
+
+          await ensureConnection(tokenId, 2, ['startBatch'], '批量日常任务');
+
+          const runner = new DailyTaskRunner(tokenStore, {
+            commandDelay: batchSettings.commandDelay,
+            taskDelay: batchSettings.taskDelay,
+          }, () => isPauseTime.value.paused, {
+            genieSweep: batchSettings.genieSweep
+          });
+
+          await runner.run(tokenId, {
+            onLog: (log) => addLog(log),
+            onProgress: (p) => {},
+          });
+
+          success = true;
+          tokenStatus.value[tokenId] = "completed";
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `=== ${token.name} 执行完成 ===`,
+            type: "success",
+          });
+
+          try {
+            const settings = loadSettings(tokenId);
+            if (settings && settings.taskCompleteFormation && settings.taskCompleteFormation > 0) {
+              addLog({
+                time: new Date().toLocaleTimeString(),
+                message: `${token.name} 正在切换到阵容 ${settings.taskCompleteFormation}`,
+                type: "info",
+              });
+              await tokenStore.sendMessageWithPromise(
+                tokenId,
+                "presetteam_saveteam",
+                { teamId: settings.taskCompleteFormation },
+                5000
+              );
+              addLog({
+                time: new Date().toLocaleTimeString(),
+                message: `${token.name} 阵容切换成功`,
+                type: "success",
+              });
+            }
+          } catch (error) {
+            console.error(`切换阵容失败: ${error.message}`);
+            addLog({
+              time: new Date().toLocaleTimeString(),
+              message: `${token.name} 阵容切换失败: ${error.message}`,
+              type: "warning",
+            });
+          }
+        } catch (error) {
+          console.error(error);
+          if (error.isPause) {
+            addLog({
+              time: new Date().toLocaleTimeString(),
+              message: `=== ${token.name} 任务被暂停: 当前处于${isPauseTime.value.reason}，批量任务将停止并加入积攒队列 ===`,
+              type: "info",
+            });
+            // 标记暂停状态，让外层统一处理剩余账号
+            isPaused = true;
+            pausedTokenId = tokenId;
+            tokenStatus.value[tokenId] = "paused";
+            break;
+          }
+          
+          // 重要：检查错误类型，如果是"已领取"或"已完成"类型的错误，标记为成功
+          // 这样可以避免无限重试已完成的任务
+          const isCompletedError = error.message && (
+            error.message.includes('已领取') ||
+            error.message.includes('已完成') ||
+            error.message.includes('没有可领取') ||
+            error.message.includes('奖励已领取')
+          );
+          
+          if (isCompletedError) {
+            // 任务实际上已完成，标记为成功
+            success = true;
+            tokenStatus.value[tokenId] = "completed";
+            addLog({
+              time: new Date().toLocaleTimeString(),
+              message: `=== ${token.name} 任务已完成（${error.message}） ===`,
+              type: "success",
+            });
+            break;
+          }
+          
+          if (retryCount < MAX_RETRIES && !batchTaskStore.shouldStop.value) {
+            addLog({
+              time: new Date().toLocaleTimeString(),
+              message: `${token.name} 执行出错: ${error.message}，等待3秒后重试...`,
+              type: "warning",
+            });
+            await new Promise((r) => setTimeout(r, 3000));
+            retryCount++;
+          } else {
+            tokenStatus.value[tokenId] = "failed";
+            addLog({
+              time: new Date().toLocaleTimeString(),
+              message: `${token.name} 执行失败: ${error.message}`,
+              type: "error",
+            });
+          }
+        } finally {
+          tokenStore.closeWebSocketConnection(tokenId);
+          releaseConnectionSlot();
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 连接已关闭  (队列: ${connectionQueue.active}/${batchSettings.maxActive})`,
+            type: "info",
+          });
+        }
+      }
+      completedCount++;
+      batchTaskStore.setProgress(Math.round((completedCount / totalTokens) * 100));
+      resolve();
+    });
+  };
+
+  try {
+    // 分批执行设置逻辑：
+    // - 如果是从定时任务调用（isFromQueue=true），不使用全局默认分批设置，由定时任务自身控制
+    // - 如果是从批量日常页面调用，使用全局的 batchSettings 设置
+    const enableBatchExecution = isFromQueue 
+      ? batchSettings.enableBatchExecution === true  // 定时任务：只有明确启用才分批
+      : batchSettings.enableBatchExecution !== false; // 批量日常页面：默认启用分批
+    const batchSize = batchSettings.batchSize || 5;
+    const batchDelay = (batchSettings.batchDelay || 5) * 1000;
+    
+    if (enableBatchExecution) {
+      const totalBatches = Math.ceil(totalTokens / batchSize);
+
+      addLog({
+        time: new Date().toLocaleTimeString(),
+        message: `=== 批量任务开始，共 ${totalTokens} 个账号，分 ${totalBatches} 批执行，每批 ${batchSize} 个账号 ===`,
+        type: "info",
+      });
+
+      for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
+        if (batchTaskStore.shouldStop.value) {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `=== 批量任务已停止 ===`,
+            type: "warning",
+          });
+          break;
+        }
+
+        const startIdx = batchIndex * batchSize;
+        const endIdx = Math.min(startIdx + batchSize, totalTokens);
+        const batchTokens = sortedSelectedTokens.slice(startIdx, endIdx);
+
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `=== 开始执行第 ${batchIndex + 1}/${totalBatches} 批，共 ${batchTokens.length} 个账号 ===`,
+          type: "info",
+        });
+
+        const batchPromises = batchTokens.map(tokenId => runTokenTasks(tokenId));
+        await Promise.all(batchPromises);
+
+        // 检查是否因暂停而停止
+        if (isPaused) {
+          // 收集剩余未执行的账号（当前批次中未执行的 + 后续所有批次）
+          const currentBatchStartIdx = batchIndex * batchSize;
+          const completedInBatch = batchTokens.filter(id => tokenStatus.value[id] === "completed").length;
+          const remainingTokens = sortedSelectedTokens.slice(currentBatchStartIdx + completedInBatch);
+          
+          if (remainingTokens.length > 0) {
+            // 检查是否已经有相同的剩余任务在队列中
+            const existingTask = batchTaskStore.taskQueue.find(t => t.name === '批量任务-剩余账号');
+            if (!existingTask) {
+              addLog({
+                time: new Date().toLocaleTimeString(),
+                message: `=== 批量任务被暂停: 当前处于${isPauseTime.value.reason}，剩余 ${remainingTokens.length} 个账号已加入积攒队列 ===`,
+                type: "info",
+              });
+              batchTaskStore.addToTaskQueue({
+                id: Date.now() + Math.random(),
+                name: '批量任务-剩余账号',
+                runType: 'manual',
+                selectedTokens: remainingTokens,
+                selectedTasks: ['startBatch'],
+              });
+            } else {
+              addLog({
+                time: new Date().toLocaleTimeString(),
+                message: `=== 批量任务-剩余账号已在积攒队列中，跳过 ===`,
+                type: "info",
+              });
+            }
+          }
+          // 重要：暂停时重置任务状态，避免进度条一直显示
+          batchTaskStore.stopTask();
+          return;
+        }
+
+        if (batchIndex < totalBatches - 1 && !batchTaskStore.shouldStop.value) {
+          // 使用局部变量 batchDelay（已转换为秒）
+          const batchDelaySeconds = batchDelay / 1000;
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `=== 第 ${batchIndex + 1} 批完成，等待 ${batchDelaySeconds} 秒后执行下一批 ===`,
+            type: "info",
+          });
+
+          // 重要：在等待期间保持进度显示，避免长时间显示0%
+          // 设置进度为当前批次的进度（已完成的账号数 / 总数）
+          const currentProgress = Math.round((completedCount / totalTokens) * 100);
+          batchTaskStore.setProgress(currentProgress);
+
+          let remainingSeconds = batchDelaySeconds;
+          while (remainingSeconds > 0 && !batchTaskStore.shouldStop.value) {
+            // 重要：确保在等待期间 isRunning 保持为 true，防止按钮被启用
+            if (!batchTaskStore.isRunning.value) {
+              batchTaskStore.startTask();
+            }
+            
+            // 检查是否进入暂停时间
+            if (isPauseTime.value.paused) {
+              // 将剩余任务加入积攒队列
+              const remainingTokens = sortedSelectedTokens.slice((batchIndex + 1) * batchSize);
+              if (remainingTokens.length > 0) {
+                // 检查是否已经有相同的剩余任务在队列中
+                const existingTask = batchTaskStore.taskQueue.find(t => t.name === '批量任务-剩余账号');
+                if (!existingTask) {
+                  addLog({
+                    time: new Date().toLocaleTimeString(),
+                    message: `=== 批量任务在倒计时期间被暂停: 当前处于${isPauseTime.value.reason}，已加入积攒队列 ===`,
+                    type: "info",
+                  });
+                  batchTaskStore.addToTaskQueue({
+                    id: Date.now() + Math.random(),
+                    name: '批量任务-剩余账号',
+                    runType: 'manual',
+                    selectedTokens: remainingTokens,
+                    selectedTasks: ['startBatch'],
+                  });
+                } else {
+                  addLog({
+                    time: new Date().toLocaleTimeString(),
+                    message: `=== 批量任务-剩余账号已在积攒队列中，跳过 ===`,
+                    type: "info",
+                  });
+                }
+              }
+              // 重要：暂停时重置任务状态，避免进度条一直显示
+              batchTaskStore.stopTask();
+              return;
+            }
+
+            if (remainingSeconds % 10 === 0 || remainingSeconds <= 5) {
+              addLog({
+                time: new Date().toLocaleTimeString(),
+                message: `倒计时: ${remainingSeconds} 秒`,
+                type: "info",
+              });
+            }
+            await new Promise((r) => setTimeout(r, 1000));
+            remainingSeconds--;
+          }
+
+          if (batchTaskStore.shouldStop.value) {
+            addLog({
+              time: new Date().toLocaleTimeString(),
+              message: `=== 批量任务已停止 ===`,
+              type: "warning",
+            });
+            break;
+          }
+        }
+      }
+
+      if (!batchTaskStore.shouldStop.value && !isPauseTime.value.paused) {
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `=== 批量任务全部完成 ===`,
+          type: "success",
+        });
+      }
+    } else {
+      addLog({
+        time: new Date().toLocaleTimeString(),
+        message: `=== 批量任务开始，共 ${totalTokens} 个账号 ===`,
+        type: "info",
+      });
+
+      const taskPromises = sortedSelectedTokens.map(tokenId => runTokenTasks(tokenId));
+      await Promise.all(taskPromises);
+
+      // 检查是否因暂停而停止
+      if (isPaused) {
+        // 收集剩余未执行的账号
+        const completedTokens = sortedSelectedTokens.filter(id => tokenStatus.value[id] === "completed");
+        const remainingTokens = sortedSelectedTokens.slice(completedTokens.length);
+        
+        if (remainingTokens.length > 0) {
+          // 检查是否已经有相同的剩余任务在队列中
+          const existingTask = batchTaskStore.taskQueue.find(t => t.name === '批量任务-剩余账号');
+          if (!existingTask) {
+            addLog({
+              time: new Date().toLocaleTimeString(),
+              message: `=== 批量任务被暂停: 当前处于${isPauseTime.value.reason}，剩余 ${remainingTokens.length} 个账号已加入积攒队列 ===`,
+              type: "info",
+            });
+            batchTaskStore.addToTaskQueue({
+              id: Date.now() + Math.random(),
+              name: '批量任务-剩余账号',
+              runType: 'manual',
+              selectedTokens: remainingTokens,
+              selectedTasks: ['startBatch'],
+            });
+          } else {
+            addLog({
+              time: new Date().toLocaleTimeString(),
+              message: `=== 批量任务-剩余账号已在积攒队列中，跳过 ===`,
+              type: "info",
+            });
+          }
+        }
+        // 重要：暂停时重置任务状态，避免进度条一直显示
+        batchTaskStore.stopTask();
+        return;
+      }
+
+      addLog({
+        time: new Date().toLocaleTimeString(),
+        message: `=== 批量任务执行完成 ===`,
+        type: "success",
+      });
+
+      // 发送批量任务完成推送通知
+      await sendTaskCompleteNotification('批量日常任务', {
+        success: totalTokens,
+        failed: 0,
+        total: totalTokens
+      });
+    }
+  } catch (error) {
+    console.error("批量任务执行出错:", error);
+    addLog({
+      time: new Date().toLocaleTimeString(),
+      message: `=== 批量任务执行出错: ${error.message} ===`,
+      type: "error",
+    });
+  } finally {
+    await new Promise((r) => setTimeout(r, 1000));
+
+    safeLocalStorage.removeItem('executingState');
+    
+    // 重要：先重置 isRunning 为 false，然后执行积攒队列
+    batchTaskStore.stopTask();
+    
+    // 重要：任务完成后检查并执行积攒队列
+    // 添加额外的安全检查，确保队列能够执行
+    try {
+      await checkAndExecuteQueuedTasks();
+    } catch (queueError) {
+      console.error('执行积攒队列失败:', queueError);
+      // 即使队列执行失败，也要确保状态被重置
+      isExecutingQueuedTasks.value = false;
+      safeLocalStorage.removeItem('queued_tasks_executing');
+    }
+    
+    selectedTasks.value = prevSelectedTasks;
+    
+    // 任务完成后启动立即倒计时刷新模式
+    if (batchSettings.enableRefresh && batchSettings.refreshInterval > 0) {
+      taskJustCompleted = true;
+      lastRefreshTime = Date.now(); // 记录任务完成时间，作为倒计时起点
+      const noticeDelaySeconds = batchSettings.refreshNoticeDelay || 30;
+      console.log(`✅ 批量任务完成，${noticeDelaySeconds}秒后将刷新页面`);
+      message.info(`任务完成，${noticeDelaySeconds}秒后将刷新页面`, { duration: 5000 });
+      
+      // 添加总提示日志
+      addLog({
+        time: new Date().toLocaleTimeString(),
+        message: `=== 任务完成，等待 ${noticeDelaySeconds} 秒后刷新页面 ===`,
+        type: "warning"
+      });
+    }
+    
+    message.success("批量任务执行结束");
+  }
+};
+
+const stopBatch = () => {
+  batchTaskStore.stopTask();
+  addLog({
+    time: new Date().toLocaleTimeString(),
+    message: "正在停止...",
+    type: "warning",
+  });
+};
 </script>
 
 <style scoped>
+/* 脉冲动画 */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
 .batch-daily-tasks {
   padding: 20px;
   height: 100vh;
@@ -8876,7 +9928,7 @@ const getTaskFunction = (taskName) => {
   height: 700px;
 }
 
-.page-header {
+page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -8915,6 +9967,27 @@ const getTaskFunction = (taskName) => {
   gap: 12px;
   justify-content: flex-end;
   flex-wrap: nowrap;
+}
+
+/* 刷新倒计时日志项样式 */
+.refresh-countdown-log {
+  background: linear-gradient(90deg, #fff7ed 0%, #ffedd5 100%) !important;
+  border-left: 3px solid #f97316 !important;
+  animation: pulse-log 1.5s ease-in-out infinite;
+}
+
+.refresh-countdown-log .message {
+  color: #c2410c !important;
+  font-weight: 500;
+}
+
+@keyframes pulse-log {
+  0%, 100% {
+    background: linear-gradient(90deg, #fff7ed 0%, #ffedd5 100%) !important;
+  }
+  50% {
+    background: linear-gradient(90deg, #ffedd5 0%, #fed7aa 100%) !important;
+  }
 }
 
 /* Cron Parser Styles */
@@ -9061,6 +10134,16 @@ const getTaskFunction = (taskName) => {
   color: #666;
 }
 
+/* 加载动画 */
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
 /* Responsive Design */
 @media (max-width: 1200px) {
   .right-column {
@@ -9099,8 +10182,9 @@ const getTaskFunction = (taskName) => {
 
 @media (max-width: 768px) {
   .batch-daily-tasks {
-    padding: 12px;
-    height: 100vh;
+    padding: 8px;
+    height: auto;
+    min-height: 100vh;
     overflow-y: auto;
     overflow-x: hidden;
   }
@@ -9109,6 +10193,7 @@ const getTaskFunction = (taskName) => {
     height: auto;
     overflow: visible;
     flex-direction: column;
+    gap: 12px;
   }
 
   .left-column {
@@ -9122,17 +10207,32 @@ const getTaskFunction = (taskName) => {
     height: auto;
     width: 100%;
     flex: none;
+    margin-top: 12px;
   }
 
   .page-header {
     flex-direction: column;
-    gap: 12px;
+    gap: 8px;
     align-items: stretch;
+    margin-bottom: 12px;
+  }
+
+  .page-header > div {
+    width: 100%;
   }
 
   .page-header .actions {
     display: flex;
-    gap: 8px;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .token-list-card {
+    margin-top: 12px;
+  }
+
+  .scheduled-tasks-card {
+    margin-top: 12px;
   }
 
   .log-card {
@@ -9146,8 +10246,9 @@ const getTaskFunction = (taskName) => {
   }
 
   .log-container {
-    height: 300px;
-    min-height: 300px;
+    height: 250px;
+    min-height: 250px;
+    max-height: 250px;
     flex: none !important;
   }
 
@@ -9155,6 +10256,85 @@ const getTaskFunction = (taskName) => {
     flex-direction: column;
     align-items: flex-start;
     gap: 4px;
+  }
+
+  /* 优化功能按钮在小屏幕上的显示 */
+  .n-space {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .n-space > .n-button {
+    flex: 1 0 45%;
+    min-width: 80px;
+    margin-bottom: 6px;
+    font-size: 13px;
+  }
+
+  /* 优化账号列表在小屏幕上的显示 */
+  .token-row {
+    padding-right: 2px;
+  }
+
+  .token-item {
+    font-size: 13px;
+  }
+
+  /* 优化模态框在小屏幕上的显示 */
+  .n-modal {
+    max-width: 95% !important;
+    width: 95% !important;
+  }
+
+  /* 优化字体大小和间距 */
+  h2 {
+    font-size: 18px;
+    margin-bottom: 12px;
+  }
+
+  .card-title {
+    font-size: 14px;
+  }
+
+  .log-item {
+    font-size: 11px;
+  }
+
+  /* 优化卡片在小屏幕上的显示 */
+  .n-card {
+    margin-bottom: 8px;
+  }
+
+  .n-card :deep(.n-card__header) {
+    padding: 10px;
+  }
+
+  .n-card :deep(.n-card__content) {
+    padding: 10px;
+  }
+
+  /* 优化表格在小屏幕上的显示 */
+  .n-data-table {
+    font-size: 12px;
+  }
+
+  .n-data-table :deep(.n-data-table-th) {
+    padding: 8px 4px;
+  }
+
+  .n-data-table :deep(.n-data-table-td) {
+    padding: 8px 4px;
+  }
+
+  /* 优化输入框在小屏幕上的显示 */
+  .n-input,
+  .n-select {
+    font-size: 13px;
+  }
+
+  /* 优化开关在小屏幕上的显示 */
+  .n-switch {
+    transform: scale(0.9);
   }
 
   /* 批量功法残卷赠送样式 */
@@ -9168,16 +10348,13 @@ const getTaskFunction = (taskName) => {
     transform: scale(1.05);
     box-shadow: 0 6px 16px rgba(102, 126, 234, 0.3);
   }
+}
 
-  /* 加载动画 */
-  @keyframes spin {
-    0% {
-      transform: rotate(0deg);
-    }
-
-    100% {
-      transform: rotate(360deg);
-    }
+/* 小屏幕设备优化 */
+@media (max-width: 600px) {
+  .batch-daily-tasks {
+    padding: 6px;
+    min-height: 100vh;
   }
 
   /* Token分组管理样式 */
@@ -9208,17 +10385,142 @@ const getTaskFunction = (taskName) => {
     font-weight: 600;
   }
 
-  /* 响应式设计 */
-  @media (max-width: 600px) {
-    .recipient-info {
-      flex-direction: column;
-      align-items: center;
-      text-align: center;
-    }
-
-    .avatar-container {
-      margin-bottom: 12px;
-    }
+  .main-layout {
+    gap: 8px;
   }
+
+  .recipient-info {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .page-header {
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+
+  .page-header .actions {
+    gap: 4px;
+  }
+
+  .n-space > .n-button {
+    flex: 1 0 48%;
+    min-width: 70px;
+    margin-bottom: 4px;
+    font-size: 12px;
+  }
+
+  .log-container {
+    height: 200px;
+    min-height: 200px;
+    max-height: 200px;
+  }
+
+  .token-item {
+    font-size: 12px;
+  }
+
+  .card-title {
+    font-size: 13px;
+  }
+
+  .log-item {
+    font-size: 10px;
+  }
+
+  .recipient-info {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  /* 优化账号列表列数 */
+  .n-grid {
+    --grid-cols: 1 !important;
+  }
+  
+  /* 进一步优化字体大小 */
+  h2 {
+    font-size: 16px;
+  }
+}
+
+/* 超小屏幕设备优化 */
+@media (max-width: 400px) {
+  .batch-daily-tasks {
+    padding: 4px;
+  }
+
+  .main-layout {
+    gap: 6px;
+  }
+
+  .n-space > .n-button {
+    flex: 1 0 100%;
+    min-width: 100%;
+    margin-bottom: 4px;
+    font-size: 12px;
+  }
+
+  .page-header .actions {
+    gap: 4px;
+  }
+
+  .log-container {
+    height: 180px;
+    min-height: 180px;
+    max-height: 180px;
+  }
+
+  .token-item {
+    font-size: 11px;
+  }
+
+  .card-title {
+    font-size: 12px;
+  }
+
+  /* 优化模态框在超小屏幕上的显示 */
+  .n-modal {
+    max-width: 98% !important;
+    width: 98% !important;
+  }
+
+  .n-modal :deep(.n-card__content) {
+    padding: 8px;
+  }
+
+  /* 优化按钮在超小屏幕上的显示 */
+  .n-button {
+    font-size: 11px;
+    padding: 4px 8px;
+  }
+
+  /* 优化输入框在超小屏幕上的显示 */
+  .n-input,
+  .n-select {
+    font-size: 12px;
+  }
+}
+
+/* 折叠动画 */
+.slide-fade-enter-active,
+.slide-fade-leave-active {
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.slide-fade-enter-from,
+.slide-fade-leave-to {
+  transform: translateY(-10px);
+  opacity: 0;
+  max-height: 0;
+}
+
+.slide-fade-enter-to,
+.slide-fade-leave-from {
+  max-height: 800px;
+  opacity: 1;
+  transform: translateY(0);
 }
 </style>

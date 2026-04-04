@@ -198,8 +198,6 @@ export function registerDefaultCommands(reg) {
     .register("legion_refuseapply")
     .register("legion_agree")
     .register("legion_ignore")
-    .register("legion_research")
-    .register("legion_resetresearch")
 
     .register("legion_getinfobyid")
     .register("legion_getarearank")
@@ -211,9 +209,9 @@ export function registerDefaultCommands(reg) {
     .register("legion_claimpayloadtaskprogress")
     .register("saltroad_getwartype")
     .register("saltroad_getsaltroadwargrouprank")
+    .register("legion_signup") // 盐场报名
     .register("league_getbattlefield")
     .register("league_getgroupopponent")
-    .register("legion_signup") // 盐场报名
 
     // 邮件
     .register("mail_getlist", { category: [0, 4, 5], lastId: 0, size: 60 })
@@ -256,6 +254,7 @@ export function registerDefaultCommands(reg) {
     // 军团匹配和签到
     .register("legionmatch_rolesignup")
     .register("legion_signin")
+    .register("legion_resetresearch")
 
     // 钓鱼
     .register("artifact_lottery", { lotteryNumber: 1, newFree: true, type: 1 })
@@ -293,7 +292,7 @@ export function registerDefaultCommands(reg) {
     // 武将升级相关
     .register("hero_heroupgradelevel") //武将升级
     .register("hero_heroupgradeorder") //武将进阶
-    .register("hero_rebirth") //武将重新birth
+    .register("hero_rebirth") //武将重生
 
     // 升星相关
     .register("hero_heroupgradestar")
@@ -311,6 +310,7 @@ export function registerDefaultCommands(reg) {
     // 活动/任务
     .register("activity_get")
     .register("activity_recyclewarorderrewardclaim")
+    .register("activity_buystoregoods")
     .register("legion_getpayloadtask")
     .register("legion_getpayloadkillrecord")
     .register("legion_getpayloadbf")
@@ -318,7 +318,6 @@ export function registerDefaultCommands(reg) {
     .register("warguess_getrank")
     .register("warguess_startguess")
     .register("warguess_getguesscoinreward")
-    .register("legion_payloadsignup") // 蟠桃报名
 
     // 珍宝阁相关
     .register("collection_claimfreereward")
@@ -843,7 +842,7 @@ export class XyzwWebSocketClient {
   /** Promise 版发送 */
   sendWithPromise(cmd, params = {}, timeoutMs = 5000) {
     return new Promise((resolve, reject) => {
-      if (!this.connected && !this.socket) {
+      if (!this.connected || !this.socket || this.socket.readyState !== WebSocket.OPEN) {
         return reject(new Error("WebSocket 连接已关闭"));
       }
 
@@ -1088,11 +1087,6 @@ export class XyzwWebSocketClient {
       warguess_getguesscoinrewardresp: "warguess_getguesscoinreward",
       league_getbattlefieldresp: "league_getbattlefield",
       league_getgroupopponentresp: "league_getgroupopponent",
-      legion_signupresp: "legion_signup",
-      legion_payloadsignupresp: "legion_payloadsignup",
-      pearl_replaceskillresp: "pearl_replaceskill",
-      pearl_exchangeskillresp: "pearl_exchangeskill",
-      pearl_unloadskillresp: "pearl_unloadskill",
       // 咸王宝库
       matchteam_getroleteaminforesp: "matchteam_getroleteaminfo",
       bosstower_getinforesp: "bosstower_getinfo",
@@ -1101,13 +1095,12 @@ export class XyzwWebSocketClient {
       discount_getdiscountinforesp: "discount_getdiscountinfo",
       // 升星相关响应映射
       hero_heroupgradestarresp: "hero_heroupgradestar",
-      hero_heroupgradelevelresp: "hero_heroupgradelevel",
-      hero_heroupgradeorderresp: "hero_heroupgradeorder",
       book_upgraderesp: "book_upgrade",
       book_claimpointrewardresp: "book_claimpointreward",
       // 军团信息
       legion_getinforesp: "legion_getinfo",
       legion_getinforresp: "legion_getinfo",
+      legion_signupresp: "legion_signup",
       // 车辆相关响应映射
       car_getrolecarresp: "car_getrolecar",
       car_refreshresp: "car_refresh",
@@ -1115,8 +1108,6 @@ export class XyzwWebSocketClient {
       car_sendresp: "car_send",
       car_getmemberhelpingcntresp: "car_getmemberhelpingcnt",
       car_getmemberrankresp: "car_getmemberrank",
-      car_researchresp: "car_research",
-      car_claimpartconsumerewardresp: "car_claimpartconsumereward",
       role_gettargetteamresp: "role_gettargetteam",
       activity_warorderclaimresp: "activity_recyclewarorderrewardclaim",
       arena_getarearankresp: "arena_getarearank",
@@ -1135,8 +1126,6 @@ export class XyzwWebSocketClient {
       task_claimweekrewardresp: "task_claimweekreward",
 
       // 同步响应映射（优先级低）
-
-      legion_researchresp: ["legion_research", "legion_resetresearch"],
       syncresp: [
         "system_mysharecallback",
         "task_claimdailypoint",
@@ -1157,6 +1146,7 @@ export class XyzwWebSocketClient {
         "artifact_exchange",
         "hero_exchange",
         "hero_rebirth",
+        "activity_buystoregoods",
       ],
     };
 
@@ -1182,11 +1172,6 @@ export class XyzwWebSocketClient {
             : packet.decodedBody !== undefined
               ? packet.decodedBody
               : packet.body;
-
-        // 附加原始命令名到响应对象
-        if (responseBody && typeof responseBody === "object") {
-          responseBody._originalCmd = promiseData.originalCmd;
-        }
 
         if (packet.code === 0 || packet.code === undefined) {
           promiseData.resolve(responseBody || packet);

@@ -516,10 +516,10 @@ const exportTokens = () => {
 
 const importTokens = ({ file }) => {
   const reader = new FileReader();
-  reader.onload = (e) => {
+  reader.onload = async (e) => {
     try {
       const tokenData = JSON.parse(e.target.result);
-      const result = localTokenStore.importTokens(tokenData);
+      const result = await localTokenStore.importTokens(tokenData);
 
       if (result.success) {
         message.success(result.message);

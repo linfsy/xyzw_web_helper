@@ -11,7 +11,6 @@ const getTokenSettings = (tokenId) => {
     const defaultSettings = {
       arenaFormation: 1,
       towerFormation: 1,
-      weirdTowerFormation: 1,
       bossFormation: 1,
       taskCompleteFormation: 1,
       bossTimes: 2,
@@ -28,7 +27,6 @@ const getTokenSettings = (tokenId) => {
     return {
       arenaFormation: 1,
       towerFormation: 1,
-      weirdTowerFormation: 1,
       bossFormation: 1,
       taskCompleteFormation: 1,
       bossTimes: 2,
@@ -70,6 +68,8 @@ export function createTasksArena(deps) {
     calculateMonthProgress,
     delayConfig,
     loadSettings,
+    startTask,
+    stopTask,
   } = deps;
 
   /**
@@ -77,8 +77,8 @@ export function createTasksArena(deps) {
    */
   const batcharenafight = async () => {
     if (selectedTokens.value.length === 0) return;
-    isRunning.value = true;
-    shouldStop.value = false;
+    if (startTask) startTask();
+    else { startTask(); }
 
     selectedTokens.value.forEach((id) => {
       tokenStatus.value[id] = "waiting";
@@ -88,9 +88,8 @@ export function createTasksArena(deps) {
       if (shouldStop.value) return;
       tokenStatus.value[tokenId] = "running";
       const token = tokens.value.find((t) => t.id === tokenId);
-      // 加载该Token的独立配置，如果未找到则回退到currentSettings(虽然可能不准确，但作为最后的兜底)
+      // 加载该Token的独立配置，如果未找到则回退到currentSettings
       const tokenSettings = loadSettings ? (loadSettings(tokenId) || currentSettings) : currentSettings;
-      
       try {
         addLog({
           time: new Date().toLocaleTimeString(),
@@ -157,9 +156,10 @@ export function createTasksArena(deps) {
           Isswitching = true;
           addLog({
             time: new Date().toLocaleTimeString(),
-            message: `成功切换到阵容${tokenSettings.arenaFormation}`,
+            message: `${token.name} 成功切换到阵容${tokenSettings.arenaFormation}`,
             type: "info",
           });
+          await new Promise((r) => setTimeout(r, delayConfig.refresh));
         }
         
         const fights = Math.min(3, ticketCount);
@@ -232,7 +232,7 @@ export function createTasksArena(deps) {
         tokenStatus.value[tokenId] = "completed";
         addLog({
           time: new Date().toLocaleTimeString(),
-          message: `=== ${token.name} 竞技场战斗已完成 ===`,
+          message: `=== ${token.name} 一键竞技场战斗结束 ===`,
           type: "success",
         });
       } catch (error) {
@@ -255,8 +255,8 @@ export function createTasksArena(deps) {
     });
 
     await Promise.all(taskPromises);
-    isRunning.value = false;
-    currentRunningTokenId.value = null;
+    if (stopTask) stopTask();
+    else { stopTask(); }
     message.success("批量竞技场战斗结束");
   };
 
@@ -265,8 +265,8 @@ export function createTasksArena(deps) {
    */
   const batchTopUpFish = async () => {
     if (selectedTokens.value.length === 0) return;
-    isRunning.value = true;
-    shouldStop.value = false;
+    if (startTask) startTask();
+    else { startTask(); }
 
     selectedTokens.value.forEach((id) => {
       tokenStatus.value[id] = "waiting";
@@ -583,8 +583,8 @@ export function createTasksArena(deps) {
     });
 
     await Promise.all(taskPromises);
-    isRunning.value = false;
-    currentRunningTokenId.value = null;
+    if (stopTask) stopTask();
+    else { stopTask(); }
     message.success("批量钓鱼补齐结束");
   };
 
@@ -593,8 +593,8 @@ export function createTasksArena(deps) {
    */
   const batchTopUpArena = async () => {
     if (selectedTokens.value.length === 0) return;
-    isRunning.value = true;
-    shouldStop.value = false;
+    if (startTask) startTask();
+    else { startTask(); }
 
     selectedTokens.value.forEach((id) => {
       tokenStatus.value[id] = "waiting";
@@ -603,7 +603,6 @@ export function createTasksArena(deps) {
     const taskPromises = selectedTokens.value.map(async (tokenId) => {
       if (shouldStop.value) return;
       tokenStatus.value[tokenId] = "running";
-      
       // 加载该Token的独立配置，如果未找到则回退到currentSettings
       const tokenSettings = loadSettings ? (loadSettings(tokenId) || currentSettings) : currentSettings;
       const token = tokens.value.find((t) => t.id === tokenId);
@@ -648,7 +647,7 @@ export function createTasksArena(deps) {
           Isswitching = true;
           addLog({
             time: new Date().toLocaleTimeString(),
-            message: `成功切换到阵容${tokenSettings.arenaFormation}`,
+            message: `${token.name} 成功切换到阵容${tokenSettings.arenaFormation}`,
             type: "info",
           });
         }
@@ -920,13 +919,19 @@ export function createTasksArena(deps) {
             type: "warning",
           });
         }
-        if (Isswitching) {
+        if (tokenSettings.taskCompleteFormation && tokenSettings.taskCompleteFormation !== tokenSettings.arenaFormation) {
+          await new Promise((r) => setTimeout(r, 1000));
           await tokenStore.sendMessageWithPromise(
             tokenId,
             "presetteam_saveteam",
-            { teamId: currentFormation },
+            { teamId: tokenSettings.taskCompleteFormation },
             5000,
           );
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 任务完成，切换到阵容${tokenSettings.taskCompleteFormation}`,
+            type: "info",
+          });
         }
         tokenStatus.value[tokenId] = "completed";
       } catch (error) {
@@ -949,8 +954,8 @@ export function createTasksArena(deps) {
     });
 
     await Promise.all(taskPromises);
-    isRunning.value = false;
-    currentRunningTokenId.value = null;
+    if (stopTask) stopTask();
+    else { stopTask(); }
     message.success("批量竞技场补齐结束");
   };
 

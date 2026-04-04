@@ -376,25 +376,73 @@ export const useLocalTokenStore = defineStore("localToken", () => {
 
   // 批量导入/导出功能
   const exportTokens = () => {
-    return {
-      userToken: userToken.value,
-      gameTokens: gameTokens.value,
-      exportedAt: new Date().toISOString(),
-    };
+    try {
+      // 同步版本的导出功能，确保在手机APK环境下也能正常工作
+      return {
+        userToken: userToken.value,
+        gameTokens: gameTokens.value,
+        exportedAt: new Date().toISOString(),
+        version: "2.0",
+      };
+    } catch (error) {
+      console.error("导出失败:", error);
+      // 即使出错，也要导出基本的Token数据
+      return {
+        userToken: userToken.value,
+        gameTokens: gameTokens.value,
+        exportedAt: new Date().toISOString(),
+        version: "2.0",
+      };
+    }
   };
 
-  const importTokens = (tokenData) => {
+  const importTokens = async (tokenData) => {
     try {
       if (tokenData.userToken) {
         setUserToken(tokenData.userToken);
       }
 
       if (tokenData.gameTokens) {
-        gameTokens.value = tokenData.gameTokens;
+        const now = new Date().toISOString();
+        // 导入Token时更新时间戳并标记为长期有效
+        const importedTokens = {};
+        Object.entries(tokenData.gameTokens).forEach(([rid, data]) => {
+          importedTokens[rid] = {
+            ...data,
+            lastUsed: now,
+            // 从文件导入的Token标记为长期有效，避免过期
+            upgradedToPermanent: true
+          };
+        });
+        gameTokens.value = importedTokens;
         // 持久化到 DB
         Object.entries(gameTokens.value).forEach(([rid, data]) => {
           dbPutGameToken(rid, { ...data, roleId: rid }).catch(() => {});
         });
+      }
+
+      // 导入BIN数据
+      if (tokenData.binData) {
+        try {
+          const { storeArrayBuffer } = useIndexedDB();
+          for (const [key, base64] of Object.entries(tokenData.binData)) {
+            // 将Base64字符串转换回ArrayBuffer
+            const binaryString = atob(base64);
+            const length = binaryString.length;
+            const arrayBuffer = new ArrayBuffer(length);
+            const uint8Array = new Uint8Array(arrayBuffer);
+            
+            for (let i = 0; i < length; i++) {
+              uint8Array[i] = binaryString.charCodeAt(i);
+            }
+            
+            await storeArrayBuffer(key, arrayBuffer);
+          }
+          console.log("BIN数据导入成功");
+        } catch (error) {
+          console.error("导入BIN数据失败:", error);
+          // BIN数据导入失败不影响Token导入
+        }
       }
 
       return { success: true, message: "Token导入成功" };

@@ -540,16 +540,38 @@ const countRacingRefreshTickets = (rewards) => {
   );
 };
 
+// 读取批量任务设置
+const getBatchSettings = () => {
+  try {
+    const saved = localStorage.getItem('batchSettings');
+    if (saved) {
+      return JSON.parse(saved);
+    }
+  } catch (e) {
+    console.warn('读取批量设置失败:', e);
+  }
+  // 默认设置
+  return {
+    carMinColor: 4,  // 默认橙色
+    useGoldRefreshFallback: false,
+    maxCarRefreshCount: 10,  // 默认最大刷新10次
+  };
+};
+
 const shouldSendCar = (car, tickets) => {
+  const settings = getBatchSettings();
+  const minColor = Number(settings.carMinColor ?? 4);
+  
   const color = Number(car?.color || 0);
   const rewards = Array.isArray(car?.rewards) ? car.rewards : [];
   const racingTickets = countRacingRefreshTickets(rewards);
+  
   if (tickets >= 6) {
     return (
-      color >= 4 && (color >= 5 || racingTickets >= 4 || isBigPrize(rewards))
+      color >= minColor && (color >= 5 || racingTickets >= 4 || isBigPrize(rewards))
     );
   }
-  return color >= 4 || racingTickets >= 2 || isBigPrize(rewards);
+  return color >= minColor || racingTickets >= 2 || isBigPrize(rewards);
 };
 
 const fetchCarInfo = async () => {
@@ -943,6 +965,11 @@ const smartSendCar = async () => {
     };
 
     let tickets = Number(refreshTickets.value || 0);
+    const settings = getBatchSettings();
+    const useGoldFallback = settings.useGoldRefreshFallback;
+    // 最大刷新次数：0=不刷新，1=免费刷新，2+=券/金砖
+    const maxRefreshCount = settings.maxCarRefreshCount || 0;
+    
     for (const car of carList.value) {
       if (Number(car.sendAt || 0) !== 0) continue;
       if (shouldSendCar(car, tickets)) {
@@ -951,18 +978,46 @@ const smartSendCar = async () => {
         await new Promise((r) => setTimeout(r, 500));
         continue;
       }
-      let shouldRefresh = false;
+      
+      // 检查是否应该刷新
       const free = Number(car.refreshCount ?? 0) === 0;
-      if (tickets >= 6) shouldRefresh = true;
-      else if (free) shouldRefresh = true;
-      else {
+      let shouldRefresh = false;
+      let refreshCount = 0;
+      
+      // 0=不刷新，直接发车
+      if (maxRefreshCount === 0) {
         await assignHelperIfNeeded(car);
         await sendCar(car);
         await new Promise((r) => setTimeout(r, 500));
         continue;
       }
-      while (shouldRefresh) {
+      
+      // 1=只允许免费刷新1次
+      if (maxRefreshCount === 1 && free) {
+        shouldRefresh = true;
+      }
+      // 2+=允许用刷新券或金砖
+      else if (maxRefreshCount >= 2) {
+        if (tickets >= 6) shouldRefresh = true;
+        else if (free) shouldRefresh = true;
+        else if (useGoldFallback) {
+          shouldRefresh = true;
+          message.warning(`车辆[${gradeLabel(car.color)}]将使用金砖刷新（已启用保底，最多${maxRefreshCount}次）`);
+        }
+      }
+      
+      // 不满足刷新条件，直接发车
+      if (!shouldRefresh) {
+        await assignHelperIfNeeded(car);
+        await sendCar(car);
+        await new Promise((r) => setTimeout(r, 500));
+        continue;
+      }
+      
+      // 循环刷新
+      while (shouldRefresh && refreshCount < maxRefreshCount) {
         await refreshCar(car);
+        refreshCount++;
         tickets = Number(refreshTickets.value || 0);
         if (shouldSendCar(car, tickets)) {
           await assignHelperIfNeeded(car);
@@ -971,14 +1026,27 @@ const smartSendCar = async () => {
           break;
         }
         const freeNow = Number(car.refreshCount ?? 0) === 0;
-        if (tickets >= 6) shouldRefresh = true;
-        else if (freeNow) shouldRefresh = true;
-        else {
-          await assignHelperIfNeeded(car);
-          await sendCar(car);
-          await new Promise((r) => setTimeout(r, 500));
-          break;
+        if (maxRefreshCount === 1 && !freeNow) {
+          // 设置为1时，免费刷新用完就停止
+          shouldRefresh = false;
         }
+        else if (maxRefreshCount >= 2) {
+          if (tickets >= 6) shouldRefresh = true;
+          else if (freeNow) shouldRefresh = true;
+          else if (useGoldFallback) {
+            shouldRefresh = true;
+          }
+          else {
+            shouldRefresh = false;
+          }
+        }
+      }
+      // 如果达到最大刷新次数仍未满足条件，强制发车
+      if (refreshCount >= maxRefreshCount && !shouldSendCar(car, tickets)) {
+        message.warning(`车辆[${gradeLabel(car.color)}]已达到最大刷新次数(${maxRefreshCount}次)，强制发车`);
+        await assignHelperIfNeeded(car);
+        await sendCar(car);
+        await new Promise((r) => setTimeout(r, 500));
       }
     }
     await fetchCarInfo();

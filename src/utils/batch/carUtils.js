@@ -58,7 +58,7 @@ export const gradeLabel = (color) => {
  * 大奖配置
  */
 const bigPrizes = [
-  { type: 3, itemId: 3201, value: 10 },
+  { type: 3, itemId: 3201, value: 8 },
   { type: 3, itemId: 1001, value: 10 },
   { type: 3, itemId: 1022, value: 2000 },
   { type: 2, itemId: 0, value: 2000 },
@@ -141,18 +141,25 @@ const checkRewardConditions = (rewards, conditions, matchAll = false) => {
   });
 
   if (matchAll) {
-    // 必须满足所有设置了阈值的条件
-    if (gold > 0 && goldCount < gold) return false;
-    if (recruit > 0 && recruitCount < recruit) return false;
-    if (jade > 0 && jadeCount < jade) return false;
-    if (ticket > 0 && ticketCount < ticket) return false;
-    return true;
-  } else {
+    // 只要满足任一设置了非零阈值的条件
     if (gold > 0 && goldCount >= gold) return true;
     if (recruit > 0 && recruitCount >= recruit) return true;
     if (jade > 0 && jadeCount >= jade) return true;
     if (ticket > 0 && ticketCount >= ticket) return true;
     return false;
+  } else {
+    // 必须满足所有设置了非零阈值的条件
+    const conditionsToCheck = [];
+    if (gold > 0) conditionsToCheck.push(goldCount >= gold);
+    if (recruit > 0) conditionsToCheck.push(recruitCount >= recruit);
+    if (jade > 0) conditionsToCheck.push(jadeCount >= jade);
+    if (ticket > 0) conditionsToCheck.push(ticketCount >= ticket);
+    
+    // 如果没有设置任何非零条件，返回false
+    if (conditionsToCheck.length === 0) return false;
+    
+    // 所有设置的条件都必须满足
+    return conditionsToCheck.every(condition => condition);
   }
 };
 
@@ -170,29 +177,31 @@ export const shouldSendCar = (car, tickets, minColor = 4, customConditions = {},
   const color = Number(car?.color || 0);
   const rewards = Array.isArray(car?.rewards) ? car.rewards : [];
   
-  // 检查自定义条件
-  const customConditionsMet = checkRewardConditions(rewards, customConditions, matchAll);
+  // 检查自定义条件（只有当matchAll为true时才使用奖励阈值条件）
+  if (matchAll) {
+    const customConditionsMet = checkRewardConditions(rewards, customConditions, matchAll);
 
-  // 如果开启了保底（严格模式），必须同时满足车辆颜色要求和自定义条件
-  if (useGoldRefreshFallback) {
-    // 1. 必须达到保底颜色
-    if (color < minColor) {
-      return false;
+    // 如果开启了保底（严格模式），必须同时满足车辆颜色要求和自定义条件
+    if (useGoldRefreshFallback) {
+      // 1. 必须达到保底颜色
+      if (color < minColor) {
+        return false;
+      }
+      // 2. 如果设置了自定义条件，必须满足
+      const hasConditions = (customConditions.gold > 0 || customConditions.recruit > 0 || customConditions.jade > 0 || customConditions.ticket > 0);
+      
+      if (hasConditions) {
+        return customConditionsMet;
+      }
+      
+      // 如果没有设置自定义条件，只要颜色满足即可
+      return true;
     }
-    // 2. 如果设置了自定义条件，必须满足
-    const hasConditions = (customConditions.gold > 0 || customConditions.recruit > 0 || customConditions.jade > 0 || customConditions.ticket > 0);
-    
-    if (hasConditions) {
-      return customConditionsMet;
-    }
-    
-    // 如果没有设置自定义条件，只要颜色满足即可
-    return true;
-  }
 
-  // 非严格模式：只要满足自定义条件，直接发车（视作大奖）
-  if (customConditionsMet) {
-    return true;
+    // 非严格模式：只要满足自定义条件，直接发车（视作大奖）
+    if (customConditionsMet) {
+      return true;
+    }
   }
 
   const racingTickets = countRacingRefreshTickets(rewards);
@@ -575,25 +584,6 @@ export function createCarManager({ tokenStore, connectionManager, batchSettings,
                 });
                 break; // 升级失败时跳出循环
               }
-            }
-
-            // 尝试领取改装升级累计奖励
-            try {
-              const rewardRes = await tokenStore.sendMessageWithPromise(
-                tokenId,
-                "car_claimpartconsumereward",
-                {},
-                5000
-              );
-              if (rewardRes && rewardRes.reward) {
-                addLog({
-                  time: new Date().toLocaleTimeString(),
-                  message: `${token.name} 领取改装升级累计奖励成功`,
-                  type: "success",
-                });
-              }
-            } catch (e) {
-              // 忽略错误
             }
           } catch (e) {
             addLog({

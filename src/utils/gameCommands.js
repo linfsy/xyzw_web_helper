@@ -39,7 +39,7 @@ export class GameCommands {
     return {
       cmd: "role_getroleinfo",
       body: this.g_utils.bon.encode({
-        clientVersion: "2.21.2-fa918e1997301834-wx",
+        clientVersion: "2.10.3-f10a39eaa0c409f4-wx",
         inviteUid: 0,
         platform: "hortor",
         platformExt: "mix",
@@ -688,6 +688,24 @@ export class GameCommands {
         ...params,
       }),
       cmd: "collection_claimfreereward",
+      seq,
+      time: Date.now(),
+    };
+  }
+
+  /**
+   * 活动商店购买商品
+   */
+  activity_buystoregoods(ack = 0, seq = 0, params = {}) {
+    return {
+      ack,
+      body: this.g_utils.bon.encode({
+        activityId: 9,
+        buyNum: 1,
+        goodsIndex: 0,
+        ...params,
+      }),
+      cmd: "activity_buystoregoods",
       seq,
       time: Date.now(),
     };

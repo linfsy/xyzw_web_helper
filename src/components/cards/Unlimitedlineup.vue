@@ -582,6 +582,20 @@ import {
   color,
 } from "@/utils/HeroList.js";
 
+// 导入 Capacitor Filesystem API（用于 APK 环境）
+import { Filesystem, Directory, FilesystemDirectory } from '@capacitor/filesystem';
+let fsFilesystem = Filesystem;
+try {
+  if (typeof window !== 'undefined' && window.Capacitor) {
+    // 优先使用全局对象中的 Filesystem（APK 环境）
+    if (window.Capacitor.Plugins.Filesystem) {
+      fsFilesystem = window.Capacitor.Plugins.Filesystem;
+    }
+  }
+} catch (e) {
+  console.warn('Capacitor Filesystem 未加载:', e);
+}
+
 const tokenStore = useTokenStore();
 const message = useMessage();
 const dialog = useDialog();
@@ -603,6 +617,133 @@ const REFRESH_DEBOUNCE = 3000;
 const COMMAND_DELAY = 500;
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// 通用APK环境检测函数
+const isAndroidApp = () => {
+  try {
+    return typeof window !== 'undefined' && 
+           window.Capacitor && 
+           (window.Capacitor.isNativePlatform() || /android/i.test(navigator.userAgent));
+  } catch (e) {
+    console.warn('检测Android环境失败:', e);
+    return false;
+  }
+};
+
+// 检查Filesystem API是否可用
+const isFilesystemAvailable = () => {
+  try {
+    return typeof window !== 'undefined' && 
+           window.Capacitor && 
+           window.Capacitor.Plugins && 
+           window.Capacitor.Plugins.Filesystem;
+  } catch (e) {
+    console.warn('检测Filesystem API失败:', e);
+    return false;
+  }
+};
+
+// 通用文件保存函数
+const saveFile = async (jsonString, fileName, successMessage, loadingMsg) => {
+  console.log('进入saveFile函数');
+  
+  try {
+    const androidApp = isAndroidApp();
+    const filesystemAvailable = isFilesystemAvailable();
+    const currentFs = filesystemAvailable ? window.Capacitor.Plugins.Filesystem : fsFilesystem;
+    
+    console.log('环境检测结果:', {
+      androidApp,
+      filesystemAvailable,
+      fsFilesystem: currentFs
+    });
+    
+    if (androidApp && currentFs) {
+      try {
+        if (loadingMsg) {
+          loadingMsg.content = '正在保存文件...';
+        }
+        
+        // 检查存储权限（兼容不同Capacitor版本）
+        console.log('开始检查权限');
+        let permStatus;
+        try {
+          permStatus = await currentFs.checkPermissions();
+          console.log('权限状态:', permStatus);
+        } catch (permError) {
+          console.warn('权限检查失败，使用浏览器下载:', permError);
+          return { success: false, isBrowser: true };
+        }
+        
+        // 处理不同权限属性名
+        const hasPermission = permStatus.publicStorage === 'granted' || 
+                             permStatus.storage === 'granted';
+        
+        if (!hasPermission) {
+          console.log('权限未授予，请求权限');
+          try {
+            const reqResult = await currentFs.requestPermissions();
+            console.log('权限请求结果:', reqResult);
+            const reqHasPermission = reqResult.publicStorage === 'granted' || 
+                                    reqResult.storage === 'granted';
+            
+            if (!reqHasPermission) {
+              console.log('权限请求被拒绝');
+              return { success: false, isBrowser: true };
+            }
+          } catch (reqError) {
+            console.warn('权限请求失败，使用浏览器下载:', reqError);
+            return { success: false, isBrowser: true };
+          }
+        }
+
+        // 准备数据
+        console.log('准备数据');
+        const encodedData = btoa(unescape(encodeURIComponent(jsonString)));
+        console.log('准备保存文件:', fileName);
+        
+        // 保存文件 - 使用正确的目录常量
+        console.log('开始保存文件');
+        try {
+          await currentFs.writeFile({
+            path: fileName,
+            data: encodedData,
+            directory: Directory.Documents,
+            encoding: 'utf8'
+          });
+          
+          await new Promise((resolve) => setTimeout(resolve, 300));
+          console.log('文件保存成功:', fileName);
+          return { success: true, path: `/storage/emulated/0/Documents/${fileName}` };
+        } catch (writeError) {
+          console.error('文件写入失败:', writeError);
+          return { success: false, isBrowser: true };
+        }
+      } catch (error) {
+        console.error('文件保存失败:', error);
+        return { success: false, isBrowser: true };
+      }
+    } else {
+      console.log('不是Android应用或Filesystem不可用，使用浏览器下载');
+      return { success: false, isBrowser: true };
+    }
+  } catch (error) {
+    console.error('saveFile函数执行失败:', error);
+    return { success: false, isBrowser: true };
+  }
+};
+
+// 浏览器下载函数
+const saveFileByDownload = (jsonString, fileName, successMessage) => {
+  const blob = new Blob([jsonString], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fileName;
+  a.click();
+  URL.revokeObjectURL(url);
+  message.success(successMessage);
+};
 
 const formatPower = (power) => {
   if (!power) return "0";
@@ -2235,6 +2376,8 @@ const exportLineups = async () => {
     return;
   }
 
+  const loadingMsg = message.loading('正在导出阵容配置...', { duration: 0 });
+
   try {
     const roleInfo = await tokenStore.sendMessageWithPromise(
       tokenId,
@@ -2245,9 +2388,21 @@ const exportLineups = async () => {
     const roleId = role?.roleId || role?.id;
 
     if (!roleId) {
+      loadingMsg.destroy();
       message.error("无法获取角色ID");
       return;
     }
+
+    // 获取账号名称
+    const accountName = token.name || `账号${roleId}`;
+    // 计算槽位范围
+    let slotStr = '全部';
+    if (savedLineups.value.length > 0) {
+      const slotRanges = [...new Set(savedLineups.value.map(l => l.teamId))].sort((a, b) => a - b);
+      slotStr = slotRanges.length > 1 ? `${slotRanges[0]}-${slotRanges[slotRanges.length-1]}` : slotRanges[0];
+    }
+    // 生成日期字符串（精确到天）
+    const dateStr = new Date().toISOString().split('T')[0];
 
     const exportData = {
       roleId: roleId,
@@ -2255,18 +2410,26 @@ const exportLineups = async () => {
       lineups: savedLineups.value,
     };
 
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], {
-      type: "application/json",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `阵容配置_${roleId}_${new Date().toLocaleDateString().replace(/\//g, "-")}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    const jsonString = JSON.stringify(exportData, null, 2);
+    const fileName = `${accountName}_槽位${slotStr}_${dateStr}.json`;
+    const successMessage = `已导出 ${savedLineups.value.length} 个阵容`;
 
-    message.success(`已导出 ${savedLineups.value.length} 个阵容`);
+    const result = await saveFile(jsonString, fileName, successMessage, loadingMsg);
+
+    if (result.success) {
+      loadingMsg.destroy();
+      message.success(`${successMessage}，文件保存到：${result.path}`);
+    } else if (result.isBrowser) {
+      loadingMsg.destroy();
+      saveFileByDownload(jsonString, fileName, successMessage);
+    } else {
+      loadingMsg.destroy();
+      console.error('文件系统保存失败:', result.error);
+      message.warning('存储权限可能不足，尝试使用浏览器下载方式');
+      saveFileByDownload(jsonString, fileName, successMessage);
+    }
   } catch (error) {
+    loadingMsg.destroy();
     message.error(`导出失败: ${error.message}`);
   }
 };
@@ -2285,6 +2448,8 @@ const importLineups = async ({ file }) => {
     return;
   }
 
+  const loadingMsg = message.loading('正在读取阵容文件...', { duration: 0 });
+
   try {
     const roleInfo = await tokenStore.sendMessageWithPromise(
       tokenId,
@@ -2297,9 +2462,28 @@ const importLineups = async ({ file }) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
-        const importData = JSON.parse(e.target.result);
+        let importData;
+        let content = e.target.result;
+
+        try {
+          importData = JSON.parse(content);
+          message.info('JSON格式，直接解析成功');
+        } catch (jsonError) {
+          try {
+            const decodedContent = decodeURIComponent(escape(atob(content)));
+            message.info('Base64解码成功');
+            importData = JSON.parse(decodedContent);
+            message.info('JSON解析成功');
+          } catch (base64Error) {
+            loadingMsg.destroy();
+            console.error('Base64解码失败:', base64Error);
+            message.error('文件格式错误：既不是有效的JSON文件，也不是Base64编码的JSON文件');
+            return;
+          }
+        }
 
         if (!importData.roleId || !importData.lineups) {
+          loadingMsg.destroy();
           message.error("无效的阵容文件格式");
           return;
         }
@@ -2323,6 +2507,7 @@ const importLineups = async ({ file }) => {
           }
 
           if (duplicateLineups.length > 0) {
+            loadingMsg.destroy();
             dialog.warning({
               title: "发现重复阵容",
               content: `发现 ${duplicateLineups.length} 个已存在的阵容，是否覆盖？`,
@@ -2356,6 +2541,7 @@ const importLineups = async ({ file }) => {
               },
             });
           } else {
+            loadingMsg.destroy();
             savedLineups.value = [...savedLineups.value, ...newLineups];
             saveLineupsToStorage();
             message.success(`已导入 ${newLineups.length} 个阵容`);
@@ -2363,6 +2549,7 @@ const importLineups = async ({ file }) => {
         };
 
         if (importData.roleId !== currentRoleId) {
+          loadingMsg.destroy();
           dialog.warning({
             title: "角色不匹配",
             content: `该阵容文件来自其他角色，是否继续导入？`,
@@ -2376,11 +2563,15 @@ const importLineups = async ({ file }) => {
           processImport(importData.lineups);
         }
       } catch (parseError) {
+        loadingMsg.destroy();
+        console.error('解析文件失败:', parseError);
         message.error("解析文件失败，请检查文件格式");
       }
     };
     reader.readAsText(file.file);
   } catch (error) {
+    loadingMsg.destroy();
+    console.error('导入失败:', error);
     message.error(`导入失败: ${error.message}`);
   }
 };

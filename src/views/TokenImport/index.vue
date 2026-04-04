@@ -13,15 +13,6 @@
         </div>
       </div>
 
-      <!-- 限流等待提示 -->
-      <n-alert
-        v-if="rateLimitWaiting"
-        type="warning"
-        style="margin-bottom: 16px"
-      >
-        {{ rateLimitMessage }}
-      </n-alert>
-
       <!-- Token导入区域 -->
       <a-modal
         class="token-import-modal"
@@ -86,7 +77,7 @@
         <div class="section-header">
           <div class="header-actions">
             <div class="main-actions">
-              <n-button type="success" @click="goToDashboard">
+              <n-button type="success" @click="goToBatchDailyTasks">
                 <template #icon>
                   <n-icon>
                     <List />
@@ -670,16 +661,14 @@ import {
   SyncCircle,
   TrashBin,
 } from "@vicons/ionicons5";
-import { NIcon, NAlert, useDialog, useMessage } from "naive-ui";
-import { h, onMounted, onUnmounted, reactive, ref, watch, computed } from "vue";
+import { NIcon, useDialog, useMessage } from "naive-ui";
+import { h, onMounted, reactive, ref, watch } from "vue";
 import { useRouter } from "vue-router";
-import { transformToken, scheduleAuthUserRequest } from "@/utils/token";
-import { $emit } from "@/stores/events/index.ts";
+import { transformToken } from "@/utils/token";
 import useIndexedDB from "@/hooks/useIndexedDB";
 import { Filesystem, Directory } from '@capacitor/filesystem';
 const indexedDB = useIndexedDB();
-const { getArrayBuffer, storeArrayBuffer, deleteArrayBuffer, clearAll, waitForReady, getAllKeys } = indexedDB;
-const scheduledTaskStore = useScheduledTaskStore();
+const { getArrayBuffer, storeArrayBuffer, deleteArrayBuffer } = indexedDB;
 // 接收路由参数
 const props = defineProps({
   token: String,
@@ -694,10 +683,7 @@ const router = useRouter();
 const message = useMessage();
 const dialog = useDialog();
 const tokenStore = useTokenStore();
-
-// 限流等待状态
-const rateLimitWaiting = ref(false);
-const rateLimitMessage = ref("");
+const scheduledTaskStore = useScheduledTaskStore();
 
 // 响应式数据
 const showImportForm = ref(false);
@@ -736,7 +722,7 @@ const sortConfig = ref(
 
 // 排序后的游戏角色Token列表
 const sortedTokens = computed(() => {
-  if (sortConfig.value.field === "manual") {
+  if (sortConfig.value.field === 'manual') {
     return tokenStore.gameTokens;
   }
 
@@ -825,12 +811,12 @@ const handleDrop = (index, event) => {
 
   // 更新 store
   tokenStore.gameTokens = currentTokens;
-
+  
   // 切换到手动排序模式，防止自动排序打乱顺序
-  sortConfig.value.field = "manual";
+  sortConfig.value.field = 'manual';
   // 保存排序设置
   localStorage.setItem("tokenSortConfig", JSON.stringify(sortConfig.value));
-
+  
   dragIndex.value = null;
   message.success("Token 顺序已更新");
 };
@@ -872,48 +858,42 @@ const refreshToken = async (token) => {
 
   try {
     if (token.importMethod === "url") {
-      // 有源URL的token - 从URL重新获取（使用限流）
-      const data = await scheduleAuthUserRequest(async () => {
-        let response;
+      // 有源URL的token - 从URL重新获取
+      let response;
 
-        const isLocalUrl =
-          token.sourceUrl.startsWith(window.location.origin) ||
-          token.sourceUrl.startsWith("/") ||
-          token.sourceUrl.startsWith("http://localhost") ||
-          token.sourceUrl.startsWith("http://127.0.0.1");
+      const isLocalUrl =
+        token.sourceUrl.startsWith(window.location.origin) ||
+        token.sourceUrl.startsWith("/") ||
+        token.sourceUrl.startsWith("http://localhost") ||
+        token.sourceUrl.startsWith("http://127.0.0.1");
 
-        if (isLocalUrl) {
-          response = await fetch(token.sourceUrl);
-        } else {
-          try {
-            response = await fetch(token.sourceUrl, {
-              method: "GET",
-              headers: {
-                Accept: "application/json",
-              },
-              mode: "cors",
-            });
-          } catch (corsError) {
-            throw new Error(
-              `跨域请求被阻止。请确保目标服务器支持CORS。错误详情: ${corsError.message}`,
-            );
-          }
-        }
-
-        if (!response.ok) {
+      if (isLocalUrl) {
+        response = await fetch(token.sourceUrl);
+      } else {
+        try {
+          response = await fetch(token.sourceUrl, {
+            method: "GET",
+            headers: {
+              Accept: "application/json",
+            },
+            mode: "cors",
+          });
+        } catch (corsError) {
           throw new Error(
-            `请求失败: ${response.status} ${response.statusText}`,
+            `跨域请求被阻止。请确保目标服务器支持CORS。错误详情: ${corsError.message}`,
           );
         }
+      }
 
-        const result = await response.json();
+      if (!response.ok) {
+        throw new Error(`请求失败: ${response.status} ${response.statusText}`);
+      }
 
-        if (!result.token) {
-          throw new Error("返回数据中未找到token字段");
-        }
+      const data = await response.json();
 
-        return result;
-      });
+      if (!data.token) {
+        throw new Error("返回数据中未找到token字段");
+      }
 
       // 更新token信息
       tokenStore.updateToken(token.id, {
@@ -999,8 +979,6 @@ const refreshToken = async (token) => {
     message.error(error.message || "Token刷新失败");
   } finally {
     refreshingTokens.value.delete(token.id);
-    // 关闭限流等待提示
-    rateLimitWaiting.value = false;
   }
 };
 
@@ -1264,23 +1242,191 @@ const deleteToken = (token) => {
     content: `确定要删除Token "${token.name}" 吗？此操作无法恢复。`,
     positiveText: "确定删除",
     negativeText: "取消",
-    onPositiveClick: async () => {
-      await tokenStore.removeToken(token.id);
+    onPositiveClick: () => {
+      tokenStore.removeToken(token.id);
       message.success("Token已删除");
     },
   });
 };
 
-// 跳转到批量功能页面
-const goToDashboard = () => {
-  router.push({ name: 'BatchDailyTasks' });
+// 批量刷新所有URLToken
+const refreshAllTokens = async () => {
+  if (!tokenStore.gameTokens.length) {
+    message.warning("没有可刷新的Token");
+    return;
+  }
+
+  const tokensToRefresh = tokenStore.gameTokens.filter(
+    (token) =>
+      token.importMethod === "url" ||
+      token.importMethod === "wxQrcode" ||
+      token.importMethod === "bin",
+  );
+  const manualTokens = tokenStore.gameTokens.filter(
+    (token) => token.importMethod === "manual",
+  );
+
+  if (tokensToRefresh.length === 0) {
+    message.warning("没有支持自动刷新的Token");
+    return;
+  }
+
+  // 显示确认对话框
+  dialog.warning({
+    title: "批量刷新Token",
+    content: "确定要刷新所有支持自动刷新的Token吗?",
+    positiveText: "开始刷新",
+    negativeText: "取消",
+    onPositiveClick: async () => {
+      try {
+        let successCount = 0;
+        let failCount = 0;
+
+        // 显示进度提示
+        const loadingMessage = message.loading(
+          `正在批量刷新Token (0/${tokensToRefresh.length})`,
+          {
+            duration: 0,
+          },
+        );
+
+        for (let i = 0; i < tokensToRefresh.length; i++) {
+          const token = tokensToRefresh[i];
+
+          try {
+            // 更新进度显示
+            loadingMessage.content = `正在刷新Token (${i + 1}/${tokensToRefresh.length}): ${token.name}`;
+
+            // 调用单个刷新函数
+            await refreshToken(token);
+            successCount++;
+          } catch (error) {
+            console.error(`刷新Token "${token.name}" 失败:`, error);
+            failCount++;
+          }
+
+          // 添加短暂延迟避免请求过于频繁
+          if (i < tokensToRefresh.length - 1) {
+            await new Promise((resolve) => setTimeout(resolve, 500));
+          }
+        }
+
+        // 关闭进度提示
+        loadingMessage.destroy();
+
+        // 显示结果
+        if (failCount === 0) {
+          message.success(`批量刷新完成！成功刷新 ${successCount} 个Token`);
+        } else {
+          message.warning(
+            `批量刷新完成，成功 ${successCount} 个，失败 ${failCount} 个`,
+          );
+        }
+
+        // 如果有手动导入的Token，提示用户
+        if (manualTokens.length > 0) {
+          message.info(`${manualTokens.length} 个手动导入的Token需要手动刷新`);
+        }
+      } catch (error) {
+        message.error("批量刷新过程中发生错误: " + error.message);
+      }
+    },
+  });
 };
 
-// 导出配置
+const handleBulkAction = (key) => {
+  switch (key) {
+    case "refreshAll":
+      refreshAllTokens();
+      break;
+    case "updateInfo":
+      updateAllTokenInfo();
+      break;
+    case "export":
+      exportTokens();
+      break;
+    case "import":
+      importTokenFile();
+      break;
+    case "clean":
+      cleanExpiredTokens();
+      break;
+    case "disconnect":
+      disconnectAll();
+      break;
+    case "clear":
+      clearAllTokens();
+      break;
+  }
+};
+
+const exportTokens = () => {
+  try {
+    const data = tokenStore.exportTokens();
+    const dataStr = JSON.stringify(data, null, 2);
+    const dataBlob = new Blob([dataStr], { type: "application/json" });
+
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(dataBlob);
+    link.download = `tokens_backup_${new Date().toISOString().split("T")[0]}.json`;
+    link.click();
+
+    message.success("Token数据已导出");
+  } catch (error) {
+    message.error("导出失败");
+  }
+};
+
+const importTokenFile = () => {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = ".json";
+  input.onchange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = JSON.parse(e.target.result);
+          const result = tokenStore.importTokens(data);
+          if (result.success) {
+            message.success(result.message);
+          } else {
+            message.error(result.message);
+          }
+        } catch (error) {
+          message.error("文件格式错误");
+        }
+      };
+      reader.readAsText(file);
+    }
+  };
+  input.click();
+};
+
+const decodeBase64 = (str) => {
+  try {
+    str = str.replace(/[\s\n\r]/g, '');
+    try {
+      return decodeURIComponent(escape(atob(str)));
+    } catch (e) {
+      const binary = atob(str);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      return new TextDecoder().decode(bytes);
+    }
+  } catch (e) {
+    throw new Error('Base64解码失败: ' + e.message);
+  }
+};
+
 const exportConfig = async () => {
   try {
     const loadingMsg = message.loading('正在导出配置，读取BIN文件中...', { duration: 0 });
     
+    const { waitForReady, getAllKeys, getArrayBuffer } = indexedDB;
     const ready = await waitForReady(3000);
     if (!ready) {
       console.warn('IndexedDB 未准备好，跳过BIN文件导出');
@@ -1388,19 +1534,33 @@ const exportConfig = async () => {
       console.warn('获取分组配置失败', e);
     }
 
-    // 导出阵容数据
-    const savedLineups = {};
-    tokens.forEach((token) => {
-      const key = `saved_lineups_${token.id}`;
-      const data = localStorage.getItem(key);
-      if (data) {
-        try {
-          savedLineups[token.id] = JSON.parse(data);
-        } catch (e) {
-          console.warn(`解析阵容数据失败 (${token.id}):`, e);
+    let lineupsData = null;
+    let lineupsByToken = {};
+    try {
+      // 读取旧格式的阵容数据（向后兼容）
+      const saved = localStorage.getItem("saved_lineups");
+      if (saved) {
+        lineupsData = JSON.parse(saved);
+      }
+      
+      // 读取所有账号的阵容数据（saved_lineups_${tokenId} 格式）
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('saved_lineups_')) {
+          try {
+            const tokenId = key.replace('saved_lineups_', '');
+            const savedLineups = localStorage.getItem(key);
+            if (savedLineups) {
+              lineupsByToken[tokenId] = JSON.parse(savedLineups);
+            }
+          } catch (e) {
+            console.warn(`读取账号 ${key} 的阵容数据失败:`, e);
+          }
         }
       }
-    });
+    } catch (e) {
+      console.warn('获取阵容数据失败', e);
+    }
 
     const exportData = {
       version: "1.3",
@@ -1424,8 +1584,9 @@ const exportConfig = async () => {
       tokenSortConfig: tokenSortConfig,
       tokenSettings: tokenSettings,
       tokenGroups: tokenGroups,
+      lineupsData: lineupsData,
+      lineupsByToken: lineupsByToken,
       binFiles: binFiles,
-      savedLineups: savedLineups,
     };
 
     const jsonString = JSON.stringify(exportData, null, 2);
@@ -1493,34 +1654,14 @@ const saveFileByDownload = (jsonString, fileName) => {
   URL.revokeObjectURL(url);
 
   const exportData = JSON.parse(jsonString);
-  const lineupsCount = Object.keys(exportData.savedLineups || {}).length;
-  message.success(`导出成功: ${exportData.tokens.length} 个账号, ${exportData.scheduledTasks?.length || 0} 个定时任务, ${Object.keys(exportData.binFiles || {}).length} 个BIN文件${lineupsCount > 0 ? `, ${lineupsCount} 个账号的阵容` : ''}`);
+  message.success(`导出成功: ${exportData.tokens.length} 个账号, ${exportData.scheduledTasks?.length || 0} 个定时任务, ${Object.keys(exportData.binFiles || {}).length} 个BIN文件`);
 };
 
-// Base64解码函数
-const decodeBase64 = (str) => {
-  try {
-    str = str.replace(/[\s\n\r]/g, '');
-    try {
-      return decodeURIComponent(escape(atob(str)));
-    } catch (e) {
-      const binary = atob(str);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) {
-        bytes[i] = binary.charCodeAt(i);
-      }
-      return new TextDecoder().decode(bytes);
-    }
-  } catch (e) {
-    throw new Error('Base64解码失败: ' + e.message);
-  }
-};
-
-// 导入配置
 const importConfig = async ({ file }) => {
   try {
     const loadingMsg = message.loading('正在读取配置文件...', { duration: 0 });
     const reader = new FileReader();
+    const { waitForReady, storeArrayBuffer } = indexedDB;
 
     reader.onload = async (e) => {
       try {
@@ -1687,6 +1828,34 @@ const importConfig = async ({ file }) => {
           }
         }
 
+        if (importData.lineupsData) {
+          try {
+            localStorage.setItem("saved_lineups", JSON.stringify(importData.lineupsData));
+            message.info('阵容数据已导入');
+          } catch (e) {
+            console.error('导入阵容数据失败:', e);
+          }
+        }
+        
+        if (importData.lineupsByToken) {
+          try {
+            let importedLineupsCount = 0;
+            Object.entries(importData.lineupsByToken).forEach(([tokenId, lineups]) => {
+              try {
+                localStorage.setItem(`saved_lineups_${tokenId}`, JSON.stringify(lineups));
+                importedLineupsCount++;
+              } catch (e) {
+                console.error(`导入账号 ${tokenId} 的阵容数据失败:`, e);
+              }
+            });
+            if (importedLineupsCount > 0) {
+              message.info(`账号阵容数据已导入: ${importedLineupsCount} 个账号`);
+            }
+          } catch (e) {
+            console.error('导入账号阵容数据失败:', e);
+          }
+        }
+
         if (importData.batchSettings) {
           try {
             localStorage.setItem("batchSettings", JSON.stringify(importData.batchSettings));
@@ -1698,26 +1867,38 @@ const importConfig = async ({ file }) => {
 
         if (importData.scheduledTasks && Array.isArray(importData.scheduledTasks)) {
           try {
-            // 直接使用store的replaceAllTasks方法替换所有任务
-            if (scheduledTaskStore) {
-              // 确保每个任务都有必要的属性
-              const formattedTasks = importData.scheduledTasks.map(task => ({
-                ...task,
-                id: task.id || Date.now() + Math.random(),
-                enabled: task.enabled !== false,
-                createdAt: task.createdAt || new Date().toISOString()
-              }));
-              
-              scheduledTaskStore.replaceAllTasks(formattedTasks);
-              message.info(`定时任务导入完成: ${formattedTasks.length} 个`);
-              
-              // 重新启动调度器，确保状态同步
-              scheduledTaskStore.startScheduler();
-              message.info('定时任务已同步到状态管理');
-            } else {
-              // 如果store不可用，回退到直接修改localStorage
-              localStorage.setItem("scheduledTasks_v2", JSON.stringify(importData.scheduledTasks));
-              message.info(`定时任务导入完成: ${importData.scheduledTasks.length} 个`);
+            localStorage.setItem("scheduledTasks_v2", JSON.stringify(importData.scheduledTasks));
+            message.info(`定时任务导入完成: ${importData.scheduledTasks.length} 个`);
+            
+            // 更新Pinia store中的定时任务状态
+            try {
+              if (scheduledTaskStore) {
+                // 清空现有的任务
+                while (scheduledTaskStore.scheduledTasks.length > 0) {
+                  scheduledTaskStore.removeTask(scheduledTaskStore.scheduledTasks[0].id);
+                }
+                // 添加新的任务
+                importData.scheduledTasks.forEach(task => {
+                  scheduledTaskStore.addTask({
+                    name: task.name,
+                    taskName: task.taskName,
+                    runType: task.runType,
+                    runTime: task.runTime,
+                    cronExpression: task.cronExpression,
+                    selectedTokens: task.selectedTokens,
+                    selectedTasks: task.selectedTasks,
+                    enableBatchExecution: task.enableBatchExecution,
+                    batchSize: task.batchSize,
+                    batchDelay: task.batchDelay
+                  });
+                });
+                // 重新启动调度器，确保状态同步
+                scheduledTaskStore.startScheduler();
+                message.info('定时任务已同步到状态管理');
+              }
+            } catch (storeError) {
+              console.error('更新定时任务状态失败:', storeError);
+              // 即使更新状态失败，也不影响导入结果
             }
           } catch (e) {
             console.error('导入定时任务失败:', e);
@@ -1730,26 +1911,6 @@ const importConfig = async ({ file }) => {
             message.info(`分组信息导入完成: ${importData.tokenGroups.length} 个`);
           } catch (e) {
             console.error('导入分组信息失败:', e);
-          }
-        }
-
-        if (importData.savedLineups && typeof importData.savedLineups === 'object') {
-          let lineupsCount = 0;
-          try {
-            Object.entries(importData.savedLineups).forEach(([tokenId, lineups]) => {
-              try {
-                const key = `saved_lineups_${tokenId}`;
-                localStorage.setItem(key, JSON.stringify(lineups));
-                lineupsCount++;
-              } catch (e) {
-                console.warn(`导入阵容数据失败 (${tokenId}):`, e);
-              }
-            });
-            if (lineupsCount > 0) {
-              message.info(`阵容数据导入完成: ${lineupsCount} 个账号`);
-            }
-          } catch (e) {
-            console.error('导入阵容数据失败:', e);
           }
         }
 
@@ -1771,193 +1932,38 @@ const importConfig = async ({ file }) => {
 
     reader.readAsText(file.file);
   } catch (error) {
-    console.error("导入配置失败:", error);
-    message.error("导入配置失败: " + error.message);
+    loadingMsg.destroy();
+    console.error('导入失败:', error);
+    message.error('导入失败: ' + error.message);
   }
 };
 
-// 导出Token文件
-const exportTokens = () => {
-  try {
-    const data = tokenStore.exportTokens();
-    const dataStr = JSON.stringify(data, null, 2);
-    const dataBlob = new Blob([dataStr], { type: "application/json" });
-
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(dataBlob);
-    link.download = `tokens_backup_${new Date().toISOString().split("T")[0]}.json`;
-    link.click();
-
-    message.success("Token数据已导出");
-  } catch (error) {
-    message.error("导出失败");
-  }
+const cleanExpiredTokens = () => {
+  const count = tokenStore.cleanExpiredTokens();
+  message.success(`已清理 ${count} 个过期Token`);
 };
 
-// 导入Token文件
-const importTokenFile = () => {
-  const input = document.createElement("input");
-  input.type = "file";
-  input.accept = ".json";
-  input.onchange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const data = JSON.parse(e.target.result);
-          const result = tokenStore.importTokens(data);
-          if (result.success) {
-            message.success(result.message);
-          } else {
-            message.error(result.message);
-          }
-        } catch (error) {
-          message.error("文件格式错误");
-        }
-      };
-      reader.readAsText(file);
-    }
-  };
-  input.click();
-};
-
-// 处理批量操作
-const handleBulkAction = (key) => {
-  switch (key) {
-    case "refreshAll":
-      refreshAllTokens();
-      break;
-    case "updateInfo":
-      updateAllTokenInfo();
-      break;
-    case "export":
-      exportTokens();
-      break;
-    case "import":
-      importTokenFile();
-      break;
-    case "clean":
-      cleanExpiredTokens();
-      break;
-    case "disconnect":
-      disconnectAllTokens();
-      break;
-    case "clear":
-      clearAllTokens();
-      break;
-  }
-};
-
-// 开始任务管理
-const startTaskManagement = (token) => {
-  // 选择当前token
-  tokenStore.selectToken(token.id);
-  // 跳转到批量功能页面
-  router.push({ name: 'BatchDailyTasks' });
-};
-
-// 掩码Token
-const maskToken = (token) => {
-  if (!token) return '';
-  if (token.length <= 8) return token;
-  return token.substring(0, 4) + '****' + token.substring(token.length - 4);
-};
-
-// 格式化时间
-const formatTime = (timestamp) => {
-  if (!timestamp) return '未知';
-  const date = new Date(timestamp);
-  return date.toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
+const disconnectAll = () => {
+  tokenStore.gameTokens.forEach((token) => {
+    tokenStore.closeWebSocketConnection(token.id);
   });
+  message.success("所有连接已断开");
 };
 
-// 批量刷新所有Token
-const refreshAllTokens = async () => {
-  if (!tokenStore.gameTokens.length) {
-    message.warning("没有可刷新的Token");
-    return;
-  }
-
-  const tokensToRefresh = tokenStore.gameTokens.filter(
-    (token) =>
-      token.importMethod === "url" ||
-      token.importMethod === "wxQrcode" ||
-      token.importMethod === "bin",
-  );
-  const manualTokens = tokenStore.gameTokens.filter(
-    (token) => token.importMethod === "manual",
-  );
-
-  if (tokensToRefresh.length === 0) {
-    message.warning("没有支持自动刷新的Token");
-    return;
-  }
-
-  // 显示确认对话框
-  dialog.warning({
-    title: "批量刷新Token",
-    content: "确定要刷新所有支持自动刷新的Token吗?",
-    positiveText: "开始刷新",
+const clearAllTokens = () => {
+  dialog.error({
+    title: "清除所有Token",
+    content: "确定要清除所有Token吗？此操作无法恢复！",
+    positiveText: "确定清除",
     negativeText: "取消",
-    onPositiveClick: async () => {
-      try {
-        let successCount = 0;
-        let failCount = 0;
-
-        // 显示进度提示
-        const loadingMessage = message.loading(
-          `正在批量刷新Token (0/${tokensToRefresh.length})`,
-          {
-            duration: 0,
-          },
-        );
-
-        for (let i = 0; i < tokensToRefresh.length; i++) {
-          const token = tokensToRefresh[i];
-
-          try {
-            // 更新进度显示
-            loadingMessage.content = `正在刷新Token (${i + 1}/${tokensToRefresh.length}): ${token.name}`;
-
-            // 调用单个刷新函数
-            await refreshToken(token);
-            successCount++;
-          } catch (error) {
-            console.error(`刷新Token "${token.name}" 失败:`, error);
-            failCount++;
-          }
-
-          // 添加短暂延迟避免请求过于频繁
-          if (i < tokensToRefresh.length - 1) {
-            await new Promise((resolve) => setTimeout(resolve, 500));
-          }
-        }
-
-        // 关闭进度提示
-        loadingMessage.destroy();
-
-        // 显示结果
-        if (failCount === 0) {
-          message.success(`批量刷新完成！成功刷新 ${successCount} 个Token`);
-        } else {
-          message.warning(`批量刷新完成！成功 ${successCount} 个，失败 ${failCount} 个`);
-        }
-      } catch (error) {
-        console.error("批量刷新失败:", error);
-        message.error("批量刷新失败");
-      }
+    onPositiveClick: () => {
+      tokenStore.clearAllTokens();
+      message.success("所有Token已清除");
     },
   });
 };
 
-// 更新所有Token信息
+// 一键连接更新所有token信息
 const updateAllTokenInfo = async () => {
   if (tokenStore.gameTokens.length === 0) {
     message.warning("没有可更新的Token");
@@ -2035,32 +2041,28 @@ const updateAllTokenInfo = async () => {
   });
 };
 
-// 清理过期Token
-const cleanExpiredTokens = () => {
-  const count = tokenStore.cleanExpiredTokens();
-  message.success(`已清理 ${count} 个过期Token`);
+const maskToken = (token) => {
+  if (!token) return "";
+  const len = token.length;
+  if (len <= 8) return token;
+  return token.substring(0, 4) + "***" + token.substring(len - 4);
 };
 
-// 断开所有连接
-const disconnectAllTokens = () => {
-  tokenStore.gameTokens.forEach((token) => {
-    tokenStore.closeWebSocketConnection(token.id);
-  });
-  message.success("所有连接已断开");
+const formatTime = (timestamp) => {
+  return new Date(timestamp).toLocaleString("zh-CN");
 };
 
-// 清除所有Token
-const clearAllTokens = () => {
-  dialog.error({
-    title: "清除所有Token",
-    content: "确定要清除所有Token吗？此操作无法恢复！",
-    positiveText: "确定清除",
-    negativeText: "取消",
-    onPositiveClick: async () => {
-      await tokenStore.clearAllTokens();
-      message.success("所有Token已清除");
-    },
-  });
+const goToBatchDailyTasks = () => {
+  router.push("/admin/batch-daily-tasks");
+};
+
+// 开始任务管理 - 直接跳转到控制台
+const startTaskManagement = (token) => {
+  // 选择token
+  tokenStore.selectToken(token.id);
+  // 直接跳转到控制台，不等待连接
+  message.success(`正在进入 ${token.name} 的控制台`);
+  router.push("/admin/dashboard");
 };
 
 // URL参数处理函数
@@ -2073,6 +2075,7 @@ const handleUrlParams = async () => {
 
       if (props.api) {
         // 通过API获取token
+        // 降噪
         message.info("正在从API获取token...");
 
         const response = await fetch(props.api, {
@@ -2108,6 +2111,7 @@ const handleUrlParams = async () => {
         );
       } else if (props.token) {
         // 直接使用URL中的token
+        // 降噪
         message.info("正在导入token...");
 
         tokenResult = tokenStore.importBase64Token(
@@ -2152,18 +2156,9 @@ const handleUrlParams = async () => {
 // 监听路由参数变化
 watch(() => [props.token, props.api], handleUrlParams, { immediate: false });
 
-// 限流等待事件处理
-const handleRateLimitWaiting = (data) => {
-  rateLimitWaiting.value = true;
-  rateLimitMessage.value = `Token刷新限流等待中，预计等待 ${data.waitSeconds} 秒（队列: ${data.queueSize}）`;
-};
-
 // 生命周期
 onMounted(async () => {
   tokenStore.initTokenStore();
-
-  // 监听限流等待事件
-  $emit.on("token:refresh:waiting", handleRateLimitWaiting);
 
   // 处理URL参数
   await handleUrlParams();
@@ -2172,11 +2167,6 @@ onMounted(async () => {
   if (!tokenStore.hasTokens && !props.token && !props.api) {
     showImportForm.value = true;
   }
-});
-
-onUnmounted(() => {
-  // 移除限流等待事件监听
-  $emit.off("token:refresh:waiting", handleRateLimitWaiting);
 });
 </script>
 
@@ -2444,6 +2434,12 @@ onUnmounted(() => {
 }
 
 .config-actions {
+  display: flex;
+  gap: var(--spacing-md);
+  flex-wrap: nowrap;
+}
+
+.bulk-actions {
   display: flex;
   gap: var(--spacing-md);
   flex-wrap: nowrap;

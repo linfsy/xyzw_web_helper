@@ -271,12 +271,6 @@ export const useScheduledTaskStore = defineStore('scheduledTask', () => {
     }
   }
   
-  const replaceAllTasks = (tasks: ScheduledTask[]) => {
-    scheduledTasks.value = tasks
-    console.log('[ScheduledTask] 替换所有任务:', tasks.length, '个')
-    updateCountdowns()
-  }
-  
   return {
     // 状态
     scheduledTasks,
@@ -294,6 +288,5 @@ export const useScheduledTaskStore = defineStore('scheduledTask', () => {
     removeTask,
     updateTask,
     toggleTask,
-    replaceAllTasks,
   }
 })

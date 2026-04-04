@@ -107,11 +107,41 @@
             />
           </div>
 
+          <!-- 爬塔设置 -->
+          <div class="setting-item">
+            <label class="setting-label">爬塔阵容</label>
+            <n-select
+              v-model:value="settings.towerFormation"
+              :options="formationOptions"
+              size="small"
+            />
+          </div>
+
+          <!-- 怪异塔设置 -->
+          <div class="setting-item">
+            <label class="setting-label">怪异塔阵容</label>
+            <n-select
+              v-model:value="settings.weirdTowerFormation"
+              :options="formationOptions"
+              size="small"
+            />
+          </div>
+
           <!-- BOSS设置 -->
           <div class="setting-item">
             <label class="setting-label">BOSS阵容</label>
             <n-select
               v-model:value="settings.bossFormation"
+              :options="formationOptions"
+              size="small"
+            />
+          </div>
+
+          <!-- 任务完成后设置 -->
+          <div class="setting-item">
+            <label class="setting-label">任务完成后阵容</label>
+            <n-select
+              v-model:value="settings.taskCompleteFormation"
               :options="formationOptions"
               size="small"
             />
@@ -309,7 +339,10 @@ const logContainer = ref(null);
 // 任务设置
 const settings = reactive({
   arenaFormation: 1,
+  towerFormation: 1,
+  weirdTowerFormation: 1,
   bossFormation: 1,
+  taskCompleteFormation: 1,
   bossTimes: 2,
   claimBottle: true,
   payRecruit: true,

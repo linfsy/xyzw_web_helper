@@ -50,37 +50,63 @@ export const StudyPlugin = ({
         let answer = await findAnswer(questionText)
 
         if (answer === null) {
-          answer = 1
-          gameLogger.verbose(`未找到匹配答案，使用默认答案: ${answer}`)
+          // 智能默认答案：根据题目长度和类型选择
+          if (questionText.includes('不是') || questionText.includes('错误') || questionText.includes('不正确')) {
+            answer = 2; // 否定题通常答案是2
+          } else {
+            answer = 1; // 肯定题通常答案是1
+          }
+          gameLogger.verbose(`未找到匹配答案，使用智能默认答案: ${answer}`)
         } else {
           gameLogger.debug(`找到答案: ${answer}`)
         }
 
-        // 发送答案
-        try {
-          client?.send('study_answer', {
-            id: studyId,
-            option: [answer],
-            questionId: [questionId]
-          })
-          gameLogger.verbose(`已提交题目 ${i + 1} 的答案: ${answer}`)
-        } catch (error) {
-          gameLogger.error(`提交答案失败 (题目 ${i + 1}):`, error)
+        // 发送答案，增加重试机制
+        let submitAttempts = 0;
+        const maxSubmitAttempts = 3;
+        let submitSuccess = false;
+        
+        while (submitAttempts < maxSubmitAttempts && !submitSuccess) {
+          try {
+            client?.send('study_answer', {
+              id: studyId,
+              option: [answer],
+              questionId: [questionId]
+            })
+            gameLogger.verbose(`已提交题目 ${i + 1} 的答案: ${answer} (尝试 ${submitAttempts + 1}/${maxSubmitAttempts})`)
+            submitSuccess = true;
+          } catch (error) {
+            submitAttempts++;
+            gameLogger.error(`提交答案失败 (题目 ${i + 1}, 尝试 ${submitAttempts}/${maxSubmitAttempts}):`, error)
+            if (submitAttempts < maxSubmitAttempts) {
+              await sleep(500); // 重试前延迟
+            }
+          }
         }
 
         // 更新已回答题目数量
         gameData.value.studyStatus.answeredCount = i + 1
 
-        // 添加短暂延迟，避免请求过快
+        // 根据题目复杂度动态调整延迟
+        const delay = Math.max(300, questionText.length * 10); // 题目越长，延迟越长
         if (i < questionList.length - 1) {
-          await sleep(300)
+          gameLogger.verbose(`等待 ${delay}ms 后回答下一题`)
+          await sleep(delay)
         }
       }
-      // 延迟1500ms后领取奖励
-      await sleep(1500)
+      // 延迟2000ms后领取奖励，确保所有答案都已处理
+      gameLogger.verbose('等待2000ms后领取奖励')
+      await sleep(2000)
       $emit.emit('I-study-week-forward', data)
     } catch (error) {
       gameLogger.error('处理学习答题响应失败:', error)
+      // 即使出错也要尝试领取奖励
+      try {
+        await sleep(1000)
+        $emit.emit('I-study-week-forward', data)
+      } catch (e) {
+        gameLogger.error('尝试领取奖励失败:', e)
+      }
     }
   });
   //

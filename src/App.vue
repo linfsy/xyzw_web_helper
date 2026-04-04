@@ -18,9 +18,13 @@
 import { computed, onMounted, onUnmounted } from "vue";
 import { darkTheme } from "naive-ui";
 import { useTheme } from "@/composables/useTheme";
+import { useScheduledTaskStore } from '@/stores/scheduledTaskStore';
 
 const { isDark, initTheme, setupSystemThemeListener, updateReactiveState } =
   useTheme();
+
+// 定时任务 Store
+const scheduledTaskStore = useScheduledTaskStore();
 
 // Naive UI 主题
 const naiveTheme = computed(() => {
@@ -46,10 +50,19 @@ onMounted(() => {
 
   // 初始化时更新状态
   updateReactiveState();
+  
+  // 启动全局定时任务调度器
+  scheduledTaskStore.startScheduler();
+  console.log('[App] 应用启动，定时任务调度器已启动');
 });
 
 onUnmounted(() => {
+  // 清理事件监听
   window.removeEventListener("theme-change", handleThemeChange);
+  
+  // 停止定时任务调度器
+  scheduledTaskStore.stopScheduler();
+  console.log('[App] 应用关闭，定时任务调度器已停止');
 });
 </script>
 

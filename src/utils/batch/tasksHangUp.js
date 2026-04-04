@@ -23,6 +23,8 @@ export function createTasksHangUp(deps) {
     addLog,
     message,
     currentRunningTokenId,
+    startTask,
+    stopTask,
   } = deps;
 
   /**
@@ -31,8 +33,9 @@ export function createTasksHangUp(deps) {
   const claimHangUpRewards = async () => {
     if (selectedTokens.value.length === 0) return;
 
-    isRunning.value = true;
-    shouldStop.value = false;
+    if (startTask) {
+      startTask();
+    }
 
     selectedTokens.value.forEach((id) => {
       tokenStatus.value[id] = "waiting";
@@ -112,8 +115,7 @@ export function createTasksHangUp(deps) {
 
     await Promise.all(taskPromises);
 
-    isRunning.value = false;
-    currentRunningTokenId.value = null;
+    if (stopTask) stopTask();
     message.success("批量领取挂机结束");
   };
 
@@ -122,8 +124,7 @@ export function createTasksHangUp(deps) {
    */
   const batchAddHangUpTime = async () => {
     if (selectedTokens.value.length === 0) return;
-    isRunning.value = true;
-    shouldStop.value = false;
+    if (startTask) startTask();
 
     selectedTokens.value.forEach((id) => {
       tokenStatus.value[id] = "waiting";
@@ -181,8 +182,7 @@ export function createTasksHangUp(deps) {
     });
 
     await Promise.all(taskPromises);
-    isRunning.value = false;
-    currentRunningTokenId.value = null;
+    if (stopTask) stopTask();
     message.success("批量加钟结束");
   };
 
@@ -192,8 +192,7 @@ export function createTasksHangUp(deps) {
   const batchStudy = async () => {
     if (selectedTokens.value.length === 0) return;
 
-    isRunning.value = true;
-    shouldStop.value = false;
+    if (startTask) startTask();
 
     selectedTokens.value.forEach((id) => {
       tokenStatus.value[id] = "waiting";
@@ -319,9 +318,8 @@ export function createTasksHangUp(deps) {
 
     await Promise.all(taskPromises);
 
-    isRunning.value = false;
-    currentRunningTokenId.value = null;
-    message.success("批量答题结束");
+  if (stopTask) stopTask();
+  message.success("批量答题结束");
   };
 
   /**
@@ -329,8 +327,7 @@ export function createTasksHangUp(deps) {
    */
   const batchclubsign = async () => {
     if (selectedTokens.value.length === 0) return;
-    isRunning.value = true;
-    shouldStop.value = false;
+    if (startTask) startTask();
 
     selectedTokens.value.forEach((id) => {
       tokenStatus.value[id] = "waiting";
@@ -381,8 +378,8 @@ export function createTasksHangUp(deps) {
     });
 
     await Promise.all(taskPromises);
-    isRunning.value = false;
-    currentRunningTokenId.value = null;
+    if (stopTask) stopTask();
+    else { stopTask(); }
     message.success("批量俱乐部签到结束");
   };
 
@@ -401,8 +398,8 @@ export function createTasksHangUp(deps) {
       return;
     }
     
-    isRunning.value = true;
-    shouldStop.value = false;
+    if (startTask) startTask();
+    else { startTask(); }
 
     selectedTokens.value.forEach((id) => {
       tokenStatus.value[id] = "waiting";
@@ -539,8 +536,8 @@ export function createTasksHangUp(deps) {
     });
 
     await Promise.all(taskPromises);
-    isRunning.value = false;
-    currentRunningTokenId.value = null;
+    if (stopTask) stopTask();
+    else { stopTask(); }
     message.success("批量助威结束");
   };
 

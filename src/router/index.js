@@ -126,8 +126,6 @@ const my_routes = [
     path: '/game-roles',
     redirect: '/tokens'
   },
-  // 增加自动路由引用
-  ...generatedRoutes,
   {
     path: '/:pathMatch(.*)*',
     name: 'NotFound',

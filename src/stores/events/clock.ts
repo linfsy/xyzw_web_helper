@@ -10,10 +10,7 @@ export const ClockPlugin = ({ onSome, $emit }: EVM) => {
   );
 
   onSome(["syncresp", "system_mysharecallback"], async (data: XyzwSession) => {
-    const { client, body } = data;
-    if (body?.role?.battleTeam || body?.role?.heroes || body?.role?.custom) {
-      return;
-    }
+    const { client } = data;
     client?.debounceSend("role_getroleinfo", {});
   });
 };

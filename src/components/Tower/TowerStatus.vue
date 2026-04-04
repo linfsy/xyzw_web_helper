@@ -148,14 +148,81 @@ const startTowerClimb = async () => {
       const tower = roleInfo.value?.role?.tower;
       const energy = tower?.energy || 0;
       if (energy <= 0) break;
-      await tokenStore.sendMessageWithPromise(
-        tokenId,
-        "fight_starttower",
-        {},
-        10000,
-      );
-      climbCount++;
-      message.success(`第${climbCount}次爬塔命令已发送`);
+      
+      try {
+        await tokenStore.sendMessageWithPromise(
+          tokenId,
+          "fight_starttower",
+          {},
+          10000,
+        );
+        climbCount++;
+        message.success(`第${climbCount}次爬塔命令已发送`);
+      } catch (climbError) {
+        // 检查是否是"上座塔的奖励未领取"错误
+        if (climbError.message && climbError.message.includes("1500040")) {
+          message.info(`${tokenStore.selectedToken.name} 上座塔的奖励未领取，尝试自动领取...`);
+          
+          // 尝试领取奖励
+          try {
+            // 先获取角色信息，检查奖励状态
+            await new Promise((res) => setTimeout(res, 1000));
+            const roleInfo = await tokenStore.sendGetRoleInfo(tokenId);
+            const towerRewards = roleInfo?.role?.tower?.reward;
+            
+            // 获取塔信息
+            const towerInfo = await tokenStore.sendMessageWithPromise(
+              tokenId,
+              "tower_getinfo",
+              {},
+              5000
+            );
+            
+            if (towerInfo && towerInfo.tower) {
+              const towerId = towerInfo.tower.towerId || 0;
+              const currentChapter = Math.floor(towerId / 10);
+              
+              // 检查该章节是否有奖励可领取
+              if (towerRewards && !towerRewards[currentChapter]) {
+                await new Promise((res) => setTimeout(res, 1500)); // 模拟游戏中的延迟
+                
+                // 尝试领取当前章节的奖励
+                await tokenStore.sendMessageWithPromise(
+                  tokenId,
+                  "tower_claimreward",
+                  { rewardId: currentChapter },
+                  8000 // 增加超时时间
+                );
+                
+                message.success(`${tokenStore.selectedToken.name} 领取第${currentChapter}章奖励成功！`);
+                
+                // 奖励领取成功后，等待一段时间再继续
+                await new Promise((res) => setTimeout(res, 1500));
+                
+                // 更新角色信息
+                await tokenStore.sendGetRoleInfo(tokenId);
+                await new Promise((res) => setTimeout(res, 500));
+                
+                // 重新获取塔信息
+                await getTowerInfo();
+                await new Promise((res) => setTimeout(res, 1000));
+                
+                // 继续下一次爬塔
+                continue;
+              } else {
+                message.info(`${tokenStore.selectedToken.name} 第${currentChapter}章奖励已领取或不存在`);
+              }
+            }
+          } catch (rewardError) {
+            message.error(`${tokenStore.selectedToken.name} 领取奖励失败: ${rewardError.message}`);
+            // 继续尝试下一次爬塔
+          }
+        } else {
+          // 其他错误，抛出异常
+          throw climbError;
+        }
+      }
+      
       await new Promise((res) => setTimeout(res, 2000)); // 每次间隔2秒
     }
     message.success(`已自动爬塔${climbCount}次，体力已耗尽或达到上限。`);

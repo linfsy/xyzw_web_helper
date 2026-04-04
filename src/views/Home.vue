@@ -273,20 +273,17 @@
 import { ref, onMounted, markRaw } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
-import { useTokenStore } from "@/stores/tokenStore";
-import { useScheduledTaskStore } from "@/stores/scheduledTaskStore";
-import useIndexedDB from "@/hooks/useIndexedDB";
+import { gameTokens } from "@/stores/tokenStore";
 import { PersonCircle, Cube, Ribbon, Settings, Menu } from "@vicons/ionicons5";
-import { NIcon, useMessage } from "naive-ui";
+import { useMessage } from "naive-ui";
+import useIndexedDB from "@/hooks/useIndexedDB";
 
 const router = useRouter();
 const authStore = useAuthStore();
-const tokenStore = useTokenStore();
-const scheduledTaskStore = useScheduledTaskStore();
-const { getArrayBuffer, storeArrayBuffer, waitForReady } = useIndexedDB();
 const message = useMessage();
 const featuresSection = ref(null);
 const isMobileMenuOpen = ref(false);
+const { getArrayBuffer, storeArrayBuffer, waitForReady } = useIndexedDB();
 
 // 解码Base64编码的配置
 const decodeBase64 = (str) => {
@@ -307,74 +304,7 @@ const decodeBase64 = (str) => {
   }
 };
 
-// 功能卡片数据
-const featureCards = ref([
-  {
-    id: 1,
-    icon: markRaw(PersonCircle),
-    title: "角色管理",
-    description: "统一管理游戏角色",
-  },
-  {
-    id: 2,
-    icon: markRaw(Cube),
-    title: "任务系统",
-    description: "自动化日常任务",
-  },
-  {
-    id: 3,
-    icon: markRaw(Ribbon),
-    title: "数据统计",
-    description: "全面的数据分析",
-  },
-]);
-
-// 功能特性数据
-const features = ref([
-  {
-    id: 1,
-    icon: markRaw(PersonCircle),
-    title: "角色管理",
-    description: "轻松管理多个游戏角色，统一查看角色信息、等级进度和装备状态",
-  },
-  {
-    id: 2,
-    icon: markRaw(Cube),
-    title: "任务自动化",
-    description: "智能日常任务系统，自动完成重复性任务，节省您的宝贵时间",
-  },
-  {
-    id: 3,
-    icon: markRaw(Ribbon),
-    title: "数据分析",
-    description: "详细的数据统计和分析报告，帮助您更好地了解游戏进度",
-  },
-  {
-    id: 4,
-    icon: markRaw(Settings),
-    title: "个性化设置",
-    description: "灵活的配置选项，根据您的需求定制最适合的管理方案",
-  },
-]);
-
-// 统计数据
-const stats = ref([
-  { id: 1, number: "1000+", label: "活跃用户" },
-  { id: 2, number: "50K+", label: "管理角色" },
-  { id: 3, number: "100K+", label: "完成任务" },
-  { id: 4, number: "99.9%", label: "系统稳定性" },
-]);
-
-// 滚动到功能区域
-const scrollToFeatures = () => {
-  if (featuresSection.value) {
-    featuresSection.value.scrollIntoView({
-      behavior: "smooth",
-    });
-  }
-};
-
-// 导入配置
+// 导入配置函数
 const importConfig = async ({ file }) => {
   try {
     const loadingMsg = message.loading('正在读取配置文件...', { duration: 0 });
@@ -420,7 +350,7 @@ const importConfig = async ({ file }) => {
           message.info(`找到 ${importData.tokens.length} 个账号`);
           importData.tokens.forEach((token, idx) => {
             try {
-              const existingToken = tokenStore.gameTokens.find(
+              const existingToken = gameTokens.value.find(
                 (t) => t.token === token.token || t.id === token.id || t.name === token.name
               );
               if (existingToken) {
@@ -431,7 +361,7 @@ const importConfig = async ({ file }) => {
                 });
                 importedTokens++;
               } else if (token.token) {
-                tokenStore.addToken({
+                gameTokens.value.push({
                   ...token,
                   importMethod: token.importMethod || "import",
                   upgradedToPermanent: true,
@@ -452,38 +382,8 @@ const importConfig = async ({ file }) => {
         if (Array.isArray(importData.scheduledTasks)) {
           message.info(`找到 ${importData.scheduledTasks.length} 个定时任务`);
           try {
-            localStorage.setItem("scheduledTasks_v2", JSON.stringify(importData.scheduledTasks));
+            localStorage.setItem("scheduledTasks", JSON.stringify(importData.scheduledTasks));
             message.success(`定时任务导入完成: ${importData.scheduledTasks.length} 个`);
-            
-            // 更新Pinia store中的定时任务状态
-            try {
-              if (scheduledTaskStore) {
-                // 清空现有的任务
-                while (scheduledTaskStore.scheduledTasks.length > 0) {
-                  scheduledTaskStore.removeTask(scheduledTaskStore.scheduledTasks[0].id);
-                }
-                // 添加新的任务
-                importData.scheduledTasks.forEach(task => {
-                  scheduledTaskStore.addTask({
-                    name: task.name,
-                    taskName: task.taskName,
-                    runType: task.runType,
-                    runTime: task.runTime,
-                    cronExpression: task.cronExpression,
-                    selectedTokens: task.selectedTokens,
-                    selectedTasks: task.selectedTasks,
-                    enableBatchExecution: task.enableBatchExecution,
-                    batchSize: task.batchSize,
-                    batchDelay: task.batchDelay
-                  });
-                });
-                // 重新启动调度器，确保状态同步
-                scheduledTaskStore.startScheduler();
-                message.info('定时任务已同步到状态管理');
-              }
-            } catch (storeError) {
-              console.error('更新定时任务状态失败:', storeError);
-            }
           } catch (e) {
             console.error('导入定时任务失败:', e);
           }
@@ -570,27 +470,6 @@ const importConfig = async ({ file }) => {
           }
         }
 
-        // 导入阵容数据
-        if (importData.savedLineups && typeof importData.savedLineups === 'object') {
-          let lineupsCount = 0;
-          try {
-            Object.entries(importData.savedLineups).forEach(([tokenId, lineups]) => {
-              try {
-                const key = `saved_lineups_${tokenId}`;
-                localStorage.setItem(key, JSON.stringify(lineups));
-                lineupsCount++;
-              } catch (e) {
-                console.warn(`导入阵容数据失败 (${tokenId}):`, e);
-              }
-            });
-            if (lineupsCount > 0) {
-              message.info(`阵容数据导入完成: ${lineupsCount} 个账号`);
-            }
-          } catch (e) {
-            console.error('导入阵容数据失败:', e);
-          }
-        }
-
         let successMessage = `导入成功: ${importedTokens} 个账号`;
         if (restoredBinFiles > 0) {
           successMessage += `, ${restoredBinFiles} 个BIN文件`;
@@ -611,6 +490,73 @@ const importConfig = async ({ file }) => {
   } catch (error) {
     console.error("Import failed:", error);
     message.error("导入失败: " + error.message);
+  }
+};
+
+// 功能卡片数据
+const featureCards = ref([
+  {
+    id: 1,
+    icon: markRaw(PersonCircle),
+    title: "角色管理",
+    description: "统一管理游戏角色",
+  },
+  {
+    id: 2,
+    icon: markRaw(Cube),
+    title: "任务系统",
+    description: "自动化日常任务",
+  },
+  {
+    id: 3,
+    icon: markRaw(Ribbon),
+    title: "数据统计",
+    description: "全面的数据分析",
+  },
+]);
+
+// 功能特性数据
+const features = ref([
+  {
+    id: 1,
+    icon: markRaw(PersonCircle),
+    title: "角色管理",
+    description: "轻松管理多个游戏角色，统一查看角色信息、等级进度和装备状态",
+  },
+  {
+    id: 2,
+    icon: markRaw(Cube),
+    title: "任务自动化",
+    description: "智能日常任务系统，自动完成重复性任务，节省您的宝贵时间",
+  },
+  {
+    id: 3,
+    icon: markRaw(Ribbon),
+    title: "数据分析",
+    description: "详细的数据统计和分析报告，帮助您更好地了解游戏进度",
+  },
+  {
+    id: 4,
+    icon: markRaw(Settings),
+    title: "个性化设置",
+    description: "灵活的配置选项，根据您的需求定制最适合的管理方案",
+  },
+]);
+
+// 统计数据
+const stats = ref([
+  { id: 1, number: "1000+", label: "活跃用户" },
+  { id: 2, number: "50K+", label: "管理角色" },
+  { id: 3, number: "100K+", label: "完成任务" },
+  { id: 4, number: "99.9%", label: "系统稳定性" },
+]);
+
+// 滚动到功能区域
+const scrollToFeatures = () => {
+  if (featuresSection.value) {
+    featuresSection.value.scrollIntoView({
+      behavior: "smooth",
+    });
   }
 };
 

@@ -24,7 +24,9 @@ export function createLogManager({ logs, logContainer, autoScrollLog, batchSetti
     // 限制logs数组大小，防止内存占用过大
     const maxLogEntries = batchSettings.maxLogEntries || 1000;
     if (logs.value.length > maxLogEntries) {
-      logs.value = logs.value.slice(-maxLogEntries);
+      // 当日志超过最大值时，删除一半，保留最后一半
+      const halfLength = Math.floor(maxLogEntries / 2);
+      logs.value = logs.value.slice(-halfLength);
     }
 
     // 尝试DOM操作，但不依赖nextTick确保日志显示

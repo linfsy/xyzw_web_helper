@@ -66,7 +66,7 @@ export const TowerPlugin = ({
         if (rewardFloor > 0) {
           gameLogger.info(`发起自动领取奖励请求: 第${rewardFloor}层奖励`);
           client?.send("tower_claimreward", { rewardId: rewardFloor });
-          
+
           // 领取后刷新数据
           setTimeout(() => {
             client?.send("role_getroleinfo", {});
